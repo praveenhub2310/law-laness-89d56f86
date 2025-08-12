@@ -1,9 +1,12 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { Project, Document } from '@/types/database';
 import { 
   Briefcase, 
   Calendar, 
@@ -18,68 +21,72 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
 
-  const stats = [
-    {
-      title: "Active Cases",
-      value: "42",
-      change: "+12%",
-      icon: Briefcase,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100"
-    },
-    {
-      title: "Today's Appointments",
-      value: "8",
-      change: "+3",
-      icon: Calendar,
-      color: "text-green-600",
-      bgColor: "bg-green-100"
-    },
-    {
-      title: "Pending Documents",
-      value: "23",
-      change: "-5",
-      icon: FileText,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100"
-    },
-    {
-      title: "Total Clients",
-      value: "156",
-      change: "+8%",
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100"
-    }
-  ];
+  // Fetch real data from Supabase
+  const { data: projects, loading: projectsLoading } = useSupabaseData<Project>({
+    table: 'projects',
+    orderBy: { column: 'updated_at', ascending: false }
+  });
 
-  const recentCases = [
-    {
-      id: "CASE-2024-001",
-      title: "Johnson vs. State Insurance",
-      type: "Personal Injury",
-      status: "active",
-      nextHearing: "2024-01-15",
-      priority: "high"
-    },
-    {
-      id: "CASE-2024-002",
-      title: "Smith Property Dispute",
-      type: "Real Estate",
-      status: "review",
-      nextHearing: "2024-01-18",
-      priority: "medium"
-    },
-    {
-      id: "CASE-2024-003",
-      title: "Corporate Contract Review",
-      type: "Corporate Law",
-      status: "closed",
-      nextHearing: null,
-      priority: "low"
-    }
-  ];
+  const { data: documents, loading: documentsLoading } = useSupabaseData<Document>({
+    table: 'documents',
+    orderBy: { column: 'created_at', ascending: false }
+  });
+
+  // Calculate stats from real data
+  const stats = useMemo(() => {
+    const activeCases = projects.filter(p => p.status === 'active').length;
+    const pendingDocs = documents.filter(d => d.status === 'active').length;
+    const totalProjects = projects.length;
+    
+    return [
+      {
+        title: "Active Cases",
+        value: activeCases.toString(),
+        change: "+12%",
+        icon: Briefcase,
+        color: "text-blue-600",
+        bgColor: "bg-blue-100"
+      },
+      {
+        title: "Today's Appointments",
+        value: "8",
+        change: "+3",
+        icon: Calendar,
+        color: "text-green-600",
+        bgColor: "bg-green-100"
+      },
+      {
+        title: "Active Documents",
+        value: pendingDocs.toString(),
+        change: "-5",
+        icon: FileText,
+        color: "text-orange-600",
+        bgColor: "bg-orange-100"
+      },
+      {
+        title: "Total Projects",
+        value: totalProjects.toString(),
+        change: "+8%",
+        icon: Users,
+        color: "text-purple-600",
+        bgColor: "bg-purple-100"
+      }
+    ];
+  }, [projects, documents]);
+
+  // Use real data for recent cases
+  const recentCases = useMemo(() => {
+    return projects.slice(0, 3).map(project => ({
+      id: project.case_number,
+      title: project.title,
+      type: "Case",
+      status: project.status,
+      nextHearing: project.end_date,
+      priority: 'medium' // Default since not in our schema
+    }));
+  }, [projects]);
 
   const upcomingAppointments = [
     {
@@ -139,7 +146,9 @@ const Dashboard = () => {
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Good morning, John!</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Good morning, {userProfile?.first_name || 'User'}!
+          </h1>
           <p className="text-gray-600">Here's what's happening with your cases today.</p>
         </div>
         <Button 
@@ -152,26 +161,38 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className={`text-sm ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                    {stat.change} from last month
-                  </p>
+      {(projectsLoading || documentsLoading) ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1,2,3,4].map(i => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-20 bg-gray-200 rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <Card key={index} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className={`text-sm ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                      {stat.change} from last month
+                    </p>
+                  </div>
+                  <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
+                    <stat.icon className="h-6 w-6" />
+                  </div>
                 </div>
-                <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
-                  <stat.icon className="h-6 w-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

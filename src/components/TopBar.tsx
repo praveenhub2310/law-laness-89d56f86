@@ -1,20 +1,44 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Calendar, User, ArrowLeft } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import { Bell, Calendar, User, ArrowLeft, LogOut, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const TopBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { userProfile, signOut } = useAuth();
   
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const showBackButton = location.pathname !== '/dashboard';
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/');
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  const getDisplayName = () => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name} ${userProfile.last_name}`;
+    }
+    return userProfile?.email || 'User';
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    const roleNames = {
+      'super_admin': 'Super Admin',
+      'advocate': 'Lawyer/Advocate', 
+      'company': 'Law Firm',
+      'client': 'Client'
+    };
+    return roleNames[role as keyof typeof roleNames] || role;
   };
 
   return (
@@ -65,17 +89,32 @@ const TopBar = () => {
             <User className="h-4 w-4 text-white" />
           </div>
           <div className="text-sm">
-            <p className="font-medium text-gray-900">{user.name}</p>
-            <p className="text-gray-500">{user.role}</p>
+            <p className="font-medium text-gray-900">{getDisplayName()}</p>
+            <p className="text-gray-500">{getRoleDisplayName(userProfile?.role || 'client')}</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleLogout}
-            className="text-red-600 hover:text-red-700"
-          >
-            Logout
-          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="ml-2">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>
