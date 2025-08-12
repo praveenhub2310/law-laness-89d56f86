@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
 import RoleGuard from './components/RoleGuard';
 import DashboardLayout from './components/DashboardLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 import CaseAnalyser from './pages/ai-tools/CaseAnalyser';
 import Compliance from './pages/ai-tools/Compliance';
 import CaseSummary from './pages/ai-tools/CaseSummary';
@@ -74,8 +75,8 @@ function App() {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           
-          {/* Dashboard Routes with Layout */}
-          <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+          {/* Dashboard Routes with Layout - Protected */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
           
           {/* Super Admin Routes */}
           <Route path="/ai-tools/case-analyser" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CaseAnalyser /></DashboardLayout></RoleGuard>} />

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/sidebar';
 import MenuItem from './MenuItem';
 import { menuItems } from './menuItems';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MenuContentProps {
   expandedItems: string[];
@@ -15,21 +16,9 @@ interface MenuContentProps {
 }
 
 const MenuContent = ({ expandedItems, toggleExpanded }: MenuContentProps) => {
-  // Get user role from localStorage with fallback
-  const getUserRole = () => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      console.log('Current user data:', user); // Debug log
-      const role = user.role || 'client';
-      console.log('Current user role:', role); // Debug log
-      return role;
-    } catch (error) {
-      console.log('Error parsing user data, defaulting to client:', error); // Debug log
-      return 'client';
-    }
-  };
-
-  const userRole = getUserRole();
+  // Get user role from auth context
+  const { userProfile } = useAuth();
+  const userRole = userProfile?.role || 'client';
 
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item => {

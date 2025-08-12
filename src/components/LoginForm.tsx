@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DemoCredential {
   role: string;
@@ -47,37 +48,24 @@ const LoginForm = () => {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate authentication
-    setTimeout(() => {
-      const credential = demoCredentials.find(cred => cred.email === email && cred.password === password);
+    try {
+      const { error } = await signIn(email, password);
       
-      if (credential) {
-        localStorage.setItem('user', JSON.stringify({
-          id: 1,
-          name: getNameFromRole(credential.role),
-          email: credential.email,
-          role: credential.role
-        }));
-        toast({
-          title: 'Login Successful',
-          description: `Welcome to Akra Legal Case Management System`,
-        });
-        navigate(credential.dashboard);
-      } else {
-        toast({
-          title: 'Login Failed',
-          description: 'Invalid email or password',
-          variant: 'destructive',
-        });
+      if (!error) {
+        navigate('/dashboard');
       }
+    } catch (error) {
+      console.error('Login error:', error);
+    } finally {
       setIsLoading(false);
       setSelectedRole(null);
-    }, 1000);
+    }
   };
 
   const getNameFromRole = (role: string): string => {

@@ -1,21 +1,21 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   
   useEffect(() => {
-    // Check if user is logged in
-    const user = localStorage.getItem('user');
-    if (user) {
-      // If user exists, redirect to dashboard
-      navigate('/dashboard');
-    } else {
-      // If no user, redirect to login
-      navigate('/login');
+    if (!loading) {
+      if (user) {
+        navigate('/dashboard');
+      } else {
+        navigate('/login');
+      }
     }
-  }, [navigate]);
+  }, [user, loading, navigate]);
 
   // Show a loading state while redirecting
   return (
