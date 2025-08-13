@@ -164,6 +164,17 @@ const LoginForm = () => {
         </Button>
       </form>
 
+      <div className="mt-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="w-full" 
+          onClick={() => navigate('/role-selection')}
+        >
+          Try Akralegal with Your Account
+        </Button>
+      </div>
+
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-gray-700 text-center">Demo Credentials</h3>
         {!demoUsersCreated && (

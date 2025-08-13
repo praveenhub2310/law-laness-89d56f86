@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import QueryClient from './QueryClient';
 import Index from './pages/Index';
 import Login from './pages/Login';
+import RoleSelection from './pages/RoleSelection';
+import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
 import RoleGuard from './components/RoleGuard';
@@ -74,6 +76,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/role-selection" element={<RoleSelection />} />
+          <Route path="/signup" element={<Signup />} />
           
           {/* Dashboard Routes with Layout - Protected */}
           <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
