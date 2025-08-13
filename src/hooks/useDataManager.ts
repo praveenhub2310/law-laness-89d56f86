@@ -1,6 +1,7 @@
 
 import { useState, useMemo } from 'react';
 import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 export interface DataManagerConfig<T> {
   initialData: T[];
@@ -95,11 +96,10 @@ export const useDataManager = <T extends { id: string }>({ initialData, entityNa
   };
 
   const exportData = () => {
-    const csvContent = convertToCSV(sortedData);
-    downloadCSV(csvContent, `${entityName}_export.csv`);
+    exportToExcel(sortedData, `${entityName}_export.xlsx`);
     toast({
       title: "Success",
-      description: `${entityName} data exported successfully.`,
+      description: `${entityName} data exported to Excel successfully.`,
     });
   };
 
@@ -152,4 +152,27 @@ const downloadCSV = (csvContent: string, filename: string) => {
   link.click();
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
+};
+
+const exportToExcel = (data: any[], filename: string) => {
+  if (data.length === 0) {
+    toast({
+      title: "No Data",
+      description: "There is no data to export.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // Create a new workbook
+  const workbook = XLSX.utils.book_new();
+  
+  // Convert data to worksheet
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Add the worksheet to the workbook
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+  
+  // Write the file
+  XLSX.writeFile(workbook, filename);
 };
