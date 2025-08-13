@@ -56,13 +56,19 @@ const LoginForm = () => {
   useEffect(() => {
     const createDemoUsers = async () => {
       try {
+        console.log('Creating demo users...');
         const { data, error } = await supabase.functions.invoke('create-demo-users');
-        if (!error) {
+        if (!error && data) {
           setDemoUsersCreated(true);
-          console.log('Demo users setup:', data);
+          console.log('Demo users setup completed:', data);
+        } else {
+          console.error('Error creating demo users:', error);
+          // Set to true anyway so user can still try to login
+          setDemoUsersCreated(true);
         }
       } catch (error) {
-        console.log('Demo users may already exist');
+        console.error('Demo users creation failed:', error);
+        // Set to true anyway so user can still try to login
         setDemoUsersCreated(true);
       }
     };

@@ -25,34 +25,28 @@ serve(async (req) => {
 
     const demoUsers = [
       {
+        id: '11111111-1111-1111-1111-111111111111',
         email: 'admin@akralegal.com',
         password: 'admin123',
-        role: 'super_admin',
-        first_name: 'John',
-        last_name: 'Smith'
+        role: 'super_admin'
       },
       {
+        id: '22222222-2222-2222-2222-222222222222',
         email: 'lawyer@akralegal.com',
         password: 'lawyer123',
-        role: 'advocate',
-        first_name: 'Sarah',
-        last_name: 'Johnson',
-        bar_number: 'BAR12345'
+        role: 'advocate'
       },
       {
+        id: '33333333-3333-3333-3333-333333333333',
         email: 'firm@akralegal.com',
         password: 'firm123',
-        role: 'company',
-        first_name: 'Michael',
-        last_name: 'Brown',
-        company_name: 'Brown Legal Associates'
+        role: 'company'
       },
       {
+        id: '44444444-4444-4444-4444-444444444444',
         email: 'client@akralegal.com',
         password: 'client123',
-        role: 'client',
-        first_name: 'Emily',
-        last_name: 'Davis'
+        role: 'client'
       }
     ]
 
@@ -67,67 +61,23 @@ serve(async (req) => {
         continue
       }
 
-      // Create user
+      // Create user with specific ID
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: userData.email,
         password: userData.password,
         email_confirm: true,
         user_metadata: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userData.role,
-          company_name: userData.company_name,
-          bar_number: userData.bar_number
+          role: userData.role
         }
       })
 
       if (createError) {
+        console.error(`Error creating user ${userData.email}:`, createError)
         results.push({ email: userData.email, status: 'error', error: createError.message })
         continue
       }
 
       if (newUser.user) {
-        // Create profile
-        const { error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .insert({
-            id: newUser.user.id,
-            email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            role: userData.role
-          })
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-        }
-
-        // Create role-specific records
-        if (userData.role === 'advocate') {
-          await supabaseAdmin
-            .from('advocates')
-            .insert({
-              id: newUser.user.id,
-              bar_number: userData.bar_number,
-              availability_status: 'available'
-            })
-        } else if (userData.role === 'company') {
-          await supabaseAdmin
-            .from('companies')
-            .insert({
-              id: newUser.user.id,
-              company_name: userData.company_name
-            })
-        } else if (userData.role === 'client') {
-          await supabaseAdmin
-            .from('clients')
-            .insert({
-              id: newUser.user.id,
-              client_type: 'individual',
-              preferred_contact_method: 'email'
-            })
-        }
-
         results.push({ email: userData.email, status: 'created', id: newUser.user.id })
       }
     }
@@ -140,6 +90,7 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Demo users creation error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
