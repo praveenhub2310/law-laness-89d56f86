@@ -32,21 +32,22 @@ const UserManagement = () => {
     realtime: true
   });
 
-  // Custom add function to create users properly in Supabase Auth
+  // Custom add function to create users properly
   const handleAddUser = async (userData: any) => {
     try {
       console.log('Creating user with data:', userData);
       
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Create user using signup (this creates both auth user and profile)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
-        user_metadata: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userData.role
-        },
-        email_confirm: true
+        options: {
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role
+          }
+        }
       });
 
       if (authError) {
@@ -60,31 +61,81 @@ const UserManagement = () => {
       }
 
       if (authData.user) {
-        // Update the profile with additional data
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            phone: userData.phone || null,
-            role: userData.role,
-            is_active: userData.is_active === 'true' || userData.is_active === true
-          })
-          .eq('id', authData.user.id);
+        // Wait a moment for the trigger to create the profile
+        setTimeout(async () => {
+          console.log('Checking if profile was created for user:', authData.user.id);
+          
+          // First check if profile exists
+          const { data: existingProfile, error: checkError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single();
 
-        if (profileError) {
-          console.error('Profile error:', profileError);
-          toast({
-            title: "Warning",
-            description: "User created but profile update failed. Please update manually.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: "User created successfully!",
-          });
-        }
+          console.log('Existing profile:', existingProfile);
+          console.log('Check error:', checkError);
+
+          if (checkError && checkError.code === 'PGRST116') {
+            // Profile doesn't exist, create it manually
+            console.log('Profile not found, creating manually...');
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: authData.user.id,
+                email: userData.email,
+                first_name: userData.first_name,
+                last_name: userData.last_name,
+                phone: userData.phone || null,
+                role: userData.role,
+                is_active: userData.is_active === 'true' || userData.is_active === true
+              });
+
+            if (insertError) {
+              console.error('Insert error:', insertError);
+              toast({
+                title: "Error",
+                description: `Failed to create profile: ${insertError.message}`,
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "Success",
+                description: "User created successfully!",
+              });
+              // Refresh the data to show new user
+              window.location.reload();
+            }
+          } else if (existingProfile) {
+            // Profile exists, update it
+            console.log('Profile exists, updating...');
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({
+                first_name: userData.first_name,
+                last_name: userData.last_name,
+                phone: userData.phone || null,
+                role: userData.role,
+                is_active: userData.is_active === 'true' || userData.is_active === true
+              })
+              .eq('id', authData.user.id);
+
+            if (profileError) {
+              console.error('Profile error:', profileError);
+              toast({
+                title: "Warning", 
+                description: "User created but profile update failed. Please update manually.",
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "Success",
+                description: "User created successfully!",
+              });
+              // Refresh the data to show new user
+              window.location.reload();
+            }
+          }
+        }, 3000);
       }
     } catch (error) {
       console.error('Unexpected error:', error);
