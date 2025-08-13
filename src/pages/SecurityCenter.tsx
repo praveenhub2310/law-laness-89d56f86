@@ -3,6 +3,8 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Shield } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { toast } from '@/hooks/use-toast';
 
 const SecurityCenter = () => {
   const {
@@ -116,6 +118,27 @@ const SecurityCenter = () => {
     }
   ];
 
+  const exportSecurityEvents = () => {
+    if (!events || events.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(events);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'SecurityEvents');
+    XLSX.writeFile(workbook, 'security_events_export.xlsx');
+    
+    toast({
+      title: "Success",
+      description: "Security events exported to Excel successfully.",
+    });
+  };
+
   if (loading && !events?.length) {
     return (
       <div className="p-6">
@@ -157,10 +180,11 @@ const SecurityCenter = () => {
         columns={columns}
         data={events || []}
         fields={fields}
-        searchPlaceholder="Search security events by type, IP, or description..."
+        searchPlaceholder="Search security events by type, user, or event..."
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
+        onExport={exportSecurityEvents}
         entityName="Security Event"
         loading={loading}
       />

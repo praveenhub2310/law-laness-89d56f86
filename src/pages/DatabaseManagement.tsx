@@ -3,6 +3,8 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Database } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { toast } from '@/hooks/use-toast';
 
 const DatabaseManagement = () => {
   const {
@@ -158,6 +160,27 @@ const DatabaseManagement = () => {
     );
   }
 
+  const exportBackups = () => {
+    if (!backups || backups.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(backups);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Backups');
+    XLSX.writeFile(workbook, 'database_backups_export.xlsx');
+    
+    toast({
+      title: "Success",
+      description: "Backup data exported to Excel successfully.",
+    });
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-2 mb-6">
@@ -174,6 +197,7 @@ const DatabaseManagement = () => {
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
+        onExport={exportBackups}
         entityName="Backup"
         loading={loading}
       />

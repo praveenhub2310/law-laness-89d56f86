@@ -4,6 +4,8 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { FileText } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { toast } from '@/hooks/use-toast';
 
 const SystemLog = () => {
   const {
@@ -149,6 +151,27 @@ const SystemLog = () => {
     { key: 'session_id', label: 'Session ID', type: 'text' as const }
   ];
 
+  const exportLogs = () => {
+    if (!logs || logs.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(logs);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Logs');
+    XLSX.writeFile(workbook, 'system_logs_export.xlsx');
+    
+    toast({
+      title: "Success",
+      description: "System logs exported to Excel successfully.",
+    });
+  };
+
   if (loading && !logs?.length) {
     return (
       <div className="p-6">
@@ -186,15 +209,16 @@ const SystemLog = () => {
       </div>
       
       <DataTable
-        title="System Activity Log"
+        title="System Activity Logs"
         columns={columns}
         data={logs || []}
         fields={fields}
-        searchPlaceholder="Search logs by action, module, or details..."
+        searchPlaceholder="Search logs by action, user, or level..."
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
-        entityName="Log Entry"
+        onExport={exportLogs}
+        entityName="Log"
         loading={loading}
       />
     </div>

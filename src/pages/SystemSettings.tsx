@@ -3,6 +3,8 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Settings } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { toast } from '@/hooks/use-toast';
 
 const SystemSettings = () => {
   const {
@@ -127,6 +129,27 @@ const SystemSettings = () => {
     );
   }
 
+  const exportSettings = () => {
+    if (!settings || settings.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(settings);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Settings');
+    XLSX.writeFile(workbook, 'system_settings_export.xlsx');
+    
+    toast({
+      title: "Success",
+      description: "Settings data exported to Excel successfully.",
+    });
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-2 mb-6">
@@ -143,6 +166,7 @@ const SystemSettings = () => {
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
+        onExport={exportSettings}
         entityName="Setting"
         loading={loading}
       />

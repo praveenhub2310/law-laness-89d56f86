@@ -3,6 +3,8 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { toast } from '@/hooks/use-toast';
 
 const UserManagement = () => {
   const {
@@ -144,6 +146,27 @@ const UserManagement = () => {
     );
   }
 
+  const exportUsers = () => {
+    if (!users || users.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(users);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+    XLSX.writeFile(workbook, 'users_export.xlsx');
+    
+    toast({
+      title: "Success",
+      description: "Users data exported to Excel successfully.",
+    });
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-2 mb-6">
@@ -160,6 +183,7 @@ const UserManagement = () => {
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
+        onExport={exportUsers}
         entityName="User"
         loading={loading}
       />
