@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DemoCredential {
   role: string;
@@ -46,9 +47,28 @@ const LoginForm = () => {
   const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [demoUsersCreated, setDemoUsersCreated] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn } = useAuth();
+
+  // Create demo users on component mount
+  useEffect(() => {
+    const createDemoUsers = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('create-demo-users');
+        if (!error) {
+          setDemoUsersCreated(true);
+          console.log('Demo users setup:', data);
+        }
+      } catch (error) {
+        console.log('Demo users may already exist');
+        setDemoUsersCreated(true);
+      }
+    };
+
+    createDemoUsers();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,6 +160,9 @@ const LoginForm = () => {
 
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-gray-700 text-center">Demo Credentials</h3>
+        {!demoUsersCreated && (
+          <p className="text-xs text-gray-500 text-center">Setting up demo users...</p>
+        )}
         <div className="space-y-2">
           {demoCredentials.map((credential, index) => (
             <button
