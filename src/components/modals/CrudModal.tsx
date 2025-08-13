@@ -35,16 +35,18 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
   const [formData, setFormData] = useState<any>({});
 
   useEffect(() => {
-    if (data) {
-      setFormData(data);
-    } else {
-      const initialData: any = {};
-      fields.forEach(field => {
-        initialData[field.key] = '';
-      });
-      setFormData(initialData);
+    if (isOpen) {
+      if (data && Object.keys(data).length > 0) {
+        setFormData({ ...data });
+      } else {
+        const initialData: any = {};
+        fields.forEach(field => {
+          initialData[field.key] = '';
+        });
+        setFormData(initialData);
+      }
     }
-  }, [data, fields]);
+  }, [isOpen, data]);
 
   const handleSave = () => {
     onSave(formData);
