@@ -1,87 +1,36 @@
 
 import React from 'react';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
-import { useDataManager } from '@/hooks/useDataManager';
+import { FileText } from 'lucide-react';
 
 const SystemLog = () => {
-  const initialLogsData = [
-    {
-      id: "LOG-001",
-      timestamp: "2024-01-12 09:30:45",
-      level: "INFO",
-      module: "Authentication",
-      user: "sarah.wilson",
-      action: "User Login",
-      ipAddress: "192.168.1.100",
-      userAgent: "Chrome 120.0.0.0",
-      status: "Success",
-      details: "Successful login with 2FA",
-      sessionId: "SES-ABC123"
-    },
-    {
-      id: "LOG-002",
-      timestamp: "2024-01-12 09:25:12",
-      level: "WARNING",
-      module: "Document Management",
-      user: "john.davis",
-      action: "Document Access",
-      ipAddress: "192.168.1.105",
-      userAgent: "Firefox 121.0.1",
-      status: "Blocked",
-      details: "Attempted access to restricted document",
-      sessionId: "SES-DEF456"
-    },
-    {
-      id: "LOG-003",
-      timestamp: "2024-01-12 09:20:33",
-      level: "ERROR",
-      module: "Database",
-      user: "System",
-      action: "Database Query",
-      ipAddress: "127.0.0.1",
-      userAgent: "System Process",
-      status: "Failed",
-      details: "Connection timeout during backup operation",
-      sessionId: "SYS-789"
-    },
-    {
-      id: "LOG-004",
-      timestamp: "2024-01-12 09:15:22",
-      level: "INFO",
-      module: "Case Management",
-      user: "emily.brown",
-      action: "Case Update",
-      ipAddress: "192.168.1.110",
-      userAgent: "Edge 120.0.2210.144",
-      status: "Success",
-      details: "Updated case CASE-2024-001 status",
-      sessionId: "SES-GHI789"
-    },
-    {
-      id: "LOG-005",
-      timestamp: "2024-01-12 09:10:15",
-      level: "CRITICAL",
-      module: "Security",
-      user: "Unknown",
-      action: "Login Attempt",
-      ipAddress: "203.0.113.195",
-      userAgent: "Unknown Bot",
-      status: "Blocked",
-      details: "Multiple failed login attempts detected",
-      sessionId: "N/A"
-    }
-  ];
-
   const {
-    data,
+    data: logs,
+    loading,
+    error,
     addItem,
     updateItem,
-    deleteItem,
-    exportData
-  } = useDataManager({
-    initialData: initialLogsData,
-    entityName: 'Log Entry'
+    deleteItem
+  } = useSupabaseData<any>({
+    table: 'system_logs',
+    select: `
+      id,
+      timestamp,
+      level,
+      module,
+      user_id,
+      action,
+      ip_address,
+      user_agent,
+      status,
+      details,
+      session_id,
+      created_at
+    `,
+    realtime: true,
+    orderBy: { column: 'timestamp', ascending: false }
   });
 
   const columns = [
@@ -172,7 +121,6 @@ const SystemLog = () => {
   ];
 
   const fields = [
-    { key: 'timestamp', label: 'Timestamp', type: 'text' as const, required: true },
     { 
       key: 'level', 
       label: 'Log Level', 
@@ -187,10 +135,9 @@ const SystemLog = () => {
       options: ['Authentication', 'Document Management', 'Database', 'Case Management', 'Security'],
       required: true 
     },
-    { key: 'user', label: 'User', type: 'text' as const, required: true },
     { key: 'action', label: 'Action', type: 'text' as const, required: true },
-    { key: 'ipAddress', label: 'IP Address', type: 'text' as const },
-    { key: 'userAgent', label: 'User Agent', type: 'text' as const },
+    { key: 'ip_address', label: 'IP Address', type: 'text' as const },
+    { key: 'user_agent', label: 'User Agent', type: 'text' as const },
     { 
       key: 'status', 
       label: 'Status', 
@@ -199,22 +146,56 @@ const SystemLog = () => {
       required: true 
     },
     { key: 'details', label: 'Details', type: 'textarea' as const },
-    { key: 'sessionId', label: 'Session ID', type: 'text' as const }
+    { key: 'session_id', label: 'Session ID', type: 'text' as const }
   ];
+
+  if (loading && !logs?.length) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <FileText className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">System Logs</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading logs...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <FileText className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">System Logs</h1>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-destructive">Error loading logs: {typeof error === 'string' ? error : 'Unknown error'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <FileText className="h-6 w-6" />
+        <h1 className="text-3xl font-bold">System Logs</h1>
+      </div>
+      
       <DataTable
         title="System Activity Log"
         columns={columns}
-        data={data}
+        data={logs || []}
         fields={fields}
-        searchPlaceholder="Search logs by user, action, or module..."
+        searchPlaceholder="Search logs by action, module, or details..."
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
-        onExport={exportData}
         entityName="Log Entry"
+        loading={loading}
       />
     </div>
   );

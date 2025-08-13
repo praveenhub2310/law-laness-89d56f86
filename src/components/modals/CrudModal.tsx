@@ -16,7 +16,7 @@ interface FieldConfig {
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'email' | 'tel';
-  options?: string[];
+  options?: string[] | { label: string; value: any }[];
   required?: boolean;
   readonly?: boolean;
 }
@@ -82,11 +82,15 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
               <SelectValue placeholder={`Select ${field.label}`} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
+                  {field.options?.map((option) => {
+                    const optionValue = typeof option === 'string' ? option : String(option.value);
+                    const optionLabel = typeof option === 'string' ? option : option.label;
+                    return (
+                      <SelectItem key={optionValue} value={optionValue}>
+                        {optionLabel}
+                      </SelectItem>
+                    );
+                  })}
             </SelectContent>
           </Select>
         );

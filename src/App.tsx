@@ -54,6 +54,10 @@ import TrustAccounting from './pages/TrustAccounting';
 import Payroll from './pages/Payroll';
 import Analytics from './pages/Analytics';
 import Subscription from './pages/Subscription';
+import UserManagement from './pages/UserManagement';
+import SystemSettings from './pages/SystemSettings';
+import SecurityCenter from './pages/SecurityCenter';
+import DatabaseManagement from './pages/DatabaseManagement';
 import InvoicesPayments from './pages/InvoicesPayments';
 import DocumentUpload from './pages/DocumentUpload';
 import ESign from './pages/ESign';
@@ -122,6 +126,14 @@ function App() {
           <Route path="/dashboard/drafting-tool" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DraftingTool /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/translation" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DocumentTranslation /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/fee-calculator" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
+          
+          {/* Admin Module Routes */}
+          <Route path="/user-management" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><UserManagement /></DashboardLayout></RoleGuard>} />
+          <Route path="/system-settings" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SystemSettings /></DashboardLayout></RoleGuard>} />
+          <Route path="/system-log" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SystemLog /></DashboardLayout></RoleGuard>} />
+          <Route path="/analytics" element={<RoleGuard allowedRoles={['super_admin', 'company']}><DashboardLayout><Analytics /></DashboardLayout></RoleGuard>} />
+          <Route path="/security-center" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SecurityCenter /></DashboardLayout></RoleGuard>} />
+          <Route path="/database-management" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DatabaseManagement /></DashboardLayout></RoleGuard>} />
           
           {/* Lawyer/Advocate Routes */}
           <Route path="/dashboard/my-cases" element={<RoleGuard allowedRoles={['advocate', 'client']}><DashboardLayout><MyCases /></DashboardLayout></RoleGuard>} />

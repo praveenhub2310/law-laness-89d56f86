@@ -15,7 +15,7 @@ interface Column {
   label: string;
   sortable?: boolean;
   filterable?: boolean;
-  filterOptions?: string[];
+  filterOptions?: (string | boolean | number)[];
   render?: (value: any, row: any) => React.ReactNode;
   className?: string;
 }
@@ -24,7 +24,7 @@ interface FieldConfig {
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'email' | 'tel';
-  options?: string[];
+  options?: string[] | { label: string; value: any }[];
   required?: boolean;
   readonly?: boolean;
 }
@@ -47,6 +47,7 @@ interface DataTableProps {
   showPreviewAction?: boolean;
   showAiToolsAction?: boolean;
   className?: string;
+  loading?: boolean;
 }
 
 const DataTable = ({ 
@@ -245,8 +246,8 @@ const DataTable = ({
                   <SelectContent className="bg-white border border-gray-200 shadow-xl z-[10000] max-h-60 overflow-y-auto">
                     <SelectItem value="all">All</SelectItem>
                     {column.filterOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="cursor-pointer hover:bg-gray-50">
-                        {option}
+                      <SelectItem key={String(option)} value={String(option)} className="cursor-pointer hover:bg-gray-50">
+                        {String(option)}
                       </SelectItem>
                     ))}
                   </SelectContent>
