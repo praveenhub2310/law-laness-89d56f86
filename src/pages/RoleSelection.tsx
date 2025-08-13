@@ -58,20 +58,39 @@ const RoleSelection = () => {
   };
 
   const handleGoogleSignUp = async () => {
-    if (!selectedRole) return;
+    if (!selectedRole) {
+      console.error('No role selected');
+      return;
+    }
     
+    console.log('Starting Google OAuth with role:', selectedRole);
     setIsLoading(true);
+    
     try {
       const userData = {
         role: selectedRole
       };
       
+      console.log('Calling signInWithGoogle with userData:', userData);
       const { error } = await signInWithGoogle(userData);
+      
       if (error) {
-        console.error('Google sign-up error:', error);
+        console.error('Google sign-up error details:', {
+          message: error.message,
+          status: error.status,
+          statusCode: error.status,
+          code: error.code,
+          details: error
+        });
+        
+        // Show user-friendly error message
+        alert(`Google Sign-In failed: ${error.message || 'Unknown error'}`);
+      } else {
+        console.log('Google sign-up successful');
       }
     } catch (error) {
-      console.error('Google sign-up failed:', error);
+      console.error('Google sign-up failed with exception:', error);
+      alert(`Google Sign-In failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
