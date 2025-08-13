@@ -12,6 +12,10 @@ import RoleGuard from './components/RoleGuard';
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardRouter from './components/DashboardRouter';
+import AdminDashboard from './pages/AdminDashboard';
+import FirmDashboard from './pages/FirmDashboard';
+import LawyerDashboard from './pages/LawyerDashboard';
+import ClientDashboard from './pages/ClientDashboard';
 import CaseAnalyser from './pages/ai-tools/CaseAnalyser';
 import Compliance from './pages/ai-tools/Compliance';
 import CaseSummary from './pages/ai-tools/CaseSummary';
@@ -84,10 +88,10 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
           
           {/* Role-specific dashboard routes */}
-          <Route path="/admin-dashboard" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
-          <Route path="/firm-dashboard" element={<RoleGuard allowedRoles={['company']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
-          <Route path="/lawyer-dashboard" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
-          <Route path="/client-dashboard" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/admin-dashboard" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><AdminDashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/firm-dashboard" element={<RoleGuard allowedRoles={['company']}><DashboardLayout><FirmDashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/lawyer-dashboard" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><LawyerDashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/client-dashboard" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ClientDashboard /></DashboardLayout></RoleGuard>} />
           
           {/* Super Admin Routes */}
           <Route path="/ai-tools/case-analyser" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CaseAnalyser /></DashboardLayout></RoleGuard>} />
