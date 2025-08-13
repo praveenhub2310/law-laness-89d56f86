@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserManagement = () => {
   const {
@@ -30,6 +31,70 @@ const UserManagement = () => {
     `,
     realtime: true
   });
+
+  // Custom add function to create users properly in Supabase Auth
+  const handleAddUser = async (userData: any) => {
+    try {
+      console.log('Creating user with data:', userData);
+      
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        password: userData.password,
+        user_metadata: {
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.role
+        },
+        email_confirm: true
+      });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        toast({
+          title: "Error",
+          description: `Failed to create user: ${authError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (authData.user) {
+        // Update the profile with additional data
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            phone: userData.phone || null,
+            role: userData.role,
+            is_active: userData.is_active === 'true' || userData.is_active === true
+          })
+          .eq('id', authData.user.id);
+
+        if (profileError) {
+          console.error('Profile error:', profileError);
+          toast({
+            title: "Warning",
+            description: "User created but profile update failed. Please update manually.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "User created successfully!",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while creating the user.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const columns = [
     {
@@ -98,13 +163,19 @@ const UserManagement = () => {
 
   const fields = [
     { key: 'email', label: 'Email', type: 'email' as const, required: true },
+    { key: 'password', label: 'Password', type: 'text' as const, required: true },
     { key: 'first_name', label: 'First Name', type: 'text' as const, required: true },
     { key: 'last_name', label: 'Last Name', type: 'text' as const, required: true },
     { 
       key: 'role', 
       label: 'Role', 
       type: 'select' as const,
-      options: ['super_admin', 'company', 'advocate', 'client'],
+      options: [
+        { label: 'Super Admin', value: 'super_admin' },
+        { label: 'Company', value: 'company' },
+        { label: 'Advocate', value: 'advocate' },
+        { label: 'Client', value: 'client' }
+      ],
       required: true 
     },
     { key: 'phone', label: 'Phone', type: 'tel' as const },
@@ -112,7 +183,7 @@ const UserManagement = () => {
       key: 'is_active', 
       label: 'Active Status', 
       type: 'select' as const,
-      options: [{ label: 'Active', value: true }, { label: 'Inactive', value: false }],
+      options: [{ label: 'Active', value: 'true' }, { label: 'Inactive', value: 'false' }],
       required: true 
     }
   ];
@@ -180,7 +251,7 @@ const UserManagement = () => {
         data={users || []}
         fields={fields}
         searchPlaceholder="Search users by name, email, or role..."
-        onAdd={addItem}
+        onAdd={handleAddUser}
         onEdit={updateItem}
         onDelete={deleteItem}
         onExport={exportUsers}
