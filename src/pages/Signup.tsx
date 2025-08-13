@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 const Signup = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   
   const selectedRole = location.state?.selectedRole || 'client';
   const [formData, setFormData] = useState({
@@ -60,8 +60,24 @@ const Signup = () => {
     setLoading(false);
   };
 
-  const handleGoogleSignUp = () => {
-    toast.info('Google Sign-Up will be available soon');
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    
+    const userData = {
+      role: selectedRole,
+      ...(selectedRole === 'company' && formData.companyName && { company_name: formData.companyName }),
+      ...(selectedRole === 'advocate' && formData.barNumber && { bar_number: formData.barNumber }),
+      ...(formData.firstName && { first_name: formData.firstName }),
+      ...(formData.lastName && { last_name: formData.lastName }),
+    };
+
+    const { error } = await signInWithGoogle(userData);
+    
+    if (error) {
+      toast.error(error.message || 'Failed to sign in with Google');
+      setLoading(false);
+    }
+    // Note: If successful, user will be redirected by OAuth flow
   };
 
   const getRoleName = (role: string) => {
@@ -94,6 +110,7 @@ const Signup = () => {
           variant="outline"
           className="w-full"
           onClick={handleGoogleSignUp}
+          disabled={loading}
         >
           <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
             <path

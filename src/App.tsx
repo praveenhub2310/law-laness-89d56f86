@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import RoleGuard from './components/RoleGuard';
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import DashboardRouter from './components/DashboardRouter';
 import CaseAnalyser from './pages/ai-tools/CaseAnalyser';
 import Compliance from './pages/ai-tools/Compliance';
 import CaseSummary from './pages/ai-tools/CaseSummary';
@@ -80,7 +81,13 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           
           {/* Dashboard Routes with Layout - Protected */}
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
+          
+          {/* Role-specific dashboard routes */}
+          <Route path="/admin-dashboard" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/firm-dashboard" element={<RoleGuard allowedRoles={['company']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/lawyer-dashboard" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
+          <Route path="/client-dashboard" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><Dashboard /></DashboardLayout></RoleGuard>} />
           
           {/* Super Admin Routes */}
           <Route path="/ai-tools/case-analyser" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CaseAnalyser /></DashboardLayout></RoleGuard>} />
