@@ -80,7 +80,7 @@ const SecurityCenter = () => {
       label: 'Status',
       sortable: true,
       filterable: true,
-      filterOptions: [true, false],
+      filterOptions: ['true', 'false'],
       render: (value: boolean) => (
         <Badge className={value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
           {value ? 'Resolved' : 'Open'}
@@ -111,8 +111,8 @@ const SecurityCenter = () => {
       key: 'resolved', 
       label: 'Resolved', 
       type: 'select' as const,
-      options: [{ label: 'Yes', value: true }, { label: 'No', value: false }],
-      required: true 
+      options: [{ label: 'Yes', value: 'true' }, { label: 'No', value: 'false' }],
+      required: true
     }
   ];
 
