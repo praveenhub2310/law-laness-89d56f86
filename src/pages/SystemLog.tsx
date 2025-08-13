@@ -72,8 +72,8 @@ const SystemLog = () => {
       )
     },
     {
-      key: 'user',
-      label: 'User',
+      key: 'user_id',
+      label: 'User ID',
       sortable: true,
       filterable: true
     },
@@ -104,7 +104,7 @@ const SystemLog = () => {
       }
     },
     {
-      key: 'ipAddress',
+      key: 'ip_address',
       label: 'IP Address',
       sortable: true,
       filterable: true
@@ -115,7 +115,7 @@ const SystemLog = () => {
       sortable: false,
       filterable: true,
       render: (value: string) => (
-        <span className="text-sm text-gray-600">{value.substring(0, 30)}...</span>
+        <span className="text-sm text-gray-600">{value?.substring(0, 30)}{value?.length > 30 ? '...' : ''}</span>
       )
     }
   ];
