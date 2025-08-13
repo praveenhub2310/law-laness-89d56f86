@@ -50,7 +50,7 @@ const LoginForm = () => {
   const [demoUsersCreated, setDemoUsersCreated] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   // Create demo users on component mount
   useEffect(() => {
@@ -128,6 +128,20 @@ const LoginForm = () => {
     }, 300);
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        console.error('Google sign-in error:', error);
+      }
+    } catch (error) {
+      console.error('Google sign-in failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -178,7 +192,8 @@ const LoginForm = () => {
           type="button" 
           variant="outline" 
           className="w-full" 
-          onClick={() => navigate('/role-selection')}
+          onClick={handleGoogleSignIn}
+          disabled={isLoading}
         >
           <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
             <path
