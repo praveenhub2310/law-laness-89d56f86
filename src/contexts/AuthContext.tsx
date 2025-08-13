@@ -175,6 +175,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogle = async (userData?: any) => {
     try {
+      console.log('AuthContext: Starting Google OAuth with userData:', userData);
+      console.log('AuthContext: Redirect URL will be:', `${window.location.origin}/dashboard`);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -188,19 +191,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        console.error('AuthContext: Google OAuth error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          details: error
+        });
+        
         toast({
           title: 'Google Sign-In Failed',
-          description: error.message,
+          description: `Error: ${error.message}${error.status ? ` (Status: ${error.status})` : ''}`,
           variant: 'destructive',
         });
+      } else {
+        console.log('AuthContext: Google OAuth initiated successfully');
       }
 
       return { error };
     } catch (error: any) {
+      console.error('AuthContext: Google OAuth exception:', error);
       const errorMessage = error?.message || 'An unexpected error occurred';
       toast({
         title: 'Google Sign-In Failed',
-        description: errorMessage,
+        description: `Exception: ${errorMessage}`,
         variant: 'destructive',
       });
       return { error };
