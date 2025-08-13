@@ -192,8 +192,7 @@ const LoginForm = () => {
           type="button" 
           variant="outline" 
           className="w-full" 
-          onClick={handleGoogleSignIn}
-          disabled={isLoading}
+          onClick={() => navigate('/role-selection')}
         >
           <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
             <path
