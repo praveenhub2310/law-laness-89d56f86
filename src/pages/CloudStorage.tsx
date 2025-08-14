@@ -10,7 +10,7 @@ declare global {
   interface Window {
     gapi: {
       load: (libraries: string, callback: () => void) => void;
-      api: {
+      client: {
         init: (config: {
           apiKey: string;
           clientId: string;
@@ -20,11 +20,11 @@ declare global {
       };
       auth2: {
         getAuthInstance: () => {
-          signIn: () => Promise<{
+          signIn: (options?: { scope: string }) => Promise<{
             getAuthResponse: () => { access_token: string };
             getBasicProfile: () => { getEmail: () => string };
           }>;
-          signOut: () => void;
+          signOut: () => Promise<void>;
         };
       };
     };
@@ -57,80 +57,160 @@ const CloudStorage = () => {
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'Root' }]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Google API configuration
-  const CLIENT_ID = '1056746515534-mq5smc5s42h6qg9u1pe3gf9pn3vkp7lj.apps.googleusercontent.com';
-  const API_KEY = 'AIzaSyDfQyCzL3Wc_2PiDC-M3nLSSEKFMQQdTas';
+  // Google API configuration - These need to be configured in Google Cloud Console
+  const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE';
+  const API_KEY = process.env.GOOGLE_API_KEY || 'YOUR_GOOGLE_API_KEY_HERE';
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
   const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
   useEffect(() => {
-    initializeGapi();
-    // Check if user was previously connected
-    const storedToken = localStorage.getItem('google_drive_token');
-    const storedEmail = localStorage.getItem('google_drive_email');
-    if (storedToken && storedEmail) {
-      setAccessToken(storedToken);
-      setUserEmail(storedEmail);
-      setIsConnected(true);
-      fetchFiles('root');
-    }
+    const initializeAndCheck = async () => {
+      await initializeGapi();
+      // Check if user was previously connected
+      const storedToken = localStorage.getItem('google_drive_token');
+      const storedEmail = localStorage.getItem('google_drive_email');
+      if (storedToken && storedEmail) {
+        // Verify token is still valid by making a test request
+        try {
+          const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+            headers: { 'Authorization': `Bearer ${storedToken}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAccessToken(storedToken);
+            setUserEmail(data.user?.emailAddress || storedEmail);
+            setIsConnected(true);
+            await fetchFiles('root');
+          } else {
+            // Token expired, clear storage
+            localStorage.removeItem('google_drive_token');
+            localStorage.removeItem('google_drive_email');
+          }
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          localStorage.removeItem('google_drive_token');
+          localStorage.removeItem('google_drive_email');
+        }
+      }
+    };
+    
+    initializeAndCheck();
   }, []);
 
   const initializeGapi = async () => {
     try {
-      // Load Google API script
+      console.log('Initializing Google API...');
+      
+      // Check if Google API keys are configured
+      if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
+        toast.error('Google API credentials not configured. Please contact administrator.');
+        return;
+      }
+      
+      // Load Google API script dynamically
       if (!window.gapi) {
-        await new Promise((resolve) => {
+        console.log('Loading Google API script...');
+        await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://apis.google.com/js/api.js';
-          script.onload = resolve;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Failed to load Google API script'));
           document.head.appendChild(script);
         });
       }
 
-      await new Promise<void>((resolve) => window.gapi.load('api:auth2', () => resolve()));
+      // Initialize gapi.auth2 and gapi.client
+      await new Promise<void>((resolve) => {
+        window.gapi.load('auth2:client', () => resolve());
+      });
       
-      await window.gapi.api.init({
+      console.log('Initializing Google API client...');
+      await window.gapi.client.init({
         apiKey: API_KEY,
         clientId: CLIENT_ID,
         discoveryDocs: [DISCOVERY_DOC],
         scope: SCOPES
       });
+      
+      console.log('Google API initialized successfully');
     } catch (error) {
       console.error('Error initializing Google API:', error);
-      toast.error('Failed to initialize Google Drive integration');
+      toast.error('Failed to initialize Google Drive integration. Please check your internet connection.');
     }
   };
 
   const connectGoogleDrive = async () => {
+    if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
+      toast.error('Google API credentials not configured. Please contact administrator.');
+      return;
+    }
+
     setIsConnecting(true);
+    console.log('Starting Google Drive connection...');
+    
     try {
+      // Ensure gapi is initialized
+      if (!window.gapi?.auth2) {
+        throw new Error('Google API not properly initialized');
+      }
+
       const authInstance = window.gapi.auth2.getAuthInstance();
-      const user = await authInstance.signIn();
-      const token = user.getAuthResponse().access_token;
+      if (!authInstance) {
+        throw new Error('Google Auth instance not available');
+      }
+
+      console.log('Requesting Google sign-in...');
+      const user = await authInstance.signIn({
+        scope: SCOPES
+      });
+      
+      const authResponse = user.getAuthResponse();
+      if (!authResponse?.access_token) {
+        throw new Error('No access token received');
+      }
+
+      const token = authResponse.access_token;
       const profile = user.getBasicProfile();
+      const email = profile.getEmail();
+      
+      console.log('Google Drive connected successfully for:', email);
       
       setAccessToken(token);
-      setUserEmail(profile.getEmail());
+      setUserEmail(email);
       setIsConnected(true);
       
       // Store in localStorage for persistence
       localStorage.setItem('google_drive_token', token);
-      localStorage.setItem('google_drive_email', profile.getEmail());
+      localStorage.setItem('google_drive_email', email);
       
+      // Fetch root files
       await fetchFiles('root');
-      toast.success('Successfully connected to Google Drive!');
+      toast.success(`Successfully connected to Google Drive as ${email}!`);
     } catch (error) {
       console.error('Error connecting to Google Drive:', error);
-      toast.error('Failed to connect to Google Drive');
+      
+      // Handle specific error cases
+      if (error.error === 'popup_closed_by_user') {
+        toast.error('Sign-in was cancelled. Please try again.');
+      } else if (error.error === 'access_denied') {
+        toast.error('Access denied. Please grant permission to access your Google Drive.');
+      } else {
+        toast.error(`Failed to connect to Google Drive: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const disconnectGoogleDrive = () => {
-    const authInstance = window.gapi.auth2.getAuthInstance();
-    authInstance.signOut();
+  const disconnectGoogleDrive = async () => {
+    try {
+      const authInstance = window.gapi?.auth2?.getAuthInstance();
+      if (authInstance) {
+        await authInstance.signOut();
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
     
     setIsConnected(false);
     setAccessToken(null);
@@ -146,32 +226,57 @@ const CloudStorage = () => {
   };
 
   const fetchFiles = async (folderId: string) => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.error('No access token available');
+      return;
+    }
     
     setLoading(true);
+    console.log(`Fetching files for folder: ${folderId}`);
+    
     try {
+      const query = folderId === 'root' ? 
+        `parents in 'root' and trashed=false` : 
+        `'${folderId}' in parents and trashed=false`;
+        
+      const params = new URLSearchParams({
+        q: query,
+        fields: 'files(id,name,mimeType,modifiedTime,size,iconLink,webViewLink,parents),nextPageToken',
+        orderBy: 'folder,name',
+        pageSize: '100'
+      });
+      
       const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files?` + 
-        `q='${folderId}' in parents and trashed=false&` +
-        `fields=files(id,name,mimeType,modifiedTime,size,iconLink,webViewLink,parents)&` +
-        `orderBy=folder,name&` +
-        `pageSize=50`,
+        `https://www.googleapis.com/drive/v3/files?${params}`,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
           }
         }
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch files');
+        if (response.status === 401) {
+          // Token expired
+          toast.error('Session expired. Please reconnect to Google Drive.');
+          disconnectGoogleDrive();
+          return;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log(`Fetched ${data.files?.length || 0} files`);
       setFiles(data.files || []);
     } catch (error) {
       console.error('Error fetching files:', error);
-      toast.error('Failed to fetch files from Google Drive');
+      toast.error(`Failed to fetch files: ${error.message}`);
+      
+      // If it's an auth error, disconnect
+      if (error.message.includes('401') || error.message.includes('unauthorized')) {
+        disconnectGoogleDrive();
+      }
     } finally {
       setLoading(false);
     }
