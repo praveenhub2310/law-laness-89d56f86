@@ -46,10 +46,11 @@ interface UserProfile {
   picture?: string;
 }
 
-// Global Google API declaration
+// Global Google API declarations
 declare global {
   interface Window {
     gapi: any;
+    google: any;
   }
 }
 
@@ -77,26 +78,35 @@ const CloudStorage = () => {
     try {
       console.log('🔧 Starting Google API initialization...');
       
-      // Load Google API script if not already loaded
+      // Load Google Identity Services script
+      if (!window.google) {
+        console.log('📥 Loading Google Identity Services script...');
+        await loadGoogleIdentityScript();
+        console.log('✅ Google Identity Services script loaded');
+      } else {
+        console.log('📋 Google Identity Services already available');
+      }
+      
+      // Load Google API script for Drive API
       if (!window.gapi) {
         console.log('📥 Loading Google API script...');
-        await loadGoogleScript();
+        await loadGoogleAPIScript();
         console.log('✅ Google API script loaded');
       } else {
         console.log('📋 Google API script already available');
       }
       
-      // Load gapi modules
-      console.log('🔌 Loading gapi modules (auth2:client)...');
+      // Load gapi client
+      console.log('🔌 Loading gapi client...');
       await new Promise<void>((resolve, reject) => {
-        window.gapi.load('auth2:client', {
+        window.gapi.load('client', {
           callback: () => {
-            console.log('✅ Gapi modules loaded successfully');
+            console.log('✅ Gapi client loaded successfully');
             resolve();
           },
           onerror: () => {
-            console.error('❌ Failed to load gapi modules');
-            reject(new Error('Failed to load gapi modules'));
+            console.error('❌ Failed to load gapi client');
+            reject(new Error('Failed to load gapi client'));
           }
         });
       });
@@ -105,9 +115,7 @@ const CloudStorage = () => {
       console.log('⚙️ Initializing Google client...');
       await window.gapi.client.init({
         apiKey: GOOGLE_API_KEY,
-        clientId: GOOGLE_CLIENT_ID,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-        scope: SCOPES
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
       });
       
       console.log('✅ Google client initialized successfully');
@@ -129,7 +137,36 @@ const CloudStorage = () => {
     }
   };
 
-  const loadGoogleScript = (): Promise<void> => {
+  const loadGoogleIdentityScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      
+      script.onload = () => {
+        console.log('📦 Google Identity Services script loaded');
+        setTimeout(() => {
+          if (window.google) {
+            console.log('✅ window.google is now available');
+            resolve();
+          } else {
+            console.error('❌ window.google still not available');
+            reject(new Error('Google Identity Services not available'));
+          }
+        }, 100);
+      };
+      
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Google Identity Services:', error);
+        reject(new Error('Failed to load Google Identity Services'));
+      };
+      
+      document.head.appendChild(script);
+    });
+  };
+
+  const loadGoogleAPIScript = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
@@ -138,7 +175,6 @@ const CloudStorage = () => {
       
       script.onload = () => {
         console.log('📦 Google API script element loaded');
-        // Give it a moment to initialize
         setTimeout(() => {
           if (window.gapi) {
             console.log('✅ window.gapi is now available');
@@ -164,6 +200,7 @@ const CloudStorage = () => {
     console.log('🔗 Connect button clicked');
     console.log('🔍 isGapiLoaded:', isGapiLoaded);
     console.log('🔍 window.gapi exists:', !!window.gapi);
+    console.log('🔍 window.google exists:', !!window.google);
     
     if (!isGapiLoaded) {
       console.log('⚠️ Google API not ready yet');
@@ -171,9 +208,9 @@ const CloudStorage = () => {
       return;
     }
 
-    if (!window.gapi) {
-      console.error('❌ window.gapi is not available');
-      toast.error('Google API not loaded. Please refresh the page.');
+    if (!window.gapi || !window.google) {
+      console.error('❌ Required Google APIs not available');
+      toast.error('Google APIs not loaded. Please refresh the page.');
       return;
     }
 
@@ -181,75 +218,89 @@ const CloudStorage = () => {
     setIsConnecting(true);
     
     try {
-      console.log('🔐 Getting auth instance...');
-      const authInstance = window.gapi.auth2.getAuthInstance();
+      console.log('🔐 Initializing Google Identity Services OAuth...');
       
-      if (!authInstance) {
-        console.error('❌ Auth instance not available');
-        throw new Error('Google Auth instance not available');
-      }
-      
-      console.log('✅ Auth instance obtained');
-      console.log('👤 Requesting sign in...');
-      
-      const user = await authInstance.signIn();
-      console.log('📝 Sign in completed, checking user status...');
-      console.log('🔍 User object:', user);
-      console.log('🔍 User.isSignedIn():', user.isSignedIn());
-      
-      if (user.isSignedIn()) {
-        console.log('✅ User is signed in, getting profile...');
-        
-        const profile = user.getBasicProfile();
-        console.log('📋 Profile obtained:', {
-          email: profile.getEmail(),
-          name: profile.getName(),
-          hasImage: !!profile.getImageUrl()
-        });
-        
-        const userProfile: UserProfile = {
-          email: profile.getEmail(),
-          name: profile.getName(),
-          picture: profile.getImageUrl()
-        };
-        
-        console.log('💾 Setting user profile and connection state...');
-        setUserProfile(userProfile);
-        setIsConnected(true);
-        
-        console.log('🗃️ Storing credentials in localStorage...');
-        localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
-        
-        console.log('📁 Fetching initial files...');
-        await fetchDriveFiles('root');
-        
-        console.log('🎉 Connection process completed successfully!');
-        toast.success(`Connected as ${userProfile.name}!`);
-      } else {
-        console.error('❌ User is not signed in after sign-in attempt');
-        throw new Error('User is not signed in after sign-in attempt');
-      }
-    } catch (error: any) {
-      console.error('💥 Connection failed with error:', error);
-      console.error('📊 Error details:', {
-        name: error?.name,
-        message: error?.message,
-        error: error?.error,
-        details: error?.details
+      // Use the modern Google Identity Services
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: SCOPES,
+        callback: async (tokenResponse: any) => {
+          console.log('🎉 Token response received:', tokenResponse);
+          
+          if (tokenResponse.access_token) {
+            console.log('✅ Access token obtained successfully');
+            
+            // Set the access token for gapi client
+            window.gapi.client.setToken({
+              access_token: tokenResponse.access_token
+            });
+            
+            try {
+              console.log('👤 Fetching user profile...');
+              
+              // Get user info using the People API
+              const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: {
+                  'Authorization': `Bearer ${tokenResponse.access_token}`
+                }
+              });
+              
+              if (!userResponse.ok) {
+                throw new Error(`Failed to fetch user info: ${userResponse.status}`);
+              }
+              
+              const userData = await userResponse.json();
+              console.log('📋 User data received:', {
+                email: userData.email,
+                name: userData.name,
+                hasImage: !!userData.picture
+              });
+              
+              const userProfile: UserProfile = {
+                email: userData.email,
+                name: userData.name,
+                picture: userData.picture
+              };
+              
+              console.log('💾 Setting user profile and connection state...');
+              setUserProfile(userProfile);
+              setIsConnected(true);
+              
+              console.log('🗃️ Storing credentials in localStorage...');
+              localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
+              localStorage.setItem('google_drive_token', tokenResponse.access_token);
+              
+              console.log('📁 Fetching initial files...');
+              await fetchDriveFiles('root');
+              
+              console.log('🎉 Connection process completed successfully!');
+              toast.success(`Connected as ${userProfile.name}!`);
+              
+            } catch (error: any) {
+              console.error('💥 Error during profile fetch:', error);
+              toast.error(`Failed to get user profile: ${error.message}`);
+            } finally {
+              setIsConnecting(false);
+            }
+          } else {
+            console.error('❌ No access token in response');
+            toast.error('Failed to get access token');
+            setIsConnecting(false);
+          }
+        },
+        error_callback: (error: any) => {
+          console.error('💥 OAuth error:', error);
+          toast.error(`OAuth error: ${error.message || 'Unknown error'}`);
+          setIsConnecting(false);
+        }
       });
       
-      if (error?.error === 'popup_closed_by_user') {
-        console.log('👆 User closed the popup');
-        toast.error('Sign-in was cancelled');
-      } else if (error?.error === 'access_denied') {
-        console.log('🚫 User denied access');
-        toast.error('Access denied. Please grant permission to access Google Drive.');
-      } else {
-        console.log('❓ Unknown error occurred');
-        toast.error(`Failed to connect: ${error?.message || 'Unknown error'}`);
-      }
-    } finally {
-      console.log('🔚 Setting isConnecting to false');
+      console.log('🚀 Requesting access token...');
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+      
+    } catch (error: any) {
+      console.error('💥 Connection setup failed:', error);
+      toast.error(`Failed to setup connection: ${error?.message || 'Unknown error'}`);
       setIsConnecting(false);
     }
   };
@@ -258,12 +309,14 @@ const CloudStorage = () => {
     console.log('🔌 Disconnecting from Google Drive...');
     
     try {
-      if (isGapiLoaded) {
-        const authInstance = window.gapi.auth2.getAuthInstance();
-        await authInstance.signOut();
+      // Revoke the token if available
+      const token = localStorage.getItem('google_drive_token');
+      if (token && window.google?.accounts?.oauth2) {
+        console.log('🔐 Revoking access token...');
+        window.google.accounts.oauth2.revoke(token);
       }
     } catch (error) {
-      console.error('Error during sign out:', error);
+      console.error('Error during token revocation:', error);
     }
     
     setIsConnected(false);
@@ -273,6 +326,8 @@ const CloudStorage = () => {
     setBreadcrumbs([{ id: 'root', name: 'My Drive' }]);
     
     localStorage.removeItem('google_drive_profile');
+    localStorage.removeItem('google_drive_token');
+    console.log('✅ Disconnection completed');
     toast.success('Disconnected from Google Drive');
   };
 
