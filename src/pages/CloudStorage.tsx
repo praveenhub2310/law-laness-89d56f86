@@ -81,12 +81,24 @@ const CloudStorage = () => {
       if (!window.gapi) {
         console.log('📥 Loading Google API script...');
         await loadGoogleScript();
+        console.log('✅ Google API script loaded');
+      } else {
+        console.log('📋 Google API script already available');
       }
       
       // Load gapi modules
-      console.log('🔌 Loading gapi modules...');
-      await new Promise((resolve) => {
-        window.gapi.load('auth2:client', resolve);
+      console.log('🔌 Loading gapi modules (auth2:client)...');
+      await new Promise<void>((resolve, reject) => {
+        window.gapi.load('auth2:client', {
+          callback: () => {
+            console.log('✅ Gapi modules loaded successfully');
+            resolve();
+          },
+          onerror: () => {
+            console.error('❌ Failed to load gapi modules');
+            reject(new Error('Failed to load gapi modules'));
+          }
+        });
       });
       
       // Initialize the client
@@ -98,13 +110,22 @@ const CloudStorage = () => {
         scope: SCOPES
       });
       
+      console.log('✅ Google client initialized successfully');
       setIsGapiLoaded(true);
-      console.log('✅ Google API initialized successfully!');
+      console.log('🎉 Google API initialization completed!');
       toast.success('Google Drive integration ready!');
       
     } catch (error) {
       console.error('❌ Google API initialization failed:', error);
-      toast.error('Failed to initialize Google Drive integration');
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
+      
+      // Set to true anyway so user can try to connect
+      setIsGapiLoaded(true);
+      toast.error('Google API initialization had issues, but you can try connecting');
     }
   };
 
@@ -112,15 +133,47 @@ const CloudStorage = () => {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Google API script'));
+      script.async = true;
+      script.defer = true;
+      
+      script.onload = () => {
+        console.log('📦 Google API script element loaded');
+        // Give it a moment to initialize
+        setTimeout(() => {
+          if (window.gapi) {
+            console.log('✅ window.gapi is now available');
+            resolve();
+          } else {
+            console.error('❌ window.gapi still not available after script load');
+            reject(new Error('Google API not available after script load'));
+          }
+        }, 100);
+      };
+      
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Google API script:', error);
+        reject(new Error('Failed to load Google API script'));
+      };
+      
+      console.log('📥 Appending Google API script to document head...');
       document.head.appendChild(script);
     });
   };
 
   const handleConnect = async () => {
+    console.log('🔗 Connect button clicked');
+    console.log('🔍 isGapiLoaded:', isGapiLoaded);
+    console.log('🔍 window.gapi exists:', !!window.gapi);
+    
     if (!isGapiLoaded) {
+      console.log('⚠️ Google API not ready yet');
       toast.error('Google API not ready. Please wait and try again.');
+      return;
+    }
+
+    if (!window.gapi) {
+      console.error('❌ window.gapi is not available');
+      toast.error('Google API not loaded. Please refresh the page.');
       return;
     }
 
@@ -128,7 +181,14 @@ const CloudStorage = () => {
     setIsConnecting(true);
     
     try {
+      console.log('🔐 Getting auth instance...');
       const authInstance = window.gapi.auth2.getAuthInstance();
+      
+      if (!authInstance) {
+        throw new Error('Google Auth instance not available');
+      }
+      
+      console.log('👤 Requesting sign in...');
       const user = await authInstance.signIn();
       
       if (user.isSignedIn()) {
@@ -152,10 +212,19 @@ const CloudStorage = () => {
         await fetchDriveFiles('root');
         
         toast.success(`Connected as ${userProfile.name}!`);
+      } else {
+        throw new Error('User is not signed in after sign-in attempt');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Connection failed:', error);
-      toast.error('Failed to connect to Google Drive');
+      
+      if (error?.error === 'popup_closed_by_user') {
+        toast.error('Sign-in was cancelled');
+      } else if (error?.error === 'access_denied') {
+        toast.error('Access denied. Please grant permission to access Google Drive.');
+      } else {
+        toast.error(`Failed to connect: ${error?.message || 'Unknown error'}`);
+      }
     } finally {
       setIsConnecting(false);
     }
