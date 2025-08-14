@@ -654,28 +654,14 @@ const CloudStorage = () => {
           <CardTitle>Recent Files</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <h4 className="font-medium">Contract_Amendment_v2.docx</h4>
-                <p className="text-sm text-muted-foreground">Modified 2 hours ago • Google Drive</p>
-              </div>
-              <span className="text-sm text-muted-foreground">2.4 MB</span>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <h4 className="font-medium">Evidence_Photos.zip</h4>
-                <p className="text-sm text-muted-foreground">Modified yesterday • OneDrive</p>
-              </div>
-              <span className="text-sm text-muted-foreground">15.2 MB</span>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <h4 className="font-medium">Legal_Brief_Draft.pdf</h4>
-                <p className="text-sm text-muted-foreground">Modified 3 days ago • Google Drive</p>
-              </div>
-              <span className="text-sm text-muted-foreground">1.8 MB</span>
-            </div>
+          <div className="text-center py-8">
+            <File className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground mb-2">
+              No recent files to display
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Files you access will appear here for quick access
+            </p>
           </div>
         </CardContent>
       </Card>
