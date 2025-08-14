@@ -74,7 +74,59 @@ const CloudStorage = () => {
     // Initialize Google API
     initializeGoogleAPI();
     loadRecentFiles();
+    checkExistingConnection();
   }, []);
+
+  const checkExistingConnection = async () => {
+    // Wait for API initialization to complete
+    let attempts = 0;
+    while (!isGapiLoaded && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+    
+    const savedProfile = localStorage.getItem('google_drive_profile');
+    const savedToken = localStorage.getItem('google_drive_token');
+    
+    if (savedProfile && savedToken && isGapiLoaded) {
+      try {
+        console.log('🔍 Checking existing connection...');
+        const profile = JSON.parse(savedProfile);
+        
+        // Test if the token is still valid by making a simple API call
+        const testResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${savedToken}`
+          }
+        });
+        
+        if (testResponse.ok) {
+          console.log('✅ Existing token is valid, restoring connection...');
+          setUserProfile(profile);
+          setIsConnected(true);
+          
+          // Set the token for gapi client
+          if (window.gapi?.client) {
+            window.gapi.client.setToken({
+              access_token: savedToken
+            });
+          }
+          
+          // Fetch files for the restored connection
+          await fetchDriveFiles('root');
+          toast.success(`Welcome back, ${profile.name}!`);
+        } else {
+          console.log('❌ Existing token is invalid, clearing stored data...');
+          localStorage.removeItem('google_drive_profile');
+          localStorage.removeItem('google_drive_token');
+        }
+      } catch (error) {
+        console.error('Error checking existing connection:', error);
+        localStorage.removeItem('google_drive_profile');
+        localStorage.removeItem('google_drive_token');
+      }
+    }
+  };
 
   const loadRecentFiles = () => {
     const saved = localStorage.getItem('recentFiles');
@@ -340,6 +392,11 @@ const CloudStorage = () => {
         console.log('🔐 Revoking access token...');
         window.google.accounts.oauth2.revoke(token);
       }
+      
+      // Clear gapi client token
+      if (window.gapi?.client) {
+        window.gapi.client.setToken(null);
+      }
     } catch (error) {
       console.error('Error during token revocation:', error);
     }
@@ -349,9 +406,11 @@ const CloudStorage = () => {
     setFiles([]);
     setCurrentFolder('root');
     setBreadcrumbs([{ id: 'root', name: 'My Drive' }]);
+    setRecentFiles([]);
     
     localStorage.removeItem('google_drive_profile');
     localStorage.removeItem('google_drive_token');
+    localStorage.removeItem('recentFiles');
     console.log('✅ Disconnection completed');
     toast.success('Disconnected from Google Drive');
   };
