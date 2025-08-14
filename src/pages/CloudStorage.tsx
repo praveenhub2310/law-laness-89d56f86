@@ -185,47 +185,71 @@ const CloudStorage = () => {
       const authInstance = window.gapi.auth2.getAuthInstance();
       
       if (!authInstance) {
+        console.error('❌ Auth instance not available');
         throw new Error('Google Auth instance not available');
       }
       
+      console.log('✅ Auth instance obtained');
       console.log('👤 Requesting sign in...');
+      
       const user = await authInstance.signIn();
+      console.log('📝 Sign in completed, checking user status...');
+      console.log('🔍 User object:', user);
+      console.log('🔍 User.isSignedIn():', user.isSignedIn());
       
       if (user.isSignedIn()) {
+        console.log('✅ User is signed in, getting profile...');
+        
         const profile = user.getBasicProfile();
+        console.log('📋 Profile obtained:', {
+          email: profile.getEmail(),
+          name: profile.getName(),
+          hasImage: !!profile.getImageUrl()
+        });
+        
         const userProfile: UserProfile = {
           email: profile.getEmail(),
           name: profile.getName(),
           picture: profile.getImageUrl()
         };
         
-        console.log('✅ Successfully connected to Google Drive');
-        console.log('👤 User:', userProfile.email);
-        
+        console.log('💾 Setting user profile and connection state...');
         setUserProfile(userProfile);
         setIsConnected(true);
         
-        // Store credentials
+        console.log('🗃️ Storing credentials in localStorage...');
         localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
         
-        // Fetch initial files
+        console.log('📁 Fetching initial files...');
         await fetchDriveFiles('root');
         
+        console.log('🎉 Connection process completed successfully!');
         toast.success(`Connected as ${userProfile.name}!`);
       } else {
+        console.error('❌ User is not signed in after sign-in attempt');
         throw new Error('User is not signed in after sign-in attempt');
       }
     } catch (error: any) {
-      console.error('❌ Connection failed:', error);
+      console.error('💥 Connection failed with error:', error);
+      console.error('📊 Error details:', {
+        name: error?.name,
+        message: error?.message,
+        error: error?.error,
+        details: error?.details
+      });
       
       if (error?.error === 'popup_closed_by_user') {
+        console.log('👆 User closed the popup');
         toast.error('Sign-in was cancelled');
       } else if (error?.error === 'access_denied') {
+        console.log('🚫 User denied access');
         toast.error('Access denied. Please grant permission to access Google Drive.');
       } else {
+        console.log('❓ Unknown error occurred');
         toast.error(`Failed to connect: ${error?.message || 'Unknown error'}`);
       }
     } finally {
+      console.log('🔚 Setting isConnecting to false');
       setIsConnecting(false);
     }
   };
@@ -253,27 +277,66 @@ const CloudStorage = () => {
   };
 
   const fetchDriveFiles = async (folderId: string = 'root') => {
-    if (!isGapiLoaded || !isConnected) return;
+    console.log(`📁 fetchDriveFiles called with folder: ${folderId}`);
+    console.log('🔍 isGapiLoaded:', isGapiLoaded);
+    console.log('🔍 isConnected:', isConnected);
     
-    console.log(`📁 Fetching files from folder: ${folderId}`);
+    if (!isGapiLoaded || !isConnected) {
+      console.log('⚠️ Cannot fetch files - API not loaded or not connected');
+      return;
+    }
+    
+    console.log('🔄 Setting loading to true...');
     setLoading(true);
     
     try {
+      console.log('📋 Preparing Google Drive API request...');
+      const query = folderId === 'root' ? 'trashed=false' : `'${folderId}' in parents and trashed=false`;
+      console.log('🔍 Query:', query);
+      
+      console.log('🌐 Making API call...');
       const response = await window.gapi.client.drive.files.list({
-        q: folderId === 'root' ? undefined : `'${folderId}' in parents and trashed=false`,
+        q: query,
         pageSize: 50,
         fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink,webContentLink,parents)',
         orderBy: 'folder,name'
       });
       
-      const files = response.result.files || [];
-      console.log(`📋 Loaded ${files.length} files`);
-      setFiles(files);
+      console.log('📨 API response received:', response);
+      console.log('📊 Response status:', response.status);
       
-    } catch (error) {
-      console.error('❌ Error fetching files:', error);
-      toast.error('Failed to fetch files');
+      if (response.status !== 200) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const files = response.result.files || [];
+      console.log(`📋 Loaded ${files.length} files successfully`);
+      console.log('📄 Sample files:', files.slice(0, 3));
+      
+      setFiles(files);
+      console.log('✅ Files state updated');
+      
+    } catch (error: any) {
+      console.error('💥 Error fetching files:', error);
+      console.error('📊 Error details:', {
+        name: error?.name,
+        message: error?.message,
+        status: error?.status,
+        result: error?.result
+      });
+      
+      // If there's an auth error, the connection might have failed
+      if (error?.status === 401 || error?.message?.includes('unauthorized')) {
+        console.log('🔐 Authentication error detected, resetting connection');
+        setIsConnected(false);
+        setUserProfile(null);
+        localStorage.removeItem('google_drive_profile');
+        toast.error('Authentication expired. Please reconnect.');
+      } else {
+        toast.error('Failed to fetch files');
+      }
     } finally {
+      console.log('🔄 Setting loading to false...');
       setLoading(false);
     }
   };
