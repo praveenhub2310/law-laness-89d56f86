@@ -64,33 +64,47 @@ const CloudStorage = () => {
   const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
   useEffect(() => {
+    console.log('CloudStorage component mounted');
+    console.log('CLIENT_ID:', CLIENT_ID.includes('YOUR_GOOGLE') ? 'NOT_CONFIGURED' : 'CONFIGURED');
+    console.log('API_KEY:', API_KEY.includes('YOUR_GOOGLE') ? 'NOT_CONFIGURED' : 'CONFIGURED');
+    
     const initializeAndCheck = async () => {
-      await initializeGapi();
-      // Check if user was previously connected
-      const storedToken = localStorage.getItem('google_drive_token');
-      const storedEmail = localStorage.getItem('google_drive_email');
-      if (storedToken && storedEmail) {
-        // Verify token is still valid by making a test request
-        try {
-          const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
-            headers: { 'Authorization': `Bearer ${storedToken}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setAccessToken(storedToken);
-            setUserEmail(data.user?.emailAddress || storedEmail);
-            setIsConnected(true);
-            await fetchFiles('root');
-          } else {
-            // Token expired, clear storage
+      try {
+        await initializeGapi();
+        
+        // Check if user was previously connected
+        const storedToken = localStorage.getItem('google_drive_token');
+        const storedEmail = localStorage.getItem('google_drive_email');
+        console.log('Stored token exists:', !!storedToken);
+        console.log('Stored email:', storedEmail);
+        
+        if (storedToken && storedEmail) {
+          // Verify token is still valid by making a test request
+          try {
+            const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+              headers: { 'Authorization': `Bearer ${storedToken}` }
+            });
+            if (response.ok) {
+              const data = await response.json();
+              console.log('Token validation successful, user:', data.user?.emailAddress);
+              setAccessToken(storedToken);
+              setUserEmail(data.user?.emailAddress || storedEmail);
+              setIsConnected(true);
+              await fetchFiles('root');
+            } else {
+              console.log('Token expired, status:', response.status);
+              // Token expired, clear storage
+              localStorage.removeItem('google_drive_token');
+              localStorage.removeItem('google_drive_email');
+            }
+          } catch (error) {
+            console.error('Token validation failed:', error);
             localStorage.removeItem('google_drive_token');
             localStorage.removeItem('google_drive_email');
           }
-        } catch (error) {
-          console.error('Token validation failed:', error);
-          localStorage.removeItem('google_drive_token');
-          localStorage.removeItem('google_drive_email');
         }
+      } catch (error) {
+        console.error('Initialization failed:', error);
       }
     };
     
@@ -99,13 +113,16 @@ const CloudStorage = () => {
 
   const initializeGapi = async () => {
     try {
-      console.log('Initializing Google API...');
+      console.log('=== Starting Google API initialization ===');
       
       // Check if Google API keys are configured
       if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
+        console.error('Google API credentials not configured');
         toast.error('Google API credentials not configured. Please contact administrator.');
-        return;
+        return false;
       }
+      
+      console.log('API credentials are configured');
       
       // Load Google API script dynamically
       if (!window.gapi) {
@@ -113,15 +130,27 @@ const CloudStorage = () => {
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://apis.google.com/js/api.js';
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load Google API script'));
+          script.onload = () => {
+            console.log('Google API script loaded successfully');
+            resolve();
+          };
+          script.onerror = () => {
+            console.error('Failed to load Google API script');
+            reject(new Error('Failed to load Google API script'));
+          };
           document.head.appendChild(script);
         });
+      } else {
+        console.log('Google API script already loaded');
       }
 
       // Initialize gapi.auth2 and gapi.client
+      console.log('Loading gapi modules...');
       await new Promise<void>((resolve) => {
-        window.gapi.load('auth2:client', () => resolve());
+        window.gapi.load('auth2:client', () => {
+          console.log('gapi modules loaded successfully');
+          resolve();
+        });
       });
       
       console.log('Initializing Google API client...');
@@ -132,41 +161,56 @@ const CloudStorage = () => {
         scope: SCOPES
       });
       
-      console.log('Google API initialized successfully');
+      console.log('=== Google API initialization completed successfully ===');
+      return true;
     } catch (error) {
-      console.error('Error initializing Google API:', error);
+      console.error('=== Google API initialization failed ===', error);
       toast.error('Failed to initialize Google Drive integration. Please check your internet connection.');
+      return false;
     }
   };
 
   const connectGoogleDrive = async () => {
+    console.log('=== Connect Google Drive button clicked ===');
+    
     if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
+      console.error('Google API credentials not configured');
       toast.error('Google API credentials not configured. Please contact administrator.');
       return;
     }
 
     setIsConnecting(true);
-    console.log('Starting Google Drive connection...');
+    console.log('Starting Google Drive connection process...');
     
     try {
       // Ensure gapi is initialized
-      if (!window.gapi?.auth2) {
-        throw new Error('Google API not properly initialized');
+      console.log('Checking if Google API is available...');
+      if (!window.gapi) {
+        console.error('Google API not loaded');
+        throw new Error('Google API not loaded. Please refresh the page and try again.');
+      }
+
+      if (!window.gapi.auth2) {
+        console.error('Google Auth2 not available');
+        throw new Error('Google Auth2 not available. Please refresh the page and try again.');
       }
 
       const authInstance = window.gapi.auth2.getAuthInstance();
       if (!authInstance) {
-        throw new Error('Google Auth instance not available');
+        console.error('Google Auth instance not available');
+        throw new Error('Google Auth instance not available. Please refresh the page and try again.');
       }
 
-      console.log('Requesting Google sign-in...');
+      console.log('Google API is ready, requesting sign-in...');
       const user = await authInstance.signIn({
         scope: SCOPES
       });
       
+      console.log('Google sign-in successful');
       const authResponse = user.getAuthResponse();
       if (!authResponse?.access_token) {
-        throw new Error('No access token received');
+        console.error('No access token received');
+        throw new Error('No access token received from Google');
       }
 
       const token = authResponse.access_token;
@@ -174,6 +218,7 @@ const CloudStorage = () => {
       const email = profile.getEmail();
       
       console.log('Google Drive connected successfully for:', email);
+      console.log('Access token received (first 20 chars):', token.substring(0, 20) + '...');
       
       setAccessToken(token);
       setUserEmail(email);
@@ -184,21 +229,29 @@ const CloudStorage = () => {
       localStorage.setItem('google_drive_email', email);
       
       // Fetch root files
+      console.log('Fetching root files...');
       await fetchFiles('root');
       toast.success(`Successfully connected to Google Drive as ${email}!`);
     } catch (error) {
-      console.error('Error connecting to Google Drive:', error);
+      console.error('=== Google Drive connection failed ===', error);
       
       // Handle specific error cases
       if (error.error === 'popup_closed_by_user') {
+        console.log('User closed the popup');
         toast.error('Sign-in was cancelled. Please try again.');
       } else if (error.error === 'access_denied') {
+        console.log('User denied access');
         toast.error('Access denied. Please grant permission to access your Google Drive.');
+      } else if (error.error === 'popup_blocked_by_browser') {
+        console.log('Popup blocked by browser');
+        toast.error('Popup blocked by browser. Please allow popups for this site and try again.');
       } else {
+        console.error('Unknown error:', error);
         toast.error(`Failed to connect to Google Drive: ${error.message || 'Unknown error'}`);
       }
     } finally {
       setIsConnecting(false);
+      console.log('=== Connect Google Drive process completed ===');
     }
   };
 
@@ -382,7 +435,10 @@ const CloudStorage = () => {
                   Connect your Google Drive account to access documents directly.
                 </p>
                 <Button 
-                  onClick={connectGoogleDrive}
+                  onClick={() => {
+                    console.log('Connect Google Drive button clicked');
+                    connectGoogleDrive();
+                  }}
                   disabled={isConnecting}
                   className="w-full"
                 >
