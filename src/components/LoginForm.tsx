@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Scale, Building2, User, Loader2 } from 'lucide-react';
 
 interface DemoCredential {
   role: string;
@@ -43,11 +44,12 @@ const demoCredentials: DemoCredential[] = [
 ];
 
 const LoginForm = () => {
-  const [email, setEmail] = useState('admin@akralegal.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('lawyer@akralegal.com');
+  const [password, setPassword] = useState('lawyer123');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [demoUsersCreated, setDemoUsersCreated] = useState(false);
+  const [loadingRole, setLoadingRole] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, signInWithGoogle } = useAuth();
@@ -114,18 +116,55 @@ const LoginForm = () => {
     return displayNames[role as keyof typeof displayNames] || role;
   };
 
-  const handleRoleClick = (credential: DemoCredential) => {
-    setSelectedRole(credential.role);
+  const handleRoleClick = async (credential: DemoCredential) => {
+    setLoadingRole(credential.role);
     setEmail(credential.email);
     setPassword(credential.password);
     
-    // Auto-submit after a brief delay to show the selection
-    setTimeout(() => {
-      const form = document.querySelector('form');
-      if (form) {
-        form.requestSubmit();
+    // Wait 3 seconds to show loading state
+    setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const { error } = await signIn(credential.email, credential.password);
+        if (!error) {
+          navigate('/dashboard');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+      } finally {
+        setIsLoading(false);
+        setLoadingRole(null);
       }
-    }, 300);
+    }, 3000);
+  };
+
+  const getDemoRoles = () => {
+    return [
+      {
+        role: 'advocate',
+        name: 'Demo Lawyer',
+        icon: Scale,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+        credential: demoCredentials.find(c => c.role === 'advocate')!
+      },
+      {
+        role: 'company', 
+        name: 'Demo Law Firm',
+        icon: Building2,
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        credential: demoCredentials.find(c => c.role === 'company')!
+      },
+      {
+        role: 'client',
+        name: 'Demo Client', 
+        icon: User,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50',
+        credential: demoCredentials.find(c => c.role === 'client')!
+      }
+    ];
   };
 
   const handleGoogleSignIn = async () => {
@@ -217,37 +256,44 @@ const LoginForm = () => {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-gray-700 text-center">Demo Credentials</h3>
+        <h3 className="text-sm font-medium text-gray-700 text-center">Quick Demo Access</h3>
         {!demoUsersCreated && (
           <p className="text-xs text-gray-500 text-center">Setting up demo users...</p>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {demoCredentials
-            .filter(credential => credential.role !== 'super_admin')
-            .map((credential, index) => (
-            <button
-              key={index}
-              onClick={() => handleRoleClick(credential)}
-              disabled={isLoading}
-              className={`p-4 text-left border-2 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                selectedRole === credential.role 
-                  ? 'border-primary bg-primary/5 shadow-lg scale-105' 
-                  : 'border-border bg-card hover:bg-accent/5'
-              }`}
-            >
-              <div className="flex flex-col space-y-2">
-                <span className="font-semibold text-foreground text-sm">{getRoleDisplayName(credential.role)}</span>
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground font-medium">Email:</span>
-                  <span className="text-xs text-foreground block">{credential.email}</span>
+          {getDemoRoles().map((role) => {
+            const IconComponent = role.icon;
+            const isLoading = loadingRole === role.role;
+            
+            return (
+              <button
+                key={role.role}
+                onClick={() => handleRoleClick(role.credential)}
+                disabled={isLoading || loadingRole !== null}
+                className={`p-4 text-center border-2 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isLoading
+                    ? 'border-primary bg-primary/5 shadow-lg scale-105' 
+                    : 'border-border bg-card hover:bg-accent/5'
+                }`}
+              >
+                <div className="flex flex-col items-center space-y-3">
+                  <div className={`p-3 rounded-lg ${role.bgColor} transition-all duration-200`}>
+                    {isLoading ? (
+                      <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                    ) : (
+                      <IconComponent className={`h-6 w-6 ${role.color}`} />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-semibold text-foreground text-sm block">{role.name}</span>
+                    {isLoading && (
+                      <span className="text-xs text-muted-foreground">Signing you in...</span>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground font-medium">Password:</span>
-                  <span className="text-xs text-foreground block">{credential.password}</span>
-                </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
