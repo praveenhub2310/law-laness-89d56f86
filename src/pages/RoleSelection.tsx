@@ -8,14 +8,6 @@ import AuthLayout from '@/components/AuthLayout';
 
 const roles = [
   {
-    id: 'super_admin',
-    name: 'Super Admin',
-    description: 'Complete system access with advanced tools for case analysis and compliance management.',
-    icon: Crown,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-  },
-  {
     id: 'advocate',
     name: 'Lawyer/Advocate', 
     description: 'Case management, time tracking, document analysis, and client communication tools.',

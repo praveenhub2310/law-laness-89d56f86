@@ -216,27 +216,35 @@ const LoginForm = () => {
         </Button>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <h3 className="text-sm font-medium text-gray-700 text-center">Demo Credentials</h3>
         {!demoUsersCreated && (
           <p className="text-xs text-gray-500 text-center">Setting up demo users...</p>
         )}
-        <div className="space-y-2">
-          {demoCredentials.map((credential, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {demoCredentials
+            .filter(credential => credential.role !== 'super_admin')
+            .map((credential, index) => (
             <button
               key={index}
               onClick={() => handleRoleClick(credential)}
               disabled={isLoading}
-              className={`w-full p-3 text-left border rounded-md transition-all duration-200 hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`p-4 text-left border-2 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                 selectedRole === credential.role 
-                  ? 'bg-blue-50 border-blue-300 shadow-sm' 
-                  : 'bg-white border-gray-200'
+                  ? 'border-primary bg-primary/5 shadow-lg scale-105' 
+                  : 'border-border bg-card hover:bg-accent/5'
               }`}
             >
-              <div className="flex flex-col space-y-1">
-                <span className="font-medium text-gray-900 text-sm">{getRoleDisplayName(credential.role)}</span>
-                <span className="text-xs text-gray-600">{credential.email}</span>
-                <span className="text-xs text-gray-500">{credential.password}</span>
+              <div className="flex flex-col space-y-2">
+                <span className="font-semibold text-foreground text-sm">{getRoleDisplayName(credential.role)}</span>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground font-medium">Email:</span>
+                  <span className="text-xs text-foreground block">{credential.email}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground font-medium">Password:</span>
+                  <span className="text-xs text-foreground block">{credential.password}</span>
+                </div>
               </div>
             </button>
           ))}
