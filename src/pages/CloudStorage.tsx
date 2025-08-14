@@ -57,9 +57,9 @@ const CloudStorage = () => {
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'Root' }]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Google API configuration - These need to be configured in Google Cloud Console
-  const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE';
-  const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || 'YOUR_GOOGLE_API_KEY_HERE';
+  // Google API configuration
+  const CLIENT_ID = '1048512211591-7isrimn9n6q2a6jh1ra23iktoilkbc3e.apps.googleusercontent.com';
+  const API_KEY = 'AIzaSyAdpCkgEOgsSeF_Ofa5nWOcUTZQZE-_bvk';
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
   const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
