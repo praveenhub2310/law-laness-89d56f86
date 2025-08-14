@@ -1,8 +1,27 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Cloud, Folder, File, Download, Eye, ArrowLeft, Loader2 } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Cloud, 
+  Folder, 
+  File, 
+  Download, 
+  Eye, 
+  ArrowLeft, 
+  Loader2, 
+  RefreshCw,
+  User,
+  LogOut,
+  Home,
+  ChevronRight,
+  FileText,
+  Image,
+  Music,
+  Video
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 // Google API TypeScript declarations
@@ -22,7 +41,7 @@ declare global {
         getAuthInstance: () => {
           signIn: (options?: { scope: string }) => Promise<{
             getAuthResponse: () => { access_token: string };
-            getBasicProfile: () => { getEmail: () => string };
+            getBasicProfile: () => { getEmail: () => string; getName: () => string; getImageUrl: () => string };
           }>;
           signOut: () => Promise<void>;
         };
@@ -39,6 +58,8 @@ interface GoogleDriveFile {
   size?: string;
   iconLink?: string;
   webViewLink?: string;
+  webContentLink?: string;
+  thumbnailLink?: string;
   parents?: string[];
 }
 
@@ -47,15 +68,23 @@ interface BreadcrumbItem {
   name: string;
 }
 
+interface UserProfile {
+  email: string;
+  name: string;
+  picture?: string;
+}
+
 const CloudStorage = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('root');
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'Root' }]);
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Drive' }]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
 
   // Google API configuration
   const CLIENT_ID = '1048512211591-7isrimn9n6q2a6jh1ra23iktoilkbc3e.apps.googleusercontent.com';
@@ -65,8 +94,8 @@ const CloudStorage = () => {
 
   useEffect(() => {
     console.log('CloudStorage component mounted');
-    console.log('CLIENT_ID:', CLIENT_ID.includes('YOUR_GOOGLE') ? 'NOT_CONFIGURED' : 'CONFIGURED');
-    console.log('API_KEY:', API_KEY.includes('YOUR_GOOGLE') ? 'NOT_CONFIGURED' : 'CONFIGURED');
+    console.log('CLIENT_ID configured:', !CLIENT_ID.includes('YOUR_GOOGLE'));
+    console.log('API_KEY configured:', !API_KEY.includes('YOUR_GOOGLE'));
     
     const initializeAndCheck = async () => {
       try {
@@ -74,33 +103,31 @@ const CloudStorage = () => {
         
         // Check if user was previously connected
         const storedToken = localStorage.getItem('google_drive_token');
-        const storedEmail = localStorage.getItem('google_drive_email');
-        console.log('Stored token exists:', !!storedToken);
-        console.log('Stored email:', storedEmail);
+        const storedProfile = localStorage.getItem('google_drive_profile');
         
-        if (storedToken && storedEmail) {
-          // Verify token is still valid by making a test request
+        if (storedToken && storedProfile) {
           try {
+            const profile = JSON.parse(storedProfile);
+            // Verify token is still valid
             const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
               headers: { 'Authorization': `Bearer ${storedToken}` }
             });
+            
             if (response.ok) {
-              const data = await response.json();
-              console.log('Token validation successful, user:', data.user?.emailAddress);
+              console.log('Token validation successful, restoring session');
               setAccessToken(storedToken);
-              setUserEmail(data.user?.emailAddress || storedEmail);
+              setUserProfile(profile);
               setIsConnected(true);
               await fetchFiles('root');
             } else {
-              console.log('Token expired, status:', response.status);
-              // Token expired, clear storage
+              console.log('Token expired, clearing storage');
               localStorage.removeItem('google_drive_token');
-              localStorage.removeItem('google_drive_email');
+              localStorage.removeItem('google_drive_profile');
             }
           } catch (error) {
             console.error('Token validation failed:', error);
             localStorage.removeItem('google_drive_token');
-            localStorage.removeItem('google_drive_email');
+            localStorage.removeItem('google_drive_profile');
           }
         }
       } catch (error) {
@@ -115,14 +142,11 @@ const CloudStorage = () => {
     try {
       console.log('=== Starting Google API initialization ===');
       
-      // Check if Google API keys are configured
       if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
         console.error('Google API credentials not configured');
         toast.error('Google API credentials not configured. Please contact administrator.');
         return false;
       }
-      
-      console.log('API credentials are configured');
       
       // Load Google API script dynamically
       if (!window.gapi) {
@@ -140,8 +164,6 @@ const CloudStorage = () => {
           };
           document.head.appendChild(script);
         });
-      } else {
-        console.log('Google API script already loaded');
       }
 
       // Initialize gapi.auth2 and gapi.client
@@ -165,7 +187,7 @@ const CloudStorage = () => {
       return true;
     } catch (error) {
       console.error('=== Google API initialization failed ===', error);
-      toast.error('Failed to initialize Google Drive integration. Please check your internet connection.');
+      toast.error('Failed to initialize Google Drive integration.');
       return false;
     }
   };
@@ -175,83 +197,65 @@ const CloudStorage = () => {
     
     if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
       console.error('Google API credentials not configured');
-      toast.error('Google API credentials not configured. Please contact administrator.');
+      toast.error('Google API credentials not configured.');
       return;
     }
 
     setIsConnecting(true);
-    console.log('Starting Google Drive connection process...');
     
     try {
-      // Ensure gapi is initialized
-      console.log('Checking if Google API is available...');
-      if (!window.gapi) {
-        console.error('Google API not loaded');
+      if (!window.gapi?.auth2) {
         throw new Error('Google API not loaded. Please refresh the page and try again.');
-      }
-
-      if (!window.gapi.auth2) {
-        console.error('Google Auth2 not available');
-        throw new Error('Google Auth2 not available. Please refresh the page and try again.');
       }
 
       const authInstance = window.gapi.auth2.getAuthInstance();
       if (!authInstance) {
-        console.error('Google Auth instance not available');
-        throw new Error('Google Auth instance not available. Please refresh the page and try again.');
+        throw new Error('Google Auth instance not available.');
       }
 
-      console.log('Google API is ready, requesting sign-in...');
-      const user = await authInstance.signIn({
-        scope: SCOPES
-      });
+      console.log('Requesting Google sign-in...');
+      const user = await authInstance.signIn({ scope: SCOPES });
       
-      console.log('Google sign-in successful');
       const authResponse = user.getAuthResponse();
       if (!authResponse?.access_token) {
-        console.error('No access token received');
         throw new Error('No access token received from Google');
       }
 
       const token = authResponse.access_token;
       const profile = user.getBasicProfile();
-      const email = profile.getEmail();
+      const userProfile: UserProfile = {
+        email: profile.getEmail(),
+        name: profile.getName(),
+        picture: profile.getImageUrl()
+      };
       
-      console.log('Google Drive connected successfully for:', email);
-      console.log('Access token received (first 20 chars):', token.substring(0, 20) + '...');
+      console.log('Google Drive connected successfully for:', userProfile.email);
       
       setAccessToken(token);
-      setUserEmail(email);
+      setUserProfile(userProfile);
       setIsConnected(true);
       
       // Store in localStorage for persistence
       localStorage.setItem('google_drive_token', token);
-      localStorage.setItem('google_drive_email', email);
+      localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
       
       // Fetch root files
-      console.log('Fetching root files...');
       await fetchFiles('root');
-      toast.success(`Successfully connected to Google Drive as ${email}!`);
+      toast.success(`Successfully connected to Google Drive as ${userProfile.name}!`);
     } catch (error) {
-      console.error('=== Google Drive connection failed ===', error);
+      console.error('Google Drive connection failed:', error);
       
-      // Handle specific error cases
       if (error.error === 'popup_closed_by_user') {
-        console.log('User closed the popup');
         toast.error('Sign-in was cancelled. Please try again.');
       } else if (error.error === 'access_denied') {
-        console.log('User denied access');
         toast.error('Access denied. Please grant permission to access your Google Drive.');
       } else if (error.error === 'popup_blocked_by_browser') {
-        console.log('Popup blocked by browser');
-        toast.error('Popup blocked by browser. Please allow popups for this site and try again.');
+        toast.error('Popup blocked by browser. Please allow popups and try again.');
       } else {
-        console.error('Unknown error:', error);
         toast.error(`Failed to connect to Google Drive: ${error.message || 'Unknown error'}`);
       }
     } finally {
       setIsConnecting(false);
-      console.log('=== Connect Google Drive process completed ===');
     }
   };
 
@@ -267,37 +271,47 @@ const CloudStorage = () => {
     
     setIsConnected(false);
     setAccessToken(null);
-    setUserEmail('');
+    setUserProfile(null);
     setFiles([]);
     setCurrentFolder('root');
-    setBreadcrumbs([{ id: 'root', name: 'Root' }]);
+    setBreadcrumbs([{ id: 'root', name: 'My Drive' }]);
+    setNextPageToken(null);
     
     localStorage.removeItem('google_drive_token');
-    localStorage.removeItem('google_drive_email');
+    localStorage.removeItem('google_drive_profile');
     
     toast.success('Disconnected from Google Drive');
   };
 
-  const fetchFiles = async (folderId: string) => {
+  const fetchFiles = async (folderId: string, loadMore: boolean = false) => {
     if (!accessToken) {
       console.error('No access token available');
       return;
     }
     
-    setLoading(true);
-    console.log(`Fetching files for folder: ${folderId}`);
+    if (loadMore) {
+      setIsLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    
+    console.log(`Fetching files for folder: ${folderId}, loadMore: ${loadMore}`);
     
     try {
       const query = folderId === 'root' ? 
-        `parents in 'root' and trashed=false` : 
+        `trashed=false` : 
         `'${folderId}' in parents and trashed=false`;
         
       const params = new URLSearchParams({
         q: query,
-        fields: 'files(id,name,mimeType,modifiedTime,size,iconLink,webViewLink,parents),nextPageToken',
+        fields: 'files(id,name,mimeType,modifiedTime,size,iconLink,webViewLink,webContentLink,thumbnailLink,parents),nextPageToken',
         orderBy: 'folder,name',
-        pageSize: '100'
+        pageSize: '50'
       });
+
+      if (loadMore && nextPageToken) {
+        params.append('pageToken', nextPageToken);
+      }
       
       const response = await fetch(
         `https://www.googleapis.com/drive/v3/files?${params}`,
@@ -311,7 +325,6 @@ const CloudStorage = () => {
       
       if (!response.ok) {
         if (response.status === 401) {
-          // Token expired
           toast.error('Session expired. Please reconnect to Google Drive.');
           disconnectGoogleDrive();
           return;
@@ -321,44 +334,68 @@ const CloudStorage = () => {
       
       const data = await response.json();
       console.log(`Fetched ${data.files?.length || 0} files`);
-      setFiles(data.files || []);
+      
+      if (loadMore) {
+        setFiles(prev => [...prev, ...(data.files || [])]);
+      } else {
+        setFiles(data.files || []);
+      }
+      
+      setNextPageToken(data.nextPageToken || null);
     } catch (error) {
       console.error('Error fetching files:', error);
       toast.error(`Failed to fetch files: ${error.message}`);
       
-      // If it's an auth error, disconnect
       if (error.message.includes('401') || error.message.includes('unauthorized')) {
         disconnectGoogleDrive();
       }
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
   const navigateToFolder = async (folder: GoogleDriveFile) => {
     setCurrentFolder(folder.id);
     setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }]);
+    setNextPageToken(null);
     await fetchFiles(folder.id);
   };
 
   const navigateToBreadcrumb = async (breadcrumb: BreadcrumbItem, index: number) => {
     setCurrentFolder(breadcrumb.id);
     setBreadcrumbs(prev => prev.slice(0, index + 1));
+    setNextPageToken(null);
     await fetchFiles(breadcrumb.id);
+  };
+
+  const loadMoreFiles = () => {
+    if (nextPageToken && !isLoadingMore) {
+      fetchFiles(currentFolder, true);
+    }
   };
 
   const downloadFile = async (file: GoogleDriveFile) => {
     if (!accessToken) return;
     
     try {
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        }
-      );
+      let downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+      
+      // Handle Google Workspace files that need to be exported
+      if (file.mimeType.includes('google-apps')) {
+        const exportFormats = {
+          'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        };
+        
+        const exportMimeType = exportFormats[file.mimeType] || 'application/pdf';
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${exportMimeType}`;
+      }
+      
+      const response = await fetch(downloadUrl, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to download file');
@@ -391,9 +428,17 @@ const CloudStorage = () => {
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType === 'application/vnd.google-apps.folder') {
-      return <Folder className="h-5 w-5 text-blue-500" />;
+      return <Folder className="h-6 w-6 text-blue-500" />;
+    } else if (mimeType.includes('image')) {
+      return <Image className="h-6 w-6 text-green-500" />;
+    } else if (mimeType.includes('video')) {
+      return <Video className="h-6 w-6 text-red-500" />;
+    } else if (mimeType.includes('audio')) {
+      return <Music className="h-6 w-6 text-purple-500" />;
+    } else if (mimeType.includes('document') || mimeType.includes('pdf') || mimeType.includes('text')) {
+      return <FileText className="h-6 w-6 text-orange-500" />;
     }
-    return <File className="h-5 w-5 text-gray-500" />;
+    return <File className="h-6 w-6 text-gray-500" />;
   };
 
   const formatFileSize = (bytes?: string) => {
@@ -416,6 +461,10 @@ const CloudStorage = () => {
     });
   };
 
+  const isFolder = (mimeType: string) => {
+    return mimeType === 'application/vnd.google-apps.folder';
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-2">
@@ -435,10 +484,7 @@ const CloudStorage = () => {
                   Connect your Google Drive account to access documents directly.
                 </p>
                 <Button 
-                  onClick={() => {
-                    console.log('Connect Google Drive button clicked');
-                    connectGoogleDrive();
-                  }}
+                  onClick={connectGoogleDrive}
                   disabled={isConnecting}
                   className="w-full"
                 >
@@ -453,18 +499,35 @@ const CloudStorage = () => {
                 </Button>
               </>
             ) : (
-              <>
-                <p className="text-muted-foreground mb-2">
-                  Connected to: <span className="font-medium text-foreground">{userEmail}</span>
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={disconnectGoogleDrive}
-                  className="w-full"
-                >
-                  Disconnect
-                </Button>
-              </>
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={userProfile?.picture} alt={userProfile?.name} />
+                      <AvatarFallback>
+                        <User className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-green-800">
+                        Connected to Google Drive
+                      </h3>
+                      <p className="text-sm text-green-600">
+                        {userProfile?.name} ({userProfile?.email})
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={disconnectGoogleDrive}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -485,32 +548,69 @@ const CloudStorage = () => {
       {isConnected && (
         <Card>
           <CardHeader>
-            <CardTitle>Google Drive Files</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Files and Folders</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{files.length} items</Badge>
+                <Button
+                  onClick={() => fetchFiles(currentFolder)}
+                  variant="ghost"
+                  size="sm"
+                  disabled={loading}
+                  className="h-8 w-8 p-0"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2 mb-4 text-sm">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
               {breadcrumbs.map((breadcrumb, index) => (
                 <React.Fragment key={breadcrumb.id}>
-                  {index > 0 && <span className="text-muted-foreground">/</span>}
+                  {index > 0 && <ChevronRight className="h-4 w-4" />}
                   <button
                     onClick={() => navigateToBreadcrumb(breadcrumb, index)}
-                    className="text-primary hover:underline"
+                    className="hover:text-foreground transition-colors"
                     disabled={loading}
                   >
-                    {breadcrumb.name}
+                    {index === 0 ? (
+                      <div className="flex items-center space-x-1">
+                        <Home className="h-4 w-4" />
+                        <span>{breadcrumb.name}</span>
+                      </div>
+                    ) : (
+                      breadcrumb.name
+                    )}
                   </button>
                 </React.Fragment>
               ))}
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2">Loading files...</span>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center space-x-3 p-3">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-[200px]" />
+                      <Skeleton className="h-3 w-[100px]" />
+                    </div>
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                ))}
               </div>
             ) : files.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No files found in this folder.</p>
+              <div className="text-center py-12">
+                <Folder className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium text-muted-foreground mb-2">
+                  No files or folders found
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This folder appears to be empty
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {files.map((file) => (
@@ -518,45 +618,53 @@ const CloudStorage = () => {
                     key={file.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {getFileIcon(file.mimeType)}
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        {file.iconLink ? (
+                          <img src={file.iconLink} alt="" className="h-8 w-8" />
+                        ) : (
+                          getFileIcon(file.mimeType)
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <button
-                          onClick={() => 
-                            file.mimeType === 'application/vnd.google-apps.folder'
-                              ? navigateToFolder(file)
-                              : previewFile(file)
-                          }
-                          className="font-medium text-left hover:text-primary transition-colors truncate block w-full"
-                        >
+                        <p className="text-sm font-medium truncate">
                           {file.name}
-                        </button>
-                        <p className="text-sm text-muted-foreground">
-                          Modified {formatDate(file.modifiedTime)}
                         </p>
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <span>{isFolder(file.mimeType) ? 'Folder' : formatFileSize(file.size)}</span>
+                          <span>{formatDate(file.modifiedTime)}</span>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground min-w-0">
-                        {file.mimeType === 'application/vnd.google-apps.folder' ? 'Folder' : formatFileSize(file.size)}
-                      </span>
-                      
-                      {file.mimeType !== 'application/vnd.google-apps.folder' && (
-                        <div className="flex gap-1">
+                    <div className="flex items-center space-x-2">
+                      {isFolder(file.mimeType) ? (
+                        <Button
+                          onClick={() => navigateToFolder(file)}
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Folder className="h-4 w-4" />
+                          Open
+                        </Button>
+                      ) : (
+                        <div className="flex items-center space-x-1">
                           <Button
-                            size="sm"
-                            variant="ghost"
                             onClick={() => previewFile(file)}
+                            variant="ghost"
+                            size="sm"
                             className="h-8 w-8 p-0"
+                            title="Preview"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="ghost"
                             onClick={() => downloadFile(file)}
+                            variant="ghost"
+                            size="sm"
                             className="h-8 w-8 p-0"
+                            title="Download"
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -565,6 +673,27 @@ const CloudStorage = () => {
                     </div>
                   </div>
                 ))}
+                
+                {/* Load More Button */}
+                {nextPageToken && (
+                  <div className="pt-4 border-t">
+                    <Button
+                      onClick={loadMoreFiles}
+                      variant="outline"
+                      disabled={isLoadingMore}
+                      className="w-full"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Loading more...
+                        </>
+                      ) : (
+                        'Load More Files'
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
