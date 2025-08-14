@@ -63,6 +63,7 @@ const CloudStorage = () => {
   const [currentFolder, setCurrentFolder] = useState('root');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Drive' }]);
   const [isGapiLoaded, setIsGapiLoaded] = useState(false);
+  const [recentFiles, setRecentFiles] = useState<GoogleDriveFile[]>([]);
 
   // Component mounting and Google API initialization
   useEffect(() => {
@@ -72,7 +73,31 @@ const CloudStorage = () => {
     
     // Initialize Google API
     initializeGoogleAPI();
+    loadRecentFiles();
   }, []);
+
+  const loadRecentFiles = () => {
+    const saved = localStorage.getItem('recentFiles');
+    if (saved) {
+      try {
+        setRecentFiles(JSON.parse(saved));
+      } catch (error) {
+        console.error('Error loading recent files:', error);
+      }
+    }
+  };
+
+  const addToRecentFiles = (file: GoogleDriveFile) => {
+    setRecentFiles(prev => {
+      // Remove if already exists to avoid duplicates
+      const filtered = prev.filter(f => f.id !== file.id);
+      // Add to beginning and limit to 10 files
+      const updated = [file, ...filtered].slice(0, 10);
+      // Save to localStorage
+      localStorage.setItem('recentFiles', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const initializeGoogleAPI = async () => {
     try {
@@ -436,6 +461,7 @@ const CloudStorage = () => {
   };
 
   const previewFile = (file: GoogleDriveFile) => {
+    addToRecentFiles(file);
     if (file.webViewLink) {
       window.open(file.webViewLink, '_blank');
     } else {
@@ -444,6 +470,7 @@ const CloudStorage = () => {
   };
 
   const downloadFile = (file: GoogleDriveFile) => {
+    addToRecentFiles(file);
     if (file.webContentLink) {
       window.open(file.webContentLink, '_blank');
     } else {
@@ -654,15 +681,58 @@ const CloudStorage = () => {
           <CardTitle>Recent Files</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <File className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-sm text-muted-foreground mb-2">
-              No recent files to display
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Files you access will appear here for quick access
-            </p>
-          </div>
+          {recentFiles.length === 0 ? (
+            <div className="text-center py-8">
+              <File className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground mb-2">
+                No recent files to display
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Files you access will appear here for quick access
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentFiles.map((file) => (
+                <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0">
+                      {getFileIcon(file.mimeType)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{file.name}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Modified {formatDate(file.modifiedTime)} • Google Drive
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        onClick={() => previewFile(file)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Preview"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={() => downloadFile(file)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Download"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
