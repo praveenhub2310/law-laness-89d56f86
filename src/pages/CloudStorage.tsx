@@ -93,20 +93,34 @@ const CloudStorage = () => {
   const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
   useEffect(() => {
-    console.log('CloudStorage component mounted');
-    console.log('CLIENT_ID configured:', !CLIENT_ID.includes('YOUR_GOOGLE'));
-    console.log('API_KEY configured:', !API_KEY.includes('YOUR_GOOGLE'));
+    console.log('🚀 CloudStorage component mounted successfully');
+    console.log('📧 CLIENT_ID configured:', !CLIENT_ID.includes('YOUR_GOOGLE'));
+    console.log('🔑 API_KEY configured:', !API_KEY.includes('YOUR_GOOGLE'));
+    console.log('🌐 Current URL:', window.location.href);
+    console.log('📁 Starting initialization...');
     
     const initializeAndCheck = async () => {
       try {
-        await initializeGapi();
+        console.log('⚡ Starting Google API initialization');
+        const initialized = await initializeGapi();
+        
+        if (!initialized) {
+          console.error('❌ Google API initialization failed');
+          return;
+        }
+        
+        console.log('✅ Google API initialized successfully');
         
         // Check if user was previously connected
         const storedToken = localStorage.getItem('google_drive_token');
         const storedProfile = localStorage.getItem('google_drive_profile');
+        console.log('💾 Checking stored credentials...');
+        console.log('🎟️ Stored token exists:', !!storedToken);
+        console.log('👤 Stored profile exists:', !!storedProfile);
         
         if (storedToken && storedProfile) {
           try {
+            console.log('🔍 Validating stored token...');
             const profile = JSON.parse(storedProfile);
             // Verify token is still valid
             const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
@@ -114,68 +128,76 @@ const CloudStorage = () => {
             });
             
             if (response.ok) {
-              console.log('Token validation successful, restoring session');
+              console.log('✅ Token validation successful, restoring session');
               setAccessToken(storedToken);
               setUserProfile(profile);
               setIsConnected(true);
               await fetchFiles('root');
             } else {
-              console.log('Token expired, clearing storage');
+              console.log('⚠️ Token expired, clearing storage');
               localStorage.removeItem('google_drive_token');
               localStorage.removeItem('google_drive_profile');
             }
           } catch (error) {
-            console.error('Token validation failed:', error);
+            console.error('❌ Token validation failed:', error);
             localStorage.removeItem('google_drive_token');
             localStorage.removeItem('google_drive_profile');
           }
+        } else {
+          console.log('ℹ️ No stored credentials found - user needs to connect');
         }
       } catch (error) {
-        console.error('Initialization failed:', error);
+        console.error('💥 Initialization failed:', error);
+        toast.error('Failed to initialize Google Drive integration. Please refresh the page.');
       }
     };
     
+    console.log('🏃 Running initialization...');
     initializeAndCheck();
   }, []);
 
-  const initializeGapi = async () => {
+  const initializeGapi = async (): Promise<boolean> => {
     try {
-      console.log('=== Starting Google API initialization ===');
+      console.log('🔧 === Starting Google API initialization ===');
       
       if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
-        console.error('Google API credentials not configured');
+        console.error('❌ Google API credentials not configured');
         toast.error('Google API credentials not configured. Please contact administrator.');
         return false;
       }
       
+      console.log('🎯 API credentials are properly configured');
+      
       // Load Google API script dynamically
       if (!window.gapi) {
-        console.log('Loading Google API script...');
+        console.log('📥 Loading Google API script...');
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://apis.google.com/js/api.js';
           script.onload = () => {
-            console.log('Google API script loaded successfully');
+            console.log('✅ Google API script loaded successfully');
             resolve();
           };
-          script.onerror = () => {
-            console.error('Failed to load Google API script');
+          script.onerror = (error) => {
+            console.error('❌ Failed to load Google API script:', error);
             reject(new Error('Failed to load Google API script'));
           };
           document.head.appendChild(script);
         });
+      } else {
+        console.log('📋 Google API script already loaded');
       }
 
       // Initialize gapi.auth2 and gapi.client
-      console.log('Loading gapi modules...');
+      console.log('🔌 Loading gapi modules...');
       await new Promise<void>((resolve) => {
         window.gapi.load('auth2:client', () => {
-          console.log('gapi modules loaded successfully');
+          console.log('✅ gapi modules loaded successfully');
           resolve();
         });
       });
       
-      console.log('Initializing Google API client...');
+      console.log('⚙️ Initializing Google API client...');
       await window.gapi.client.init({
         apiKey: API_KEY,
         clientId: CLIENT_ID,
@@ -183,41 +205,52 @@ const CloudStorage = () => {
         scope: SCOPES
       });
       
-      console.log('=== Google API initialization completed successfully ===');
+      console.log('🎉 === Google API initialization completed successfully ===');
       return true;
     } catch (error) {
-      console.error('=== Google API initialization failed ===', error);
-      toast.error('Failed to initialize Google Drive integration.');
+      console.error('💥 === Google API initialization failed ===', error);
+      toast.error('Failed to initialize Google Drive integration. Please check your internet connection.');
       return false;
     }
   };
 
   const connectGoogleDrive = async () => {
-    console.log('=== Connect Google Drive button clicked ===');
+    console.log('🔗 === Connect Google Drive button clicked ===');
     
     if (CLIENT_ID.includes('YOUR_GOOGLE') || API_KEY.includes('YOUR_GOOGLE')) {
-      console.error('Google API credentials not configured');
+      console.error('❌ Google API credentials not configured');
       toast.error('Google API credentials not configured.');
       return;
     }
 
     setIsConnecting(true);
+    console.log('🔄 Starting Google Drive connection process...');
     
     try {
-      if (!window.gapi?.auth2) {
+      console.log('🔍 Checking if Google API is available...');
+      if (!window.gapi) {
+        console.error('❌ Google API not loaded');
         throw new Error('Google API not loaded. Please refresh the page and try again.');
+      }
+
+      if (!window.gapi.auth2) {
+        console.error('❌ Google Auth2 not available');
+        throw new Error('Google Auth2 not available. Please refresh the page and try again.');
       }
 
       const authInstance = window.gapi.auth2.getAuthInstance();
       if (!authInstance) {
-        throw new Error('Google Auth instance not available.');
+        console.error('❌ Google Auth instance not available');
+        throw new Error('Google Auth instance not available. Please refresh the page and try again.');
       }
 
-      console.log('Requesting Google sign-in...');
+      console.log('🚀 Google API is ready, requesting sign-in...');
       const user = await authInstance.signIn({ scope: SCOPES });
       
+      console.log('✅ Google sign-in successful');
       const authResponse = user.getAuthResponse();
       if (!authResponse?.access_token) {
+        console.error('❌ No access token received');
         throw new Error('No access token received from Google');
       }
 
@@ -229,33 +262,41 @@ const CloudStorage = () => {
         picture: profile.getImageUrl()
       };
       
-      console.log('Google Drive connected successfully for:', userProfile.email);
+      console.log('🎉 Google Drive connected successfully for:', userProfile.email);
+      console.log('🔑 Access token received (length):', token.length);
       
       setAccessToken(token);
       setUserProfile(userProfile);
       setIsConnected(true);
       
       // Store in localStorage for persistence
+      console.log('💾 Storing credentials in localStorage...');
       localStorage.setItem('google_drive_token', token);
       localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
       
       // Fetch root files
+      console.log('📁 Fetching initial files...');
       await fetchFiles('root');
       toast.success(`Successfully connected to Google Drive as ${userProfile.name}!`);
-    } catch (error) {
-      console.error('Google Drive connection failed:', error);
+    } catch (error: any) {
+      console.error('💥 Google Drive connection failed:', error);
       
-      if (error.error === 'popup_closed_by_user') {
+      if (error?.error === 'popup_closed_by_user') {
+        console.log('👆 User closed the popup');
         toast.error('Sign-in was cancelled. Please try again.');
-      } else if (error.error === 'access_denied') {
+      } else if (error?.error === 'access_denied') {
+        console.log('🚫 User denied access');
         toast.error('Access denied. Please grant permission to access your Google Drive.');
-      } else if (error.error === 'popup_blocked_by_browser') {
+      } else if (error?.error === 'popup_blocked_by_browser') {
+        console.log('🚧 Popup blocked by browser');
         toast.error('Popup blocked by browser. Please allow popups and try again.');
       } else {
-        toast.error(`Failed to connect to Google Drive: ${error.message || 'Unknown error'}`);
+        console.error('❓ Unknown error:', error);
+        toast.error(`Failed to connect to Google Drive: ${error?.message || 'Unknown error'}`);
       }
     } finally {
       setIsConnecting(false);
+      console.log('🔚 === Connect Google Drive process completed ===');
     }
   };
 
