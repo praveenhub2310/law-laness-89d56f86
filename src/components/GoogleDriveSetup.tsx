@@ -68,8 +68,8 @@ const GoogleDriveSetup = () => {
               Add your credentials to the environment configuration:
             </p>
             <div className="bg-muted p-3 rounded-md text-sm font-mono">
-              GOOGLE_CLIENT_ID=your_client_id_here<br />
-              GOOGLE_API_KEY=your_api_key_here
+              VITE_GOOGLE_CLIENT_ID=your_client_id_here<br />
+              VITE_GOOGLE_API_KEY=your_api_key_here
             </div>
           </div>
 
