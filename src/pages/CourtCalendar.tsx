@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from 'lucide-react';
+import CourtCalendarComponent from '@/components/CourtCalendar';
 
 const CourtCalendar = () => {
   return (
@@ -11,15 +11,7 @@ const CourtCalendar = () => {
         <h1 className="text-3xl font-bold">Court Calendar</h1>
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Court Dates</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">View and manage your court appearances and hearings.</p>
-          {/* This will be populated with actual calendar functionality */}
-        </CardContent>
-      </Card>
+      <CourtCalendarComponent />
     </div>
   );
 };
