@@ -125,7 +125,7 @@ const MyCases = () => {
   };
 
   const handleDocuments = () => {
-    navigate('/cloud-storage');
+    navigate('/dashboard/cloud-storage');
   };
 
   const handleSchedule = (caseId: string) => {
