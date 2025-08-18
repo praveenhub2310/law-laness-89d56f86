@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -146,6 +146,42 @@ export type Database = {
           },
         ]
       }
+      court_calendar: {
+        Row: {
+          case_id: string | null
+          court_name: string
+          created_at: string
+          description: string | null
+          hearing_date: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          case_id?: string | null
+          court_name: string
+          created_at?: string
+          description?: string | null
+          hearing_date: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string | null
+          court_name?: string
+          created_at?: string
+          description?: string | null
+          hearing_date?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           case_id: string | null
@@ -217,6 +253,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          case_id: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          expense_date: string
+          expense_title: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          case_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expense_date: string
+          expense_title: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          case_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expense_date?: string
+          expense_title?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -478,6 +553,42 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      time_tracker: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          duration: number | null
+          end_time: string | null
+          id: string
+          start_time: string
+          task_description: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          start_time: string
+          task_description: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          start_time?: string
+          task_description?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
