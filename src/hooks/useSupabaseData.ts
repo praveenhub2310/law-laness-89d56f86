@@ -52,18 +52,22 @@ export const useSupabaseData = <T extends Record<string, any>>({
       const { data: result, error: fetchError } = await query;
 
       if (fetchError) {
-        throw fetchError;
+        console.error(`Supabase error for table ${table}:`, fetchError);
+        setError(fetchError.message);
+        setData([]);
+        return;
       }
 
       setData((result as unknown as T[]) || []);
     } catch (err: any) {
       const errorMessage = err?.message || 'Failed to fetch data';
       setError(errorMessage);
+      setData([]);
       console.error(`Error fetching data from ${table}:`, err);
     } finally {
       setLoading(false);
     }
-  }, [table, select, filters, orderBy, user]);
+  }, [table, select, JSON.stringify(filters), JSON.stringify(orderBy), user]);
 
   const addItem = useCallback(async (newItem: any) => {
     if (!user) return { error: 'User not authenticated' };
@@ -160,7 +164,11 @@ export const useSupabaseData = <T extends Record<string, any>>({
   }, [table, user, toast]);
 
   useEffect(() => {
-    fetchData();
+    const timeoutId = setTimeout(() => {
+      fetchData();
+    }, 100); // Small delay to prevent rapid successive calls
+
+    return () => clearTimeout(timeoutId);
   }, [fetchData]);
 
   useEffect(() => {

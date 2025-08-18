@@ -236,13 +236,17 @@ const TimeTracker = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Select a case" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.case_number} - {project.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                    <SelectContent>
+                      {projects && projects.length > 0 ? (
+                        projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.case_number} - {project.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>No cases available</SelectItem>
+                      )}
+                    </SelectContent>
                 </Select>
               </div>
 

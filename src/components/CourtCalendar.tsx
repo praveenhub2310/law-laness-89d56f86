@@ -74,7 +74,7 @@ const CourtCalendar = () => {
     realtime: false
   });
 
-  // Fetch projects for case selection
+  // Fetch projects for case selection  
   const { 
     data: projects = [], 
     loading: projectsLoading,
