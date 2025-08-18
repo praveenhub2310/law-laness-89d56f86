@@ -62,7 +62,7 @@ const CourtCalendar = () => {
 
   // Fetch court calendar entries with real-time updates
   const {
-    data: hearings,
+    data: hearings = [],
     loading: hearingsLoading,
     error: hearingsError,
     addItem,
@@ -71,12 +71,12 @@ const CourtCalendar = () => {
   } = useSupabaseData<CourtCalendarEntry>({
     table: 'court_calendar',
     orderBy: { column: 'hearing_date', ascending: true },
-    realtime: true
+    realtime: false // Disable realtime for now to fix the glitching
   });
 
   // Fetch projects for case selection
   const { 
-    data: projects, 
+    data: projects = [], 
     loading: projectsLoading,
     error: projectsError
   } = useSupabaseData<Project>({
@@ -85,8 +85,8 @@ const CourtCalendar = () => {
     orderBy: { column: 'created_at', ascending: false }
   });
 
-  // Handle loading state properly to prevent infinite loops
-  const loading = hearingsLoading && projectsLoading;
+  // Fixed loading logic - only show loading if BOTH are still loading initially
+  const isInitialLoading = hearingsLoading || projectsLoading;
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -308,15 +308,15 @@ const CourtCalendar = () => {
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-red-600">Failed to load calendar data</p>
-            <p className="text-sm">Please check your connection and try refreshing the page</p>
+            <p className="text-red-600">Unable to connect to database</p>
+            <p className="text-sm">Please check your internet connection and refresh the page</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <Card>
         <CardHeader>
