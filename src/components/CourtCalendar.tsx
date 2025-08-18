@@ -333,7 +333,7 @@ const CourtCalendar = () => {
                 Schedule Hearing
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingEntry ? 'Edit Hearing' : 'Schedule New Hearing'}
@@ -381,7 +381,7 @@ const CourtCalendar = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="hearing_date">Hearing Date *</Label>
                     <Input
@@ -404,7 +404,7 @@ const CourtCalendar = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="duration">Duration</Label>
                     <Select value={formData.duration} onValueChange={(value) => setFormData({...formData, duration: value})}>
@@ -475,7 +475,7 @@ const CourtCalendar = () => {
                   />
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 pt-4">
                   <Button type="submit" className="flex-1">
                     {editingEntry ? 'Update Hearing' : 'Schedule Hearing'}
                   </Button>
@@ -483,6 +483,7 @@ const CourtCalendar = () => {
                     type="button" 
                     variant="outline" 
                     onClick={() => setIsDialogOpen(false)}
+                    className="sm:w-auto"
                   >
                     Cancel
                   </Button>
@@ -493,7 +494,7 @@ const CourtCalendar = () => {
 
           {/* Reschedule Dialog */}
           <Dialog open={isRescheduleOpen} onOpenChange={setIsRescheduleOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Reschedule Hearing</DialogTitle>
               </DialogHeader>
@@ -537,7 +538,7 @@ const CourtCalendar = () => {
                   </Select>
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 pt-4">
                   <Button type="submit" className="flex-1">
                     Reschedule
                   </Button>
@@ -545,6 +546,7 @@ const CourtCalendar = () => {
                     type="button" 
                     variant="outline" 
                     onClick={() => setIsRescheduleOpen(false)}
+                    className="sm:w-auto"
                   >
                     Cancel
                   </Button>
