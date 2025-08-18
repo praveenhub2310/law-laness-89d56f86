@@ -63,7 +63,8 @@ const CourtCalendar = () => {
   // Fetch court calendar entries with real-time updates
   const {
     data: hearings,
-    loading,
+    loading: hearingsLoading,
+    error: hearingsError,
     addItem,
     updateItem,
     deleteItem
@@ -74,11 +75,18 @@ const CourtCalendar = () => {
   });
 
   // Fetch projects for case selection
-  const { data: projects } = useSupabaseData<Project>({
+  const { 
+    data: projects, 
+    loading: projectsLoading,
+    error: projectsError
+  } = useSupabaseData<Project>({
     table: 'projects',
     select: 'id, case_number, title',
     orderBy: { column: 'created_at', ascending: false }
   });
+
+  // Handle loading state properly to prevent infinite loops
+  const loading = hearingsLoading && projectsLoading;
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -244,7 +252,7 @@ const CourtCalendar = () => {
   };
 
   const handleAddToCalendar = (hearing: CourtCalendarEntry) => {
-    const selectedCase = projects.find(p => p.id === hearing.case_id);
+    const selectedCase = projects?.find(p => p.id === hearing.case_id);
     const startDate = new Date(`${hearing.hearing_date}T${hearing.start_time || '09:00'}`);
     const endDate = new Date(startDate);
     
@@ -282,9 +290,31 @@ const CourtCalendar = () => {
   };
 
   const upcomingHearings = useMemo(() => {
+    if (!hearings || hearings.length === 0) return [];
     const today = new Date();
     return hearings.filter(hearing => new Date(hearing.hearing_date) >= today);
   }, [hearings]);
+
+  // Show error state if there are fetch errors
+  if (hearingsError || projectsError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Court Calendar
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-red-600">Failed to load calendar data</p>
+            <p className="text-sm">Please check your connection and try refreshing the page</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
@@ -336,11 +366,15 @@ const CourtCalendar = () => {
                       <SelectValue placeholder="Select a case" />
                     </SelectTrigger>
                     <SelectContent>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.case_number} - {project.title}
-                        </SelectItem>
-                      ))}
+                      {projects && projects.length > 0 ? (
+                        projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.case_number} - {project.title}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>No cases available</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -539,7 +573,7 @@ const CourtCalendar = () => {
           </Dialog>
         </CardHeader>
         <CardContent className="space-y-4">
-          {hearings.length === 0 ? (
+          {!hearings || hearings.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No hearings scheduled</p>
@@ -548,7 +582,7 @@ const CourtCalendar = () => {
           ) : (
             hearings.map((hearing) => {
               const hearingDate = new Date(hearing.hearing_date);
-              const selectedCase = projects.find(p => p.id === hearing.case_id);
+              const selectedCase = projects?.find(p => p.id === hearing.case_id);
               
               return (
                 <Card key={hearing.id} className="border-l-4 border-l-primary">
