@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,17 @@ const MyCases = () => {
     start_date: new Date().toISOString().split('T')[0]
   });
 
+  // Memoize filters to prevent infinite re-renders
+  const filters = useMemo(() => ({
+    lawyer_id: user?.id
+  }), [user?.id]);
+
+  // Memoize orderBy to prevent infinite re-renders  
+  const orderBy = useMemo(() => ({
+    column: 'created_at' as const,
+    ascending: false
+  }), []);
+
   // Fetch projects from Supabase with real-time updates
   const { 
     data: projects, 
@@ -62,8 +73,8 @@ const MyCases = () => {
     refetch 
   } = useSupabaseData<Project>({
     table: 'projects',
-    filters: { lawyer_id: user?.id },
-    orderBy: { column: 'created_at', ascending: false },
+    filters,
+    orderBy,
     realtime: true
   });
 
