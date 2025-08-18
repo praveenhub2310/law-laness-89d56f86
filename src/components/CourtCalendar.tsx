@@ -71,7 +71,7 @@ const CourtCalendar = () => {
   } = useSupabaseData<CourtCalendarEntry>({
     table: 'court_calendar',
     orderBy: { column: 'hearing_date', ascending: true },
-    realtime: false // Disable realtime for now to fix the glitching
+    realtime: false
   });
 
   // Fetch projects for case selection
@@ -84,9 +84,6 @@ const CourtCalendar = () => {
     select: 'id, case_number, title',
     orderBy: { column: 'created_at', ascending: false }
   });
-
-  // Fixed loading logic - only show loading if BOTH are still loading initially
-  const isInitialLoading = hearingsLoading || projectsLoading;
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -316,23 +313,7 @@ const CourtCalendar = () => {
     );
   }
 
-  if (isInitialLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Court Calendar
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // REMOVE THE LOADING CHECK COMPLETELY - ALWAYS RENDER THE COMPONENT
 
   return (
     <div className="space-y-6">
