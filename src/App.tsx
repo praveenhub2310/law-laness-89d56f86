@@ -77,6 +77,8 @@ import FirmAiScenario from './pages/FirmAiScenario';
 import ClientCaseStatus from './pages/ClientCaseStatus';
 import ClientHearings from './pages/ClientHearings';
 import ClientMeetings from './pages/ClientMeetings';
+import CaseDetails from './pages/CaseDetails';
+import Schedule from './pages/Schedule';
 
 function App() {
   return (
@@ -175,7 +177,9 @@ function App() {
           <Route path="/dashboard/client-fee-calculator" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
           
           {/* Cloud Storage - Available to all authenticated users */}
-          <Route path="/dashboard/cloud-storage" element={<DashboardLayout><CloudStorage /></DashboardLayout>} />
+          <Route path="/cloud-storage" element={<ProtectedRoute><DashboardLayout><CloudStorage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/case-details/:id" element={<ProtectedRoute><DashboardLayout><CaseDetails /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/schedule/:caseId" element={<ProtectedRoute><DashboardLayout><Schedule /></DashboardLayout></ProtectedRoute>} />
           
           {/* Catch all route */}
           <Route path="*" element={<NotFound />} />

@@ -1,14 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Briefcase, 
   Search, 
-  Filter, 
   Calendar, 
   Clock, 
   User, 
@@ -19,90 +23,103 @@ import {
   Timer
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
+import type { Project } from '@/types/database';
 
-interface Case {
-  id: string;
+interface NewCaseForm {
   title: string;
-  clientName: string;
-  caseNumber: string;
-  status: 'active' | 'pending' | 'closed' | 'review';
-  priority: 'high' | 'medium' | 'low';
-  nextHearing: string | null;
-  lastUpdate: string;
   description: string;
-  assignedLawyer: string;
-  progress: number;
+  case_number: string;
+  client_id: string;
+  status: 'active' | 'draft' | 'closed' | 'pending';
+  budget: number;
+  start_date: string;
 }
 
 const MyCases = () => {
-  const { userProfile } = useAuth();
-  const [cases, setCases] = useState<Case[]>([]);
+  const { userProfile, user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
+  const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
+  const [newCase, setNewCase] = useState<NewCaseForm>({
+    title: '',
+    description: '',
+    case_number: '',
+    client_id: '',
+    status: 'active',
+    budget: 0,
+    start_date: new Date().toISOString().split('T')[0]
+  });
 
-  // Mock data for demonstration - replace with actual API call
-  useEffect(() => {
-    const mockCases: Case[] = [
-      {
-        id: '1',
-        title: 'Contract Dispute - Tech Solutions Inc.',
-        clientName: 'Tech Solutions Inc.',
-        caseNumber: 'CS-2024-001',
+  // Fetch projects from Supabase with real-time updates
+  const { 
+    data: projects, 
+    loading, 
+    addItem, 
+    refetch 
+  } = useSupabaseData<Project>({
+    table: 'projects',
+    filters: { lawyer_id: user?.id },
+    orderBy: { column: 'created_at', ascending: false },
+    realtime: true
+  });
+
+  const handleCreateCase = async () => {
+    if (!newCase.title || !newCase.case_number) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const caseData = {
+      ...newCase,
+      lawyer_id: user?.id,
+      client_id: newCase.client_id || null,
+    };
+
+    const result = await addItem(caseData);
+    
+    if (result.error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create case. Please try again.',
+        variant: 'destructive',
+      });
+    } else {
+      setIsNewCaseOpen(false);
+      setNewCase({
+        title: '',
+        description: '',
+        case_number: '',
+        client_id: '',
         status: 'active',
-        priority: 'high',
-        nextHearing: '2024-01-15',
-        lastUpdate: '2024-01-10',
-        description: 'Commercial contract breach case involving software licensing disputes.',
-        assignedLawyer: userProfile?.first_name + ' ' + userProfile?.last_name || 'Current User',
-        progress: 65
-      },
-      {
-        id: '2',
-        title: 'Employment Termination Case',
-        clientName: 'John Smith',
-        caseNumber: 'EM-2024-012',
-        status: 'pending',
-        priority: 'medium',
-        nextHearing: '2024-01-18',
-        lastUpdate: '2024-01-08',
-        description: 'Wrongful termination and discrimination case.',
-        assignedLawyer: userProfile?.first_name + ' ' + userProfile?.last_name || 'Current User',
-        progress: 30
-      },
-      {
-        id: '3',
-        title: 'Property Rights Dispute',
-        clientName: 'Green Valley LLC',
-        caseNumber: 'PR-2024-005',
-        status: 'review',
-        priority: 'low',
-        nextHearing: null,
-        lastUpdate: '2024-01-05',
-        description: 'Land acquisition and boundary dispute case.',
-        assignedLawyer: userProfile?.first_name + ' ' + userProfile?.last_name || 'Current User',
-        progress: 80
-      },
-      {
-        id: '4',
-        title: 'Personal Injury Claim',
-        clientName: 'Maria Rodriguez',
-        caseNumber: 'PI-2024-008',
-        status: 'closed',
-        priority: 'medium',
-        nextHearing: null,
-        lastUpdate: '2024-01-03',
-        description: 'Motor vehicle accident personal injury case - settled.',
-        assignedLawyer: userProfile?.first_name + ' ' + userProfile?.last_name || 'Current User',
-        progress: 100
-      }
-    ];
+        budget: 0,
+        start_date: new Date().toISOString().split('T')[0]
+      });
+      toast({
+        title: 'Success',
+        description: 'New case created successfully.',
+      });
+    }
+  };
 
-    setTimeout(() => {
-      setCases(mockCases);
-      setLoading(false);
-    }, 1000);
-  }, [userProfile]);
+  const handleViewDetails = (caseId: string) => {
+    navigate(`/case-details/${caseId}`);
+  };
+
+  const handleDocuments = () => {
+    navigate('/cloud-storage');
+  };
+
+  const handleSchedule = (caseId: string) => {
+    navigate(`/schedule/${caseId}`);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -133,18 +150,18 @@ const MyCases = () => {
     }
   };
 
-  const filteredCases = cases.filter(caseItem => {
-    const matchesSearch = caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         caseItem.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         caseItem.caseNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || caseItem.status === filterStatus;
+  const filteredCases = projects.filter(project => {
+    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.case_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (project.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || project.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
-  const activeCases = cases.filter(c => c.status === 'active');
-  const pendingCases = cases.filter(c => c.status === 'pending');
-  const reviewCases = cases.filter(c => c.status === 'review');
-  const closedCases = cases.filter(c => c.status === 'closed');
+  const activeCases = projects.filter(c => c.status === 'active');
+  const pendingCases = projects.filter(c => c.status === 'pending');
+  const draftCases = projects.filter(c => c.status === 'draft');
+  const closedCases = projects.filter(c => c.status === 'closed');
 
   if (loading) {
     return (
@@ -168,10 +185,80 @@ const MyCases = () => {
           <Briefcase className="h-6 w-6" />
           <h1 className="text-3xl font-bold">My Cases</h1>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          New Case
-        </Button>
+        <Dialog open={isNewCaseOpen} onOpenChange={setIsNewCaseOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              New Case
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Case</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Case Title *</Label>
+                <Input
+                  id="title"
+                  value={newCase.title}
+                  onChange={(e) => setNewCase({ ...newCase, title: e.target.value })}
+                  placeholder="Enter case title"
+                />
+              </div>
+              <div>
+                <Label htmlFor="case_number">Case Number *</Label>
+                <Input
+                  id="case_number"
+                  value={newCase.case_number}
+                  onChange={(e) => setNewCase({ ...newCase, case_number: e.target.value })}
+                  placeholder="e.g., CS-2024-001"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={newCase.description}
+                  onChange={(e) => setNewCase({ ...newCase, description: e.target.value })}
+                  placeholder="Brief case description"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={newCase.status} onValueChange={(value: any) => setNewCase({ ...newCase, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="budget">Budget</Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  value={newCase.budget}
+                  onChange={(e) => setNewCase({ ...newCase, budget: Number(e.target.value) })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleCreateCase} className="flex-1">
+                  Create Case
+                </Button>
+                <Button variant="outline" onClick={() => setIsNewCaseOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Overview Cards */}
@@ -202,8 +289,8 @@ const MyCases = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Under Review</p>
-                <p className="text-2xl font-bold">{reviewCases.length}</p>
+                <p className="text-sm text-gray-600">Draft</p>
+                <p className="text-2xl font-bold">{draftCases.length}</p>
               </div>
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
@@ -249,10 +336,10 @@ const MyCases = () => {
       {/* Cases List */}
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">All Cases ({cases.length})</TabsTrigger>
+          <TabsTrigger value="all">All Cases ({projects.length})</TabsTrigger>
           <TabsTrigger value="active">Active ({activeCases.length})</TabsTrigger>
           <TabsTrigger value="pending">Pending ({pendingCases.length})</TabsTrigger>
-          <TabsTrigger value="review">Review ({reviewCases.length})</TabsTrigger>
+          <TabsTrigger value="draft">Draft ({draftCases.length})</TabsTrigger>
           <TabsTrigger value="closed">Closed ({closedCases.length})</TabsTrigger>
         </TabsList>
 
@@ -265,22 +352,19 @@ const MyCases = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredCases.map((caseItem) => (
-              <Card key={caseItem.id} className="hover:shadow-md transition-shadow">
+            filteredCases.map((project) => (
+              <Card key={project.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="flex items-center gap-2">
-                        {getStatusIcon(caseItem.status)}
-                        {caseItem.title}
+                        {getStatusIcon(project.status)}
+                        {project.title}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">{caseItem.description}</p>
+                      <p className="text-sm text-gray-600 mt-1">{project.description}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getStatusColor(caseItem.status)}>{caseItem.status}</Badge>
-                      <span className={`text-sm font-medium ${getPriorityColor(caseItem.priority)}`}>
-                        {caseItem.priority} priority
-                      </span>
+                      <Badge variant={getStatusColor(project.status)}>{project.status}</Badge>
                     </div>
                   </div>
                 </CardHeader>
@@ -288,42 +372,27 @@ const MyCases = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">Case #: {caseItem.caseNumber}</span>
+                      <span className="text-sm">Case #: {project.case_number}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">Client: {caseItem.clientName}</span>
+                      <span className="text-sm">Budget: ${project.budget?.toLocaleString() || 'N/A'}</span>
                     </div>
-                    {caseItem.nextHearing && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">Next hearing: {caseItem.nextHearing}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span>Progress</span>
-                      <span>{caseItem.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${caseItem.progress}%` }}
-                      ></div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">Start: {project.start_date || 'Not set'}</span>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="default" size="sm">
+                    <Button variant="default" size="sm" onClick={() => handleViewDetails(project.id)}>
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleDocuments}>
                       <FileText className="h-4 w-4 mr-2" />
                       Documents
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleSchedule(project.id)}>
                       <Calendar className="h-4 w-4 mr-2" />
                       Schedule
                     </Button>
@@ -334,24 +403,21 @@ const MyCases = () => {
           )}
         </TabsContent>
 
-        {['active', 'pending', 'review', 'closed'].map(status => (
+        {['active', 'pending', 'draft', 'closed'].map(status => (
           <TabsContent key={status} value={status} className="space-y-4">
-            {cases.filter(c => c.status === status).map((caseItem) => (
-              <Card key={caseItem.id} className="hover:shadow-md transition-shadow">
+            {projects.filter(c => c.status === status).map((project) => (
+              <Card key={project.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="flex items-center gap-2">
-                        {getStatusIcon(caseItem.status)}
-                        {caseItem.title}
+                        {getStatusIcon(project.status)}
+                        {project.title}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">{caseItem.description}</p>
+                      <p className="text-sm text-gray-600 mt-1">{project.description}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getStatusColor(caseItem.status)}>{caseItem.status}</Badge>
-                      <span className={`text-sm font-medium ${getPriorityColor(caseItem.priority)}`}>
-                        {caseItem.priority} priority
-                      </span>
+                      <Badge variant={getStatusColor(project.status)}>{project.status}</Badge>
                     </div>
                   </div>
                 </CardHeader>
@@ -359,42 +425,27 @@ const MyCases = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">Case #: {caseItem.caseNumber}</span>
+                      <span className="text-sm">Case #: {project.case_number}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">Client: {caseItem.clientName}</span>
+                      <span className="text-sm">Budget: ${project.budget?.toLocaleString() || 'N/A'}</span>
                     </div>
-                    {caseItem.nextHearing && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">Next hearing: {caseItem.nextHearing}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span>Progress</span>
-                      <span>{caseItem.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${caseItem.progress}%` }}
-                      ></div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">Start: {project.start_date || 'Not set'}</span>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="default" size="sm">
+                    <Button variant="default" size="sm" onClick={() => handleViewDetails(project.id)}>
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleDocuments}>
                       <FileText className="h-4 w-4 mr-2" />
                       Documents
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleSchedule(project.id)}>
                       <Calendar className="h-4 w-4 mr-2" />
                       Schedule
                     </Button>
