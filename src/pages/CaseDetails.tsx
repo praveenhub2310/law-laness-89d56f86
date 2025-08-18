@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,12 @@ const CaseDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  // Memoize filters to prevent infinite re-renders
+  const filters = useMemo(() => ({ id }), [id]);
+
   const { data: projects, loading } = useSupabaseData<Project>({
     table: 'projects',
-    filters: { id },
+    filters,
   });
 
   const project = projects[0];
