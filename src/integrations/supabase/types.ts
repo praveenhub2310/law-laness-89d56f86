@@ -152,10 +152,14 @@ export type Database = {
           court_name: string
           created_at: string
           description: string | null
+          duration: unknown | null
           hearing_date: string
           id: string
+          location: string | null
+          start_time: string | null
           status: string
           title: string
+          type: string | null
           updated_at: string
         }
         Insert: {
@@ -163,10 +167,14 @@ export type Database = {
           court_name: string
           created_at?: string
           description?: string | null
+          duration?: unknown | null
           hearing_date: string
           id?: string
+          location?: string | null
+          start_time?: string | null
           status?: string
           title: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
@@ -174,10 +182,14 @@ export type Database = {
           court_name?: string
           created_at?: string
           description?: string | null
+          duration?: unknown | null
           hearing_date?: string
           id?: string
+          location?: string | null
+          start_time?: string | null
           status?: string
           title?: string
+          type?: string | null
           updated_at?: string
         }
         Relationships: []
