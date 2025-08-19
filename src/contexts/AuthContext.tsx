@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -77,6 +78,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const profile = await fetchUserProfile(session.user.id);
             setUserProfile(profile);
             setLoading(false);
+            
+            // Auto-redirect to dashboard after email confirmation
+            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+              toast({
+                title: 'Email Confirmed!',
+                description: 'Welcome to Akra Legal Case Management System',
+              });
+              window.location.href = '/dashboard';
+            }
           }, 0);
         } else {
           setUserProfile(null);
