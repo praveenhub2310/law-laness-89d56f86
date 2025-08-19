@@ -125,7 +125,19 @@ const Signup = () => {
       
       if (result?.error) {
         console.error('Signup failed with error:', result.error);
-        toast.error(result.error.message || 'Failed to create account');
+        
+        // Handle specific error cases
+        if (result.error.code === 'over_email_send_rate_limit' || result.error.status === 429) {
+          toast.error('Email rate limit reached. Please wait a few minutes before trying again, or contact support if this persists.', {
+            duration: 10000
+          });
+        } else if (result.error.message?.includes('User already registered')) {
+          toast.error('An account with this email already exists. Please try logging in instead.', {
+            duration: 8000
+          });
+        } else {
+          toast.error(result.error.message || 'Failed to create account');
+        }
         setLoading(false);
       } else {
         console.log('Signup successful - showing confirmation message');

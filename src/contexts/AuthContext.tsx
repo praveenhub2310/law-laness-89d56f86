@@ -165,6 +165,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           code: error.code,
           details: error
         });
+        
+        // Don't show toast for rate limiting - let the component handle it
+        if (error.code !== 'over_email_send_rate_limit' && error.status !== 429) {
+          toast({
+            title: 'Registration Failed',
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
       } else {
         console.log('Signup successful:', data);
         console.log('User confirmation status:', data.user?.email_confirmed_at);
