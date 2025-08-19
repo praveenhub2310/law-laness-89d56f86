@@ -117,6 +117,21 @@ const CourtFeeCalculator = () => {
         yPosition += fontSize * 0.5;
       };
 
+      // Helper function to add aligned row (description left, amount right)
+      const addAlignedRow = (description: string, amount: string, fontSize = 12, isBold = false) => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+        
+        // Description on the left
+        pdf.text(description, margin, yPosition);
+        
+        // Amount on the right, aligned
+        const amountWidth = pdf.getTextWidth(amount);
+        pdf.text(amount, pageWidth - margin - amountWidth, yPosition);
+        
+        yPosition += fontSize * 0.6;
+      };
+
       // Header
       pdf.setFillColor(59, 130, 246);
       pdf.rect(0, 0, pageWidth, 20, 'F');
@@ -135,97 +150,115 @@ const CourtFeeCalculator = () => {
 
       // Case Details Section
       addText('CASE DETAILS', 16, true);
-      yPosition += 5;
+      yPosition += 2;
       
       pdf.setDrawColor(59, 130, 246);
       pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 10;
+      yPosition += 8;
 
       addText(`Case Type: ${calculatedFee.caseType}`, 12);
+      yPosition += 2;
       addText(`Court Jurisdiction: ${calculatedFee.jurisdiction}`, 12);
+      yPosition += 2;
       
       if (calculatedFee.claimAmount > 0) {
         addText(`Claim/Property Value: ₹${calculatedFee.claimAmount.toLocaleString()}`, 12);
+        yPosition += 2;
       }
       
       if (calculatedFee.caseConfig?.articleReference) {
         addText(`Legal Reference: ${calculatedFee.caseConfig.articleReference}`, 12);
+        yPosition += 2;
       }
       
       yPosition += 10;
 
       // Fee Breakdown Section
       addText('DETAILED FEE BREAKDOWN', 16, true);
-      yPosition += 5;
+      yPosition += 2;
       
       pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 10;
+      yPosition += 8;
 
-      // Fee breakdown table
+      // Fee breakdown table with proper alignment
       if (calculatedFee.breakdown?.length) {
         calculatedFee.breakdown.forEach((item) => {
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(item.description, margin, yPosition);
-          pdf.text(`₹${item.amount.toLocaleString()}`, pageWidth - margin - 40, yPosition);
-          yPosition += 7;
+          addAlignedRow(item.description, `₹${item.amount.toLocaleString()}`, 11);
+          yPosition += 2;
         });
-        yPosition += 5;
+        yPosition += 8;
       }
 
-      // Summary Section
+      // Summary Section with better formatting
       pdf.setFillColor(248, 250, 252);
-      pdf.rect(margin, yPosition, maxWidth, 35, 'F');
+      pdf.rect(margin, yPosition, maxWidth, 45, 'F');
       pdf.setDrawColor(226, 232, 240);
-      pdf.rect(margin, yPosition, maxWidth, 35);
+      pdf.rect(margin, yPosition, maxWidth, 45);
       
-      yPosition += 8;
-      addText('SUMMARY', 14, true);
-      
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Base Court Fee: ₹${calculatedFee.baseFee.toLocaleString()}`, margin + 5, yPosition);
-      yPosition += 7;
-      pdf.text(`Additional Fees: ₹${calculatedFee.additionalFees.toLocaleString()}`, margin + 5, yPosition);
       yPosition += 10;
+      addText('SUMMARY', 14, true);
+      yPosition += 5;
       
-      pdf.setFont('helvetica', 'bold');
+      addAlignedRow(`Base Court Fee:`, `₹${calculatedFee.baseFee.toLocaleString()}`, 12);
+      yPosition += 3;
+      addAlignedRow(`Additional Fees:`, `₹${calculatedFee.additionalFees.toLocaleString()}`, 12);
+      yPosition += 8;
+      
+      // Total with emphasis
+      pdf.setDrawColor(59, 130, 246);
+      pdf.line(margin + 5, yPosition, pageWidth - margin - 5, yPosition);
+      yPosition += 6;
+      
       pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(59, 130, 246);
-      pdf.text(`TOTAL PAYABLE: ₹${calculatedFee.totalFee.toLocaleString()}`, margin + 5, yPosition);
-      pdf.setTextColor(0, 0, 0);
       
+      pdf.text('TOTAL PAYABLE:', margin + 5, yPosition);
+      const totalText = `₹${calculatedFee.totalFee.toLocaleString()}`;
+      const totalWidth = pdf.getTextWidth(totalText);
+      pdf.text(totalText, pageWidth - margin - 5 - totalWidth, yPosition);
+      
+      pdf.setTextColor(0, 0, 0);
       yPosition += 20;
 
       // Disclaimer Section
       addText('IMPORTANT DISCLAIMER', 14, true);
-      yPosition += 5;
+      yPosition += 2;
       
       pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 10;
+      yPosition += 8;
 
-      const disclaimerText = `This calculation is based on the High Court Fees Rules, 1956 (Tamil Nadu) and general court fee provisions. Actual fees may vary based on:
+      const disclaimerPoints = [
+        '• Specific court rules and local amendments',
+        '• Updated fee schedules',
+        '• Special circumstances of the case',
+        '• Additional procedural requirements'
+      ];
 
-• Specific court rules and local amendments
-• Updated fee schedules  
-• Special circumstances of the case
-• Additional procedural requirements
+      addText('This calculation is based on the High Court Fees Rules, 1956 (Tamil Nadu) and general court fee provisions. Actual fees may vary based on:', 10);
+      yPosition += 3;
 
-Always verify the exact fee amount with the respective court registry before payment.`;
+      disclaimerPoints.forEach(point => {
+        addText(point, 10);
+        yPosition += 1;
+      });
 
-      addText(disclaimerText, 10);
-      yPosition += 15;
-
-      // Footer
-      pdf.setFillColor(248, 250, 252);
-      pdf.rect(0, pdf.internal.pageSize.getHeight() - 25, pageWidth, 25, 'F');
+      yPosition += 5;
+      addText('Always verify the exact fee amount with the respective court registry before payment.', 10, true);
       
-      pdf.setFontSize(10);
+      // Footer
+      const footerY = pdf.internal.pageSize.getHeight() - 25;
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, footerY, pageWidth, 25, 'F');
+      
+      pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Generated on: ${new Date().toLocaleString()}`, margin, pdf.internal.pageSize.getHeight() - 15);
-      pdf.text('Generated by: Akralegal Court Fee Calculator', margin, pdf.internal.pageSize.getHeight() - 8);
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, margin, footerY + 8);
+      pdf.text('Generated by: Akralegal Court Fee Calculator', margin, footerY + 15);
       
       const referenceText = 'Legal Database Reference: High Court Fees Rules, 1956';
       const referenceWidth = pdf.getTextWidth(referenceText);
-      pdf.text(referenceText, pageWidth - margin - referenceWidth, pdf.internal.pageSize.getHeight() - 8);
+      pdf.text(referenceText, pageWidth - margin - referenceWidth, footerY + 15);
 
       // Save the PDF
       const fileName = `court_fee_calculation_${new Date().toISOString().split('T')[0]}.pdf`;
