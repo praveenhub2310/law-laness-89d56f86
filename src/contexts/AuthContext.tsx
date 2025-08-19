@@ -137,9 +137,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/login`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -149,20 +149,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        console.error('Signup error:', error);
         toast({
           title: 'Registration Failed',
           description: error.message,
           variant: 'destructive',
         });
       } else {
-        toast({
-          title: 'Registration Successful',
-          description: 'Please check your email to verify your account.',
-        });
+        console.log('Signup successful:', data);
+        // Different messages based on whether email confirmation is required
+        if (data.user && !data.user.email_confirmed_at) {
+          toast({
+            title: 'Registration Successful!',
+            description: 'Please check your email and click the confirmation link to verify your account before logging in.',
+            duration: 8000,
+          });
+        } else {
+          toast({
+            title: 'Registration Successful',
+            description: 'Your account has been created successfully.',
+          });
+        }
       }
 
       return { error };
     } catch (error: any) {
+      console.error('Signup exception:', error);
       const errorMessage = error?.message || 'An unexpected error occurred';
       toast({
         title: 'Registration Failed',
@@ -176,12 +188,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithGoogle = async (userData?: any) => {
     try {
       console.log('AuthContext: Starting Google OAuth with userData:', userData);
-      console.log('AuthContext: Redirect URL will be:', `${window.location.origin}/dashboard`);
+      console.log('AuthContext: Redirect URL will be:', `${window.location.origin}/login`);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/login`,
           queryParams: userData ? {
             access_type: 'offline',
             prompt: 'consent',
@@ -205,6 +217,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
       } else {
         console.log('AuthContext: Google OAuth initiated successfully');
+        toast({
+          title: 'Redirecting to Google',
+          description: 'Please complete the sign-in process with Google.',
+        });
       }
 
       return { error };

@@ -53,8 +53,13 @@ const Signup = () => {
     if (error) {
       toast.error(error.message || 'Failed to create account');
     } else {
-      toast.success('Account created successfully! Please check your email to verify your account.');
-      navigate('/login');
+      // Navigate to login page after successful signup
+      navigate('/login', { 
+        state: { 
+          message: 'Please check your email and click the confirmation link to verify your account before logging in.',
+          email: formData.email 
+        } 
+      });
     }
     
     setLoading(false);
