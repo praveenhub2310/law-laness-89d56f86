@@ -26,18 +26,17 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  // Listen for hash changes to detect email confirmation
+  // Listen for hash changes to detect email confirmation and auto-login
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       if (hash.includes('type=signup') || hash.includes('access_token')) {
-        // Email was confirmed, redirect to login
-        navigate('/login', {
-          state: {
-            message: 'Email confirmed successfully! You can now log in.',
-            confirmed: true
-          }
-        });
+        // Email was confirmed, auto-login and redirect to dashboard
+        toast.success('Email confirmed successfully! Logging you in...', { duration: 3000 });
+        // Navigate to dashboard instead of login since user is now authenticated
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
       }
     };
 
@@ -116,7 +115,9 @@ const Signup = () => {
     } else {
       console.log('Google signup initiated successfully');
       toast.success('Redirecting to Google for authentication...', { duration: 3000 });
-      // Note: If successful, user will be redirected by OAuth flow to /login
+      // Show confirmation screen for Google signup too
+      setEmailSent(true);
+      setLoading(false);
     }
   };
 
@@ -149,20 +150,32 @@ const Signup = () => {
           <div className="text-center space-y-4 py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">Check Your Email</h3>
-              <p className="text-gray-600">
-                We've sent a confirmation email to <strong>{formData.email}</strong>
-              </p>
-              <p className="text-sm text-gray-500">
-                Please click the confirmation link in your email to verify your account, then return here to log in.
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {formData.email ? 'Check Your Email' : 'Account Setup Complete'}
+              </h3>
+              {formData.email ? (
+                <>
+                  <p className="text-gray-600">
+                    We've sent a confirmation email to <strong>{formData.email}</strong>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Please click the confirmation link in your email to verify your account. You'll be automatically logged in after verification.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600">
+                    Your Google account has been linked successfully!
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    You'll be redirected to your dashboard shortly after completing the authentication process.
+                  </p>
+                </>
+              )}
             </div>
-            <Button
-              onClick={() => navigate('/login')}
-              className="mt-4"
-            >
-              Go to Login
-            </Button>
+            <div className="text-xs text-gray-400 mt-4">
+              <p><strong>Email not working?</strong> Configure SMTP in your Supabase Dashboard under Authentication → Settings → SMTP Settings</p>
+            </div>
           </div>
         ) : (
           <>
