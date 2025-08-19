@@ -116,6 +116,11 @@ const CourtFeeCalculator = () => {
         yPosition += fontSize * 0.7;
       };
 
+      // Helper function to format currency with proper rupee symbol
+      const formatCurrency = (amount: number) => {
+        return `Rs ${amount.toLocaleString()}`;
+      };
+
       // Header
       pdf.setFillColor(59, 130, 246);
       pdf.rect(0, 0, pageWidth, 20, 'F');
@@ -150,7 +155,7 @@ const CourtFeeCalculator = () => {
       addRow(`Court Jurisdiction: ${calculatedFee.jurisdiction}`, '', 11);
       
       if (calculatedFee.claimAmount > 0) {
-        addRow(`Claim/Property Value: ₹${calculatedFee.claimAmount.toLocaleString()}`, '', 11);
+        addRow(`Claim/Property Value: ${formatCurrency(calculatedFee.claimAmount)}`, '', 11);
       }
       
       if (calculatedFee.caseConfig?.articleReference) {
@@ -171,7 +176,7 @@ const CourtFeeCalculator = () => {
       // Fee breakdown with perfect alignment
       if (calculatedFee.breakdown?.length) {
         calculatedFee.breakdown.forEach((item) => {
-          addRow(item.description, `₹${item.amount.toLocaleString()}`, 11);
+          addRow(item.description, formatCurrency(item.amount), 11);
         });
         yPosition += 5;
       }
@@ -189,8 +194,8 @@ const CourtFeeCalculator = () => {
       pdf.text('SUMMARY', margin + 5, yPosition);
       yPosition += 8;
       
-      addRow('Base Court Fee:', `₹${calculatedFee.baseFee.toLocaleString()}`, 11, false, 5);
-      addRow('Additional Fees:', `₹${calculatedFee.additionalFees.toLocaleString()}`, 11, false, 5);
+      addRow('Base Court Fee:', formatCurrency(calculatedFee.baseFee), 11, false, 5);
+      addRow('Additional Fees:', formatCurrency(calculatedFee.additionalFees), 11, false, 5);
       
       yPosition += 3;
       
@@ -204,7 +209,7 @@ const CourtFeeCalculator = () => {
       pdf.setTextColor(59, 130, 246);
       pdf.text('TOTAL PAYABLE:', margin + 5, yPosition);
       
-      const totalText = `₹${calculatedFee.totalFee.toLocaleString()}`;
+      const totalText = formatCurrency(calculatedFee.totalFee);
       const totalWidth = pdf.getTextWidth(totalText);
       pdf.text(totalText, pageWidth - margin - 5 - totalWidth, yPosition);
       
