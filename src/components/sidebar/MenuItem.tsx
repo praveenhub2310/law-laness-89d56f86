@@ -46,32 +46,36 @@ const MenuItem = ({ item, expandedItems, toggleExpanded }: MenuItemProps) => {
         <Collapsible open={expandedItems.includes(item.title)}>
           <CollapsibleTrigger
             onClick={() => toggleExpanded(item.title)}
-            className={`flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors ${
+            className={`flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors ${
               isActive(item.path) || isParentActive(item)
                 ? 'bg-blue-700 text-white' 
                 : 'text-blue-100 hover:bg-blue-700 hover:text-white'
             }`}
           >
-            <item.icon className="h-4 w-4 flex-shrink-0" />
-            <span className="flex-1 text-left ml-3 truncate">{item.title}</span>
+            <div className="flex items-center justify-center w-5 h-5 mr-3 flex-shrink-0">
+              <item.icon className="h-4 w-4" />
+            </div>
+            <span className="flex-1 text-left truncate">{item.title}</span>
             {expandedItems.includes(item.title) ? (
               <ChevronDown className="h-4 w-4 flex-shrink-0" />
             ) : (
               <ChevronRight className="h-4 w-4 flex-shrink-0" />
             )}
           </CollapsibleTrigger>
-          <CollapsibleContent className="ml-7 mt-1 space-y-1">
+          <CollapsibleContent className="ml-8 mt-1 space-y-1">
             {item.subItems.map((subItem) => (
               <SidebarMenuButton
                 key={subItem.title}
                 onClick={() => navigate(subItem.path)}
-                className={`flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                className={`flex items-center px-4 py-2.5 text-sm rounded-md transition-colors ${
                   isActive(subItem.path) 
                     ? 'bg-blue-700 text-white' 
                     : 'text-blue-100 hover:bg-blue-700 hover:text-white'
                 }`}
               >
-                {subItem.icon && <subItem.icon className="h-3 w-3 mr-2 flex-shrink-0" />}
+                <div className="flex items-center justify-center w-4 h-4 mr-3 flex-shrink-0">
+                  {subItem.icon && <subItem.icon className="h-3 w-3" />}
+                </div>
                 <span className="truncate">{subItem.title}</span>
               </SidebarMenuButton>
             ))}
@@ -86,14 +90,16 @@ const MenuItem = ({ item, expandedItems, toggleExpanded }: MenuItemProps) => {
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => navigate(item.path)}
-        className={`flex items-center px-3 py-2.5 text-sm rounded-md transition-colors ${
+        className={`flex items-center px-4 py-3 text-sm rounded-md transition-colors ${
           isActive(item.path) 
             ? 'bg-blue-700 text-white' 
             : 'text-blue-100 hover:bg-blue-700 hover:text-white'
         }`}
       >
-        <item.icon className="h-4 w-4 flex-shrink-0" />
-        <span className="ml-3 truncate">{item.title}</span>
+        <div className="flex items-center justify-center w-5 h-5 mr-3 flex-shrink-0">
+          <item.icon className="h-4 w-4" />
+        </div>
+        <span className="truncate">{item.title}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
