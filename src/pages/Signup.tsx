@@ -173,9 +173,6 @@ const Signup = () => {
                 </>
               )}
             </div>
-            <div className="text-xs text-gray-400 mt-4">
-              <p><strong>Email not working?</strong> Configure SMTP in your Supabase Dashboard under Authentication → Settings → SMTP Settings</p>
-            </div>
           </div>
         ) : (
           <>
