@@ -62,19 +62,19 @@ const MenuItem = ({ item, expandedItems, toggleExpanded }: MenuItemProps) => {
               <ChevronRight className="h-4 w-4 flex-shrink-0" />
             )}
           </CollapsibleTrigger>
-          <CollapsibleContent className="ml-8 mt-1 space-y-1">
+          <CollapsibleContent className="space-y-1">
             {item.subItems.map((subItem) => (
               <SidebarMenuButton
                 key={subItem.title}
                 onClick={() => navigate(subItem.path)}
-                className={`flex items-center px-4 py-2.5 text-sm rounded-md transition-colors ${
+                className={`flex items-center w-full py-2.5 text-sm rounded-md transition-colors ml-8 ${
                   isActive(subItem.path) 
                     ? 'bg-blue-700 text-white' 
                     : 'text-blue-100 hover:bg-blue-700 hover:text-white'
                 }`}
               >
-                <div className="flex items-center justify-center w-4 h-4 mr-3 flex-shrink-0">
-                  {subItem.icon && <subItem.icon className="h-3 w-3" />}
+                <div className="flex items-center justify-center w-5 h-5 mr-3 flex-shrink-0">
+                  {subItem.icon && <subItem.icon className="h-4 w-4" />}
                 </div>
                 <span className="truncate">{subItem.title}</span>
               </SidebarMenuButton>
