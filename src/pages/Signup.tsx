@@ -48,21 +48,32 @@ const Signup = () => {
       ...(selectedRole === 'advocate' && { bar_number: formData.barNumber }),
     };
 
+    console.log('Attempting signup with:', { email: formData.email, userData });
+
     const { error } = await signUp(formData.email, formData.password, userData);
     
     if (error) {
+      console.error('Signup failed:', error);
       toast.error(error.message || 'Failed to create account');
+      setLoading(false);
     } else {
-      // Navigate to login page after successful signup
-      navigate('/login', { 
-        state: { 
-          message: 'Please check your email and click the confirmation link to verify your account before logging in.',
-          email: formData.email 
-        } 
+      console.log('Signup successful, navigating to login with confirmation message');
+      
+      // Show immediate toast for successful signup
+      toast.success('Account created successfully! Please check your email for verification.', {
+        duration: 5000,
       });
+      
+      // Navigate to login page after successful signup with state
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { 
+            message: 'Please check your email and click the confirmation link to verify your account before logging in.',
+            email: formData.email 
+          } 
+        });
+      }, 2000); // Give time for toast to show
     }
-    
-    setLoading(false);
   };
 
   const handleGoogleSignUp = async () => {
@@ -76,11 +87,17 @@ const Signup = () => {
       ...(formData.lastName && { last_name: formData.lastName }),
     };
 
+    console.log('Starting Google signup with userData:', userData);
+
     const { error } = await signInWithGoogle(userData);
     
     if (error) {
+      console.error('Google signup failed:', error);
       toast.error(error.message || 'Failed to sign in with Google');
       setLoading(false);
+    } else {
+      console.log('Google signup initiated successfully');
+      toast.success('Redirecting to Google for authentication...', { duration: 3000 });
     }
     // Note: If successful, user will be redirected by OAuth flow
   };

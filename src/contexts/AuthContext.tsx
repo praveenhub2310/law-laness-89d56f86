@@ -149,27 +149,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
-        console.error('Signup error:', error);
-        toast({
-          title: 'Registration Failed',
-          description: error.message,
-          variant: 'destructive',
+        console.error('Signup error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          details: error
         });
       } else {
         console.log('Signup successful:', data);
-        // Different messages based on whether email confirmation is required
-        if (data.user && !data.user.email_confirmed_at) {
-          toast({
-            title: 'Registration Successful!',
-            description: 'Please check your email and click the confirmation link to verify your account before logging in.',
-            duration: 8000,
-          });
-        } else {
-          toast({
-            title: 'Registration Successful',
-            description: 'Your account has been created successfully.',
-          });
-        }
+        console.log('User confirmation status:', data.user?.email_confirmed_at);
+        console.log('Session info:', data.session);
       }
 
       return { error };
