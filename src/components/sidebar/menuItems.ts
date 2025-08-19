@@ -203,7 +203,7 @@ export const menuItems: MenuItem[] = [
     roles: ["advocate"],
     subItems: [
       { title: "Document Analysis", path: "/dashboard/document-analysis", icon: FileSearch, roles: ["advocate"] },
-      { title: "Document (Excel) Upload", path: "/dashboard/excel-upload", icon: FileUp, roles: ["advocate"] }
+      { title: "Docs Upload", path: "/dashboard/excel-upload", icon: FileUp, roles: ["advocate"] }
     ]
   },
   {
