@@ -50,17 +50,30 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
+    console.log('Selected role:', selectedRole);
     
+    // Enhanced validation
     if (!formData.email || !formData.password) {
+      console.log('Validation failed: Missing email or password');
       toast.error('Please fill in all required fields');
       return;
     }
 
     if (formData.password.length < 6) {
+      console.log('Validation failed: Password too short');
       toast.error('Password must be at least 6 characters long');
       return;
     }
 
+    // Role-specific validation
+    if (selectedRole === 'company' && !formData.companyName.trim()) {
+      console.log('Validation failed: Missing company name');
+      toast.error('Company name is required');
+      return;
+    }
+
+    console.log('All validations passed, proceeding with signup...');
     setLoading(true);
     
     const userData = {
@@ -73,22 +86,30 @@ const Signup = () => {
 
     console.log('Attempting signup with:', { email: formData.email, userData });
 
-    const { error } = await signUp(formData.email, formData.password, userData);
-    
-    if (error) {
-      console.error('Signup failed:', error);
-      toast.error(error.message || 'Failed to create account');
-      setLoading(false);
-    } else {
-      console.log('Signup successful - showing confirmation message');
+    try {
+      const { error } = await signUp(formData.email, formData.password, userData);
       
-      // Show confirmation toast that stays visible
-      toast.success('Account created successfully! Please check your email and click the confirmation link to verify your account before logging in.', {
-        duration: 15000, // Keep visible for 15 seconds
-      });
-      
-      // Set email sent state to show confirmation UI
-      setEmailSent(true);
+      if (error) {
+        console.error('Signup failed with error:', error);
+        toast.error(error.message || 'Failed to create account');
+        setLoading(false);
+      } else {
+        console.log('Signup successful - showing confirmation message');
+        
+        // Show confirmation toast that stays visible
+        toast.success('Account created successfully! Please check your email and click the confirmation link to verify your account.', {
+          duration: 15000, // Keep visible for 15 seconds
+        });
+        
+        // Set email sent state to show confirmation UI
+        setEmailSent(true);
+        setLoading(false);
+        
+        console.log('Email confirmation screen should now be visible');
+      }
+    } catch (catchError) {
+      console.error('Signup threw an exception:', catchError);
+      toast.error('An unexpected error occurred. Please try again.');
       setLoading(false);
     }
   };
