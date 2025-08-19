@@ -337,29 +337,11 @@ export const menuItems: MenuItem[] = [
     roles: ["company"]
   },
 
-  // Client specific items
+  // Client specific items - rearranged as requested
   {
     title: "My Cases",
     icon: Briefcase,
     path: "/dashboard/my-cases",
-    roles: ["client"]
-  },
-  {
-    title: "Invoices & Payments",
-    icon: CreditCard,
-    path: "/dashboard/payments",
-    roles: ["client"]
-  },
-  {
-    title: "Upload Documents",
-    icon: FileUp,
-    path: "/dashboard/document-upload",
-    roles: ["client"]
-  },
-  {
-    title: "E-Sign Documents",
-    icon: FileSignature,
-    path: "/dashboard/e-sign",
     roles: ["client"]
   },
   {
@@ -369,27 +351,27 @@ export const menuItems: MenuItem[] = [
     roles: ["client"]
   },
   {
-    title: "Case Status Updates",
-    icon: Activity,
-    path: "/dashboard/case-status",
-    roles: ["client"]
-  },
-  {
-    title: "Hearing Details",
-    icon: Calendar,
-    path: "/dashboard/client-hearings",
-    roles: ["client"]
-  },
-  {
     title: "Meeting Access",
     icon: FileText,
     path: "/dashboard/client-meetings",
     roles: ["client"]
   },
   {
+    title: "Hearings",
+    icon: Calendar,
+    path: "/dashboard/client-hearings",
+    roles: ["client"]
+  },
+  {
+    title: "Case Status Updates",
+    icon: Activity,
+    path: "/dashboard/case-status",
+    roles: ["client"]
+  },
+  {
     title: "Document Upload",
     icon: FileUp,
-    path: "/dashboard/client-excel",
+    path: "/dashboard/document-upload",
     roles: ["client"]
   },
   {
@@ -399,9 +381,15 @@ export const menuItems: MenuItem[] = [
     roles: ["client"]
   },
   {
-    title: "Fee Calculator",
+    title: "Fee Calculation",
     icon: Calculator,
     path: "/dashboard/client-fee-calculator",
+    roles: ["client"]
+  },
+  {
+    title: "E-Sign Documents",
+    icon: FileSignature,
+    path: "/dashboard/e-sign",
     roles: ["client"]
   },
 
