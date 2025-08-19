@@ -151,15 +151,15 @@ const CourtFeeCalculator = () => {
       pdf.line(margin, yPosition, pageWidth - margin, yPosition);
       yPosition += 10;
 
-      addRow(`Case Type: ${calculatedFee.caseType} ₹, '', 11);
-      addRow(`Court Jurisdiction: ${calculatedFee.jurisdiction} ₹, '', 11);
+      addRow(`Case Type: ${calculatedFee.caseType}`, '', 11);
+      addRow(`Court Jurisdiction: ${calculatedFee.jurisdiction}`, '', 11);
       
       if (calculatedFee.claimAmount > 0) {
-        addRow(`Claim/Property Value: ${formatCurrency(calculatedFee.claimAmount)} ₹, '', 11);
+        addRow(`Claim/Property Value: ${formatCurrency(calculatedFee.claimAmount)}`, '', 11);
       }
       
       if (calculatedFee.caseConfig?.articleReference) {
-        addRow(`Legal Reference: ${calculatedFee.caseConfig.articleReference} ₹, '', 11);
+        addRow(`Legal Reference: ${calculatedFee.caseConfig.articleReference}`, '', 11);
       }
       
       yPosition += 10;
