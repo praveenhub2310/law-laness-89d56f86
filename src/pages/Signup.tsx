@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 const Signup = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, user, loading: authLoading } = useAuth();
   
   const selectedRole = location.state?.selectedRole || 'client';
   const [formData, setFormData] = useState({
@@ -25,6 +25,14 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  // Redirect logged-in users to dashboard
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('User already logged in, redirecting to dashboard');
+      navigate('/dashboard');
+    }
+  }, [user, authLoading, navigate]);
 
   // Listen for hash changes to detect email confirmation and auto-login
   useEffect(() => {
@@ -50,8 +58,11 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted with data:', formData);
+    console.log('=== SIGNUP FORM SUBMITTED ===');
+    console.log('Form data:', formData);
     console.log('Selected role:', selectedRole);
+    console.log('Current user:', user);
+    console.log('Loading state:', authLoading);
     
     // Enhanced validation
     if (!formData.email || !formData.password) {
