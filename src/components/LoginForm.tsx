@@ -7,7 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Scale, Building2, User, Loader2 } from 'lucide-react';
+import { Scale, Building2, User, Loader2, Mail, Terminal } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DemoCredential {
   role: string;
@@ -50,6 +51,12 @@ const LoginForm = () => {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [demoUsersCreated, setDemoUsersCreated] = useState(false);
   const [loadingRole, setLoadingRole] = useState<string | null>(null);
+  
+  // SMTP Test states
+  const [testEmail, setTestEmail] = useState('');
+  const [smtpLogs, setSmtpLogs] = useState<string[]>([]);
+  const [isSmtpTesting, setIsSmtpTesting] = useState(false);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, signInWithGoogle } = useAuth();
@@ -181,6 +188,65 @@ const LoginForm = () => {
     }
   };
 
+  const handleSmtpTest = async () => {
+    if (!testEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address for testing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSmtpTesting(true);
+    setSmtpLogs([]);
+    
+    const addLog = (message: string) => {
+      const timestamp = new Date().toLocaleTimeString();
+      setSmtpLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+    };
+
+    try {
+      addLog('Starting SMTP test...');
+      addLog(`Attempting to send test email to: ${testEmail}`);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: testEmail,
+        password: 'TempPassword123!', // Temporary password for test
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`
+        }
+      });
+
+      if (error) {
+        addLog(`SMTP Test Error: ${error.message}`);
+        if (error.message.includes('User already registered')) {
+          addLog('User exists - trying password reset instead...');
+          
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(testEmail, {
+            redirectTo: `${window.location.origin}/login`
+          });
+          
+          if (resetError) {
+            addLog(`Password reset error: ${resetError.message}`);
+          } else {
+            addLog('✅ Password reset email sent successfully!');
+            addLog('SMTP configuration is working correctly.');
+          }
+        }
+      } else {
+        addLog('✅ Signup email sent successfully!');
+        addLog('SMTP configuration is working correctly.');
+        addLog('Note: Check the email inbox for confirmation email.');
+      }
+    } catch (error: any) {
+      addLog(`Unexpected error: ${error.message}`);
+    } finally {
+      setIsSmtpTesting(false);
+      addLog('SMTP test completed.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -296,6 +362,80 @@ const LoginForm = () => {
           })}
         </div>
       </div>
+
+      {/* SMTP Test Section */}
+      <Card className="mt-6 border-2 border-dashed border-muted-foreground/30">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Mail className="h-5 w-5" />
+            <span>SMTP Configuration Test</span>
+          </CardTitle>
+          <CardDescription>
+            Test if your SMTP settings are working correctly by sending a test email
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex space-x-2">
+            <div className="flex-1">
+              <Label htmlFor="testEmail">Test Email Address</Label>
+              <Input
+                id="testEmail"
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="Enter email to test SMTP"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button 
+                onClick={handleSmtpTest}
+                disabled={isSmtpTesting}
+                variant="outline"
+                className="flex items-center space-x-2"
+              >
+                {isSmtpTesting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Testing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Terminal className="h-4 w-4" />
+                    <span>Test SMTP</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          
+          {smtpLogs.length > 0 && (
+            <div className="mt-4">
+              <Label className="flex items-center space-x-2 mb-2">
+                <Terminal className="h-4 w-4" />
+                <span>SMTP Test Logs</span>
+              </Label>
+              <div className="bg-muted/30 border rounded-lg p-3 max-h-48 overflow-y-auto">
+                <div className="font-mono text-xs space-y-1">
+                  {smtpLogs.map((log, index) => (
+                    <div 
+                      key={index} 
+                      className={`${
+                        log.includes('✅') 
+                          ? 'text-green-600' 
+                          : log.includes('Error') || log.includes('error')
+                          ? 'text-red-600'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {log}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
