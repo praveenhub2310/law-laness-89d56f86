@@ -195,17 +195,47 @@ export const menuItems: MenuItem[] = [
     roles: ["super_admin"]
   },
 
-  // Lawyer/Advocate specific items
+  // Lawyer/Advocate specific items - rearranged as requested
   {
-    title: "My Cases",
+    title: "Documents Management",
+    icon: FileText,
+    path: "/dashboard/documents-management",
+    roles: ["advocate"],
+    subItems: [
+      { title: "Document Analysis", path: "/dashboard/document-analysis", icon: FileSearch, roles: ["advocate"] },
+      { title: "Document (Excel) Upload", path: "/dashboard/excel-upload", icon: FileUp, roles: ["advocate"] }
+    ]
+  },
+  {
+    title: "Cases",
     icon: Briefcase,
-    path: "/dashboard/my-cases",
+    path: "/dashboard/cases",
+    roles: ["advocate"],
+    subItems: [
+      { title: "My Cases", path: "/dashboard/my-cases", icon: Briefcase, roles: ["advocate"] },
+      { title: "Meeting Recordings", path: "/dashboard/recordings", icon: FileText, roles: ["advocate"] }
+    ]
+  },
+  {
+    title: "Court",
+    icon: Calendar,
+    path: "/dashboard/court",
+    roles: ["advocate"],
+    subItems: [
+      { title: "Calendar", path: "/dashboard/court-calendar", icon: Calendar, roles: ["advocate"] },
+      { title: "View Hearings", path: "/dashboard/hearings", icon: Calendar, roles: ["advocate"] }
+    ]
+  },
+  {
+    title: "Drafting & Translation",
+    icon: PenTool,
+    path: "/dashboard/drafting-translation",
     roles: ["advocate"]
   },
   {
-    title: "Court Calendar",
-    icon: Calendar,
-    path: "/dashboard/court-calendar",
+    title: "Cloud Storage",
+    icon: Cloud,
+    path: "/dashboard/cloud-storage",
     roles: ["advocate"]
   },
   {
@@ -218,42 +248,6 @@ export const menuItems: MenuItem[] = [
     title: "Expenses",
     icon: DollarSign,
     path: "/dashboard/expense-tracker",
-    roles: ["advocate"]
-  },
-  {
-    title: "Profile",
-    icon: User,
-    path: "/dashboard/profile",
-    roles: ["advocate"]
-  },
-  {
-    title: "Document Analysis",
-    icon: FileSearch,
-    path: "/dashboard/document-analysis",
-    roles: ["advocate"]
-  },
-  {
-    title: "View Hearings",
-    icon: Calendar,
-    path: "/dashboard/hearings",
-    roles: ["advocate"]
-  },
-  {
-    title: "Meeting Recordings",
-    icon: FileText,
-    path: "/dashboard/recordings",
-    roles: ["advocate"]
-  },
-  {
-    title: "Excel Uploads",
-    icon: FileUp,
-    path: "/dashboard/excel-upload",
-    roles: ["advocate"]
-  },
-  {
-    title: "Drafting & Translation",
-    icon: PenTool,
-    path: "/dashboard/drafting-translation",
     roles: ["advocate"]
   },
 
