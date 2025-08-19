@@ -4,8 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, IndianRupee, FileText, Download, Info } from 'lucide-react';
+import { Calculator, IndianRupee, FileText, Download, Info, BookOpen } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { 
+  COURT_FEE_RULES, 
+  JURISDICTIONS, 
+  calculateCourtFee, 
+  getFeeStructureGuide 
+} from '@/config/courtFees';
 
 const CourtFeeCalculator = () => {
   const [caseType, setCaseType] = useState('');
@@ -14,31 +20,21 @@ const CourtFeeCalculator = () => {
   const [propertyValue, setPropertyValue] = useState('');
   const [calculatedFee, setCalculatedFee] = useState(null);
 
-  const caseTypes = [
-    { value: 'civil_suit', label: 'Civil Suit', needsAmount: true },
-    { value: 'money_suit', label: 'Money Suit', needsAmount: true },
-    { value: 'property_suit', label: 'Property Suit', needsAmount: true },
-    { value: 'criminal_complaint', label: 'Criminal Complaint', needsAmount: false },
-    { value: 'writ_petition', label: 'Writ Petition', needsAmount: false },
-    { value: 'appeal', label: 'Appeal', needsAmount: true },
-    { value: 'revision', label: 'Revision Petition', needsAmount: false },
-    { value: 'execution', label: 'Execution Petition', needsAmount: true },
-    { value: 'injunction', label: 'Injunction', needsAmount: false },
-    { value: 'divorce', label: 'Divorce Petition', needsAmount: false }
-  ];
+  // Use actual case types from the High Court Fees Rules
+  const caseTypes = Object.entries(COURT_FEE_RULES).map(([key, config]) => ({
+    value: key,
+    label: config.label,
+    needsAmount: config.needsAmount
+  }));
 
-  const jurisdictions = [
-    { value: 'delhi', label: 'Delhi Courts', multiplier: 1.0 },
-    { value: 'mumbai', label: 'Mumbai Courts', multiplier: 1.1 },
-    { value: 'bangalore', label: 'Bangalore Courts', multiplier: 0.9 },
-    { value: 'chennai', label: 'Chennai Courts', multiplier: 0.95 },
-    { value: 'kolkata', label: 'Kolkata Courts', multiplier: 0.85 },
-    { value: 'hyderabad', label: 'Hyderabad Courts', multiplier: 0.9 },
-    { value: 'pune', label: 'Pune Courts', multiplier: 1.0 },
-    { value: 'ahmedabad', label: 'Ahmedabad Courts', multiplier: 0.95 }
-  ];
+  // Use actual jurisdictions with real multipliers
+  const jurisdictions = Object.entries(JURISDICTIONS).map(([key, config]) => ({
+    value: key,
+    label: config.label,
+    multiplier: config.multiplier
+  }));
 
-  const calculateCourtFee = () => {
+  const handleCalculateCourtFee = () => {
     if (!caseType || !jurisdiction) {
       toast({
         title: "Missing Information",
@@ -51,7 +47,7 @@ const CourtFeeCalculator = () => {
     const selectedCaseType = caseTypes.find(ct => ct.value === caseType);
     const selectedJurisdiction = jurisdictions.find(j => j.value === jurisdiction);
     
-    if (selectedCaseType.needsAmount && !claimAmount) {
+    if (selectedCaseType?.needsAmount && !claimAmount) {
       toast({
         title: "Missing Amount",
         description: "Please enter the claim/property value",
@@ -60,98 +56,73 @@ const CourtFeeCalculator = () => {
       return;
     }
 
-    let baseFee = 0;
-    const amount = parseFloat(claimAmount || propertyValue || '0');
-    const multiplier = selectedJurisdiction.multiplier;
+    try {
+      const amount = parseFloat(claimAmount || propertyValue || '0');
+      
+      // Use the actual High Court Fees Rules calculation
+      const feeCalculation = calculateCourtFee(caseType, amount, jurisdiction);
+      
+      setCalculatedFee({
+        baseFee: feeCalculation.baseFee,
+        additionalFees: feeCalculation.additionalFees,
+        totalFee: feeCalculation.totalFee,
+        breakdown: feeCalculation.breakdown,
+        caseType: selectedCaseType?.label || '',
+        jurisdiction: selectedJurisdiction?.label || '',
+        claimAmount: amount,
+        caseConfig: COURT_FEE_RULES[caseType]
+      });
 
-    // Court fee calculation based on Indian Court Fee Act
-    switch (caseType) {
-      case 'civil_suit':
-      case 'money_suit':
-        if (amount <= 20000) {
-          baseFee = Math.max(amount * 0.075, 50); // 7.5% or minimum ₹50
-        } else if (amount <= 100000) {
-          baseFee = 1500 + (amount - 20000) * 0.05;
-        } else if (amount <= 2000000) {
-          baseFee = 5500 + (amount - 100000) * 0.04;
-        } else {
-          baseFee = 81500 + (amount - 2000000) * 0.03;
-        }
-        break;
-        
-      case 'property_suit':
-        baseFee = Math.max(amount * 0.06, 100); // 6% or minimum ₹100
-        break;
-        
-      case 'appeal':
-        baseFee = Math.max(amount * 0.03, 500); // 3% or minimum ₹500
-        break;
-        
-      case 'execution':
-        baseFee = Math.max(amount * 0.025, 200); // 2.5% or minimum ₹200
-        break;
-        
-      case 'criminal_complaint':
-        baseFee = 100;
-        break;
-        
-      case 'writ_petition':
-        baseFee = 500;
-        break;
-        
-      case 'revision':
-        baseFee = 300;
-        break;
-        
-      case 'injunction':
-        baseFee = 250;
-        break;
-        
-      case 'divorce':
-        baseFee = 150;
-        break;
-        
-      default:
-        baseFee = 100;
+      toast({
+        title: "Fee Calculated",
+        description: `Total court fee: ₹${feeCalculation.totalFee.toLocaleString()}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Calculation Error",
+        description: error instanceof Error ? error.message : "Failed to calculate fee",
+        variant: "destructive",
+      });
     }
-
-    const adjustedFee = Math.round(baseFee * multiplier);
-    const processFeee = Math.round(adjustedFee * 0.1); // 10% process fee
-    const totalFee = adjustedFee + processFeee;
-
-    setCalculatedFee({
-      baseFee: adjustedFee,
-      processFee: processFeee,
-      totalFee: totalFee,
-      caseType: selectedCaseType.label,
-      jurisdiction: selectedJurisdiction.label,
-      claimAmount: amount
-    });
-
-    toast({
-      title: "Fee Calculated",
-      description: `Total court fee: ₹${totalFee.toLocaleString()}`,
-    });
   };
 
   const generateReport = () => {
     if (!calculatedFee) return;
 
-    const report = `COURT FEE CALCULATION REPORT
-    
-Case Type: ${calculatedFee.caseType}
-Jurisdiction: ${calculatedFee.jurisdiction}
-${calculatedFee.claimAmount > 0 ? `Claim Amount: ₹${calculatedFee.claimAmount.toLocaleString()}` : ''}
+    const breakdownText = calculatedFee.breakdown?.map(item => 
+      `${item.description}: ₹${item.amount.toLocaleString()}`
+    ).join('\n') || '';
 
-FEE BREAKDOWN:
+    const report = `HIGH COURT FEE CALCULATION REPORT
+Based on High Court Fees Rules, 1956
+
+CASE DETAILS:
+Case Type: ${calculatedFee.caseType}
+Court Jurisdiction: ${calculatedFee.jurisdiction}
+${calculatedFee.claimAmount > 0 ? `Claim/Property Value: ₹${calculatedFee.claimAmount.toLocaleString()}` : ''}
+${calculatedFee.caseConfig?.articleReference ? `Legal Reference: ${calculatedFee.caseConfig.articleReference}` : ''}
+
+DETAILED FEE BREAKDOWN:
+${breakdownText}
+
+SUMMARY:
 Base Court Fee: ₹${calculatedFee.baseFee.toLocaleString()}
-Process Fee (10%): ₹${calculatedFee.processFee.toLocaleString()}
+Additional Fees: ₹${calculatedFee.additionalFees.toLocaleString()}
 TOTAL PAYABLE: ₹${calculatedFee.totalFee.toLocaleString()}
 
-Generated on: ${new Date().toLocaleDateString()}
-Generated by: Akralegal Court Fee Calculator
+IMPORTANT DISCLAIMER:
+This calculation is based on the High Court Fees Rules, 1956 (Tamil Nadu) and general court fee provisions. 
+Actual fees may vary based on:
+- Specific court rules and local amendments
+- Updated fee schedules
+- Special circumstances of the case
+- Additional procedural requirements
 
-Note: This calculation is based on general court fee rules and may vary based on specific circumstances. Please verify with the respective court for exact fees.`;
+Always verify the exact fee amount with the respective court registry before payment.
+
+Generated on: ${new Date().toLocaleString()}
+Generated by: Akralegal Court Fee Calculator
+Legal Database Reference: High Court Fees Rules, 1956`;
 
     const blob = new Blob([report], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
@@ -165,7 +136,7 @@ Note: This calculation is based on general court fee rules and may vary based on
 
     toast({
       title: "Report Downloaded",
-      description: "Court fee calculation report has been downloaded",
+      description: "Detailed court fee calculation report has been downloaded",
     });
   };
 
@@ -249,7 +220,7 @@ Note: This calculation is based on general court fee rules and may vary based on
               </div>
             )}
 
-            <Button onClick={calculateCourtFee} className="w-full">
+            <Button onClick={handleCalculateCourtFee} className="w-full">
               <Calculator className="mr-2 h-4 w-4" />
               Calculate Court Fee
             </Button>
@@ -276,13 +247,20 @@ Note: This calculation is based on general court fee rules and may vary based on
                   </div>
                   
                   <div className="space-y-2 text-sm">
+                    {calculatedFee.breakdown?.map((item, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span className="text-xs">{item.description}:</span>
+                        <span>₹{item.amount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <hr className="my-2" />
                     <div className="flex justify-between">
                       <span>Base Court Fee:</span>
                       <span>₹{calculatedFee.baseFee.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Process Fee (10%):</span>
-                      <span>₹{calculatedFee.processFee.toLocaleString()}</span>
+                      <span>Additional Fees:</span>
+                      <span>₹{calculatedFee.additionalFees.toLocaleString()}</span>
                     </div>
                     <hr className="my-2" />
                     <div className="flex justify-between font-bold text-lg">
@@ -307,17 +285,24 @@ Note: This calculation is based on general court fee rules and may vary based on
                       <span>₹{calculatedFee.claimAmount.toLocaleString()}</span>
                     </div>
                   )}
+                  {calculatedFee.caseConfig?.articleReference && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Legal Reference:</span>
+                      <span className="text-xs">{calculatedFee.caseConfig.articleReference}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex items-start gap-2">
                     <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                     <div className="text-xs text-blue-800 dark:text-blue-200">
-                      <p className="font-medium">Important Notes:</p>
+                      <p className="font-medium">Based on High Court Fees Rules, 1956:</p>
                       <ul className="mt-1 space-y-1 list-disc list-inside">
-                        <li>Fees calculated as per Court Fee Act</li>
-                        <li>Additional fees may apply for specific procedures</li>
-                        <li>Verify with respective court for final amount</li>
+                        <li>Calculation follows official Tamil Nadu court fee structure</li>
+                        <li>Fees may vary by jurisdiction and recent amendments</li>
+                        <li>Additional court costs (summons, process fees) may apply</li>
+                        <li>Always verify final amount with court registry</li>
                       </ul>
                     </div>
                   </div>
@@ -336,45 +321,43 @@ Note: This calculation is based on general court fee rules and may vary based on
 
       <Card>
         <CardHeader>
-          <CardTitle>Fee Structure Guide</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            High Court Fees Rules, 1956 - Fee Structure Guide
+          </CardTitle>
+          <CardDescription>
+            Official fee structure based on Tamil Nadu High Court Fees Rules
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="p-4 border border-border rounded-lg">
-              <h4 className="font-semibold text-sm mb-2">Civil Suits</h4>
-              <p className="text-xs text-muted-foreground">
-                7.5% of claim value (minimum ₹50) for claims up to ₹20,000
-              </p>
-            </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h4 className="font-semibold text-sm mb-2">Property Suits</h4>
-              <p className="text-xs text-muted-foreground">
-                6% of property value (minimum ₹100)
-              </p>
-            </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h4 className="font-semibold text-sm mb-2">Appeals</h4>
-              <p className="text-xs text-muted-foreground">
-                3% of disputed amount (minimum ₹500)
-              </p>
-            </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h4 className="font-semibold text-sm mb-2">Writ Petitions</h4>
-              <p className="text-xs text-muted-foreground">
-                Fixed fee of ₹500 in most High Courts
-              </p>
-            </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h4 className="font-semibold text-sm mb-2">Criminal Cases</h4>
-              <p className="text-xs text-muted-foreground">
-                Fixed fee of ₹100 for complaint filing
-              </p>
-            </div>
-            <div className="p-4 border border-border rounded-lg">
-              <h4 className="font-semibold text-sm mb-2">Execution</h4>
-              <p className="text-xs text-muted-foreground">
-                2.5% of execution amount (minimum ₹200)
-              </p>
+            {getFeeStructureGuide().map((guide, index) => (
+              <div key={index} className="p-4 border border-border rounded-lg">
+                <h4 className="font-semibold text-sm mb-2">{guide.title}</h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {guide.description}
+                </p>
+                <p className="text-xs font-mono text-primary">
+                  {guide.example}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  {guide.reference}
+                </p>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-amber-600 mt-0.5" />
+              <div className="text-xs text-amber-800 dark:text-amber-200">
+                <p className="font-medium">Legal Reference: High Court Fees Rules, 1956</p>
+                <p className="mt-1">
+                  This calculator implements the actual fee structure from the Tamil Nadu High Court Fees Rules, 1956, 
+                  including Appendix I-A (slab-based fees for civil suits) and Appendix II (fixed fees for various proceedings). 
+                  Fees are calculated according to the exact formulas specified in the Act.
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
