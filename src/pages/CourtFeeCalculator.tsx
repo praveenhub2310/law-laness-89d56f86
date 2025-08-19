@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, IndianRupee, FileText, Download, Info, BookOpen } from 'lucide-react';
+import { Calculator, IndianRupee, FileText, Download, Info, BookOpen, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
 import { 
   COURT_FEE_RULES, 
   JURISDICTIONS, 
@@ -19,6 +20,7 @@ const CourtFeeCalculator = () => {
   const [claimAmount, setClaimAmount] = useState('');
   const [propertyValue, setPropertyValue] = useState('');
   const [calculatedFee, setCalculatedFee] = useState(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Use actual case types from the High Court Fees Rules
   const caseTypes = Object.entries(COURT_FEE_RULES).map(([key, config]) => ({
@@ -86,58 +88,162 @@ const CourtFeeCalculator = () => {
     }
   };
 
-  const generateReport = () => {
+  const generatePDFReport = async () => {
     if (!calculatedFee) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      const maxWidth = pageWidth - (margin * 2);
+      let yPosition = 25;
 
-    const breakdownText = calculatedFee.breakdown?.map(item => 
-      `${item.description}: ₹${item.amount.toLocaleString()}`
-    ).join('\n') || '';
+      // Helper function to add text with wrapping
+      const addText = (text: string, fontSize = 12, isBold = false, centerAlign = false) => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+        
+        if (centerAlign) {
+          const textWidth = pdf.getTextWidth(text);
+          const xPosition = (pageWidth - textWidth) / 2;
+          pdf.text(text, xPosition, yPosition);
+        } else {
+          const lines = pdf.splitTextToSize(text, maxWidth);
+          pdf.text(lines, margin, yPosition);
+          yPosition += (lines.length - 1) * 5;
+        }
+        yPosition += fontSize * 0.5;
+      };
 
-    const report = `HIGH COURT FEE CALCULATION REPORT
-Based on High Court Fees Rules, 1956
+      // Header
+      pdf.setFillColor(59, 130, 246);
+      pdf.rect(0, 0, pageWidth, 20, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('HIGH COURT FEE CALCULATION REPORT', pageWidth / 2, 13, { align: 'center' });
+      
+      pdf.setTextColor(0, 0, 0);
+      yPosition = 35;
 
-CASE DETAILS:
-Case Type: ${calculatedFee.caseType}
-Court Jurisdiction: ${calculatedFee.jurisdiction}
-${calculatedFee.claimAmount > 0 ? `Claim/Property Value: ₹${calculatedFee.claimAmount.toLocaleString()}` : ''}
-${calculatedFee.caseConfig?.articleReference ? `Legal Reference: ${calculatedFee.caseConfig.articleReference}` : ''}
+      // Subtitle
+      addText('Based on High Court Fees Rules, 1956', 14, true, true);
+      yPosition += 10;
 
-DETAILED FEE BREAKDOWN:
-${breakdownText}
+      // Case Details Section
+      addText('CASE DETAILS', 16, true);
+      yPosition += 5;
+      
+      pdf.setDrawColor(59, 130, 246);
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 10;
 
-SUMMARY:
-Base Court Fee: ₹${calculatedFee.baseFee.toLocaleString()}
-Additional Fees: ₹${calculatedFee.additionalFees.toLocaleString()}
-TOTAL PAYABLE: ₹${calculatedFee.totalFee.toLocaleString()}
+      addText(`Case Type: ${calculatedFee.caseType}`, 12);
+      addText(`Court Jurisdiction: ${calculatedFee.jurisdiction}`, 12);
+      
+      if (calculatedFee.claimAmount > 0) {
+        addText(`Claim/Property Value: ₹${calculatedFee.claimAmount.toLocaleString()}`, 12);
+      }
+      
+      if (calculatedFee.caseConfig?.articleReference) {
+        addText(`Legal Reference: ${calculatedFee.caseConfig.articleReference}`, 12);
+      }
+      
+      yPosition += 10;
 
-IMPORTANT DISCLAIMER:
-This calculation is based on the High Court Fees Rules, 1956 (Tamil Nadu) and general court fee provisions. 
-Actual fees may vary based on:
-- Specific court rules and local amendments
-- Updated fee schedules
-- Special circumstances of the case
-- Additional procedural requirements
+      // Fee Breakdown Section
+      addText('DETAILED FEE BREAKDOWN', 16, true);
+      yPosition += 5;
+      
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 10;
 
-Always verify the exact fee amount with the respective court registry before payment.
+      // Fee breakdown table
+      if (calculatedFee.breakdown?.length) {
+        calculatedFee.breakdown.forEach((item) => {
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(item.description, margin, yPosition);
+          pdf.text(`₹${item.amount.toLocaleString()}`, pageWidth - margin - 40, yPosition);
+          yPosition += 7;
+        });
+        yPosition += 5;
+      }
 
-Generated on: ${new Date().toLocaleString()}
-Generated by: Akralegal Court Fee Calculator
-Legal Database Reference: High Court Fees Rules, 1956`;
+      // Summary Section
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, yPosition, maxWidth, 35, 'F');
+      pdf.setDrawColor(226, 232, 240);
+      pdf.rect(margin, yPosition, maxWidth, 35);
+      
+      yPosition += 8;
+      addText('SUMMARY', 14, true);
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Base Court Fee: ₹${calculatedFee.baseFee.toLocaleString()}`, margin + 5, yPosition);
+      yPosition += 7;
+      pdf.text(`Additional Fees: ₹${calculatedFee.additionalFees.toLocaleString()}`, margin + 5, yPosition);
+      yPosition += 10;
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.setTextColor(59, 130, 246);
+      pdf.text(`TOTAL PAYABLE: ₹${calculatedFee.totalFee.toLocaleString()}`, margin + 5, yPosition);
+      pdf.setTextColor(0, 0, 0);
+      
+      yPosition += 20;
 
-    const blob = new Blob([report], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `court_fee_calculation_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+      // Disclaimer Section
+      addText('IMPORTANT DISCLAIMER', 14, true);
+      yPosition += 5;
+      
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 10;
 
-    toast({
-      title: "Report Downloaded",
-      description: "Detailed court fee calculation report has been downloaded",
-    });
+      const disclaimerText = `This calculation is based on the High Court Fees Rules, 1956 (Tamil Nadu) and general court fee provisions. Actual fees may vary based on:
+
+• Specific court rules and local amendments
+• Updated fee schedules  
+• Special circumstances of the case
+• Additional procedural requirements
+
+Always verify the exact fee amount with the respective court registry before payment.`;
+
+      addText(disclaimerText, 10);
+      yPosition += 15;
+
+      // Footer
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, pdf.internal.pageSize.getHeight() - 25, pageWidth, 25, 'F');
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, margin, pdf.internal.pageSize.getHeight() - 15);
+      pdf.text('Generated by: Akralegal Court Fee Calculator', margin, pdf.internal.pageSize.getHeight() - 8);
+      
+      const referenceText = 'Legal Database Reference: High Court Fees Rules, 1956';
+      const referenceWidth = pdf.getTextWidth(referenceText);
+      pdf.text(referenceText, pageWidth - margin - referenceWidth, pdf.internal.pageSize.getHeight() - 8);
+
+      // Save the PDF
+      const fileName = `court_fee_calculation_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "PDF Report Generated",
+        description: "Professional court fee calculation report has been downloaded as PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "PDF Generation Failed",
+        description: "Failed to generate PDF report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   const selectedCaseType = caseTypes.find(ct => ct.value === caseType);
@@ -228,13 +334,38 @@ Legal Database Reference: High Court Fees Rules, 1956`;
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Fee Calculation Result</CardTitle>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>Fee Calculation Result</CardTitle>
+              <CardDescription className="mt-1">
+                Professional court fee calculation based on High Court Rules
+              </CardDescription>
+            </div>
             {calculatedFee && (
-              <Button onClick={generateReport} variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Download Report
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={generatePDFReport} 
+                  variant="default" 
+                  size="sm"
+                  disabled={isGeneratingPDF}
+                  className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                >
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PDF Report
+                    </>
+                  )}
+                </Button>
+                <div className="text-xs text-muted-foreground text-center">
+                  Professional format
+                </div>
+              </div>
             )}
           </CardHeader>
           <CardContent>
