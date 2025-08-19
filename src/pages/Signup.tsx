@@ -62,30 +62,48 @@ const Signup = () => {
     console.log('Form data:', formData);
     console.log('Selected role:', selectedRole);
     console.log('Current user:', user);
-    console.log('Loading state:', authLoading);
+    console.log('Auth loading state:', authLoading);
     
-    // Enhanced validation
+    // Check if user is already logged in
+    if (user) {
+      console.log('User already logged in, redirecting to dashboard');
+      navigate('/dashboard');
+      return;
+    }
+    
+    // Enhanced validation with detailed logging
     if (!formData.email || !formData.password) {
-      console.log('Validation failed: Missing email or password');
+      console.log('Validation failed: Missing email or password', {
+        email: formData.email,
+        password: formData.password ? 'provided' : 'missing'
+      });
       toast.error('Please fill in all required fields');
       return;
     }
 
     if (formData.password.length < 6) {
-      console.log('Validation failed: Password too short');
+      console.log('Validation failed: Password too short', formData.password.length);
       toast.error('Password must be at least 6 characters long');
       return;
     }
 
     // Role-specific validation
     if (selectedRole === 'company' && !formData.companyName.trim()) {
-      console.log('Validation failed: Missing company name');
+      console.log('Validation failed: Missing company name for company role');
       toast.error('Company name is required');
       return;
     }
 
     console.log('All validations passed, proceeding with signup...');
+    
+    // Prevent double submission
+    if (loading) {
+      console.log('Already loading, preventing double submission');
+      return;
+    }
+    
     setLoading(true);
+    console.log('Loading state set to true');
     
     const userData = {
       first_name: formData.firstName,
@@ -95,34 +113,41 @@ const Signup = () => {
       ...(selectedRole === 'advocate' && { bar_number: formData.barNumber }),
     };
 
-    console.log('Attempting signup with:', { email: formData.email, userData });
+    console.log('Calling signUp with:', { 
+      email: formData.email, 
+      passwordLength: formData.password.length,
+      userData 
+    });
 
     try {
-      const { error } = await signUp(formData.email, formData.password, userData);
+      const result = await signUp(formData.email, formData.password, userData);
+      console.log('SignUp function returned:', result);
       
-      if (error) {
-        console.error('Signup failed with error:', error);
-        toast.error(error.message || 'Failed to create account');
+      if (result?.error) {
+        console.error('Signup failed with error:', result.error);
+        toast.error(result.error.message || 'Failed to create account');
         setLoading(false);
       } else {
         console.log('Signup successful - showing confirmation message');
         
         // Show confirmation toast that stays visible
         toast.success('Account created successfully! Please check your email and click the confirmation link to verify your account.', {
-          duration: 15000, // Keep visible for 15 seconds
+          duration: 15000,
         });
         
         // Set email sent state to show confirmation UI
         setEmailSent(true);
         setLoading(false);
         
-        console.log('Email confirmation screen should now be visible');
+        console.log('Email confirmation screen should now be visible, emailSent:', true);
       }
     } catch (catchError) {
       console.error('Signup threw an exception:', catchError);
       toast.error('An unexpected error occurred. Please try again.');
       setLoading(false);
     }
+    
+    console.log('=== SIGNUP PROCESS COMPLETED ===');
   };
 
   const handleGoogleSignUp = async () => {
@@ -339,7 +364,7 @@ const Signup = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={loading || authLoading}
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
