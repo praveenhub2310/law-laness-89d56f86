@@ -20,12 +20,14 @@ import {
   Plus,
   AlertCircle,
   CheckCircle2,
-  Timer
+  Timer,
+  Bot
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/types/database';
+import AiToolSelectionModal from '@/components/modals/AiToolSelectionModal';
 
 interface NewCaseForm {
   title: string;
@@ -44,6 +46,8 @@ const MyCases = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<Project | null>(null);
   const [newCase, setNewCase] = useState<NewCaseForm>({
     title: '',
     description: '',
@@ -130,6 +134,15 @@ const MyCases = () => {
 
   const handleSchedule = (caseId: string) => {
     navigate(`/schedule/${caseId}`);
+  };
+
+  const handleAiToolSelect = (project: Project) => {
+    setSelectedCase(project);
+    setIsAiModalOpen(true);
+  };
+
+  const handleAiToolSelection = (toolName: string) => {
+    // AI tool selection handled by the modal
   };
 
   const getStatusColor = (status: string) => {
@@ -272,6 +285,15 @@ const MyCases = () => {
         </Dialog>
       </div>
 
+      {/* AI Tool Selection Modal */}
+      <AiToolSelectionModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onSelect={handleAiToolSelection}
+        itemName={selectedCase?.title}
+        caseData={selectedCase}
+      />
+
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -399,6 +421,10 @@ const MyCases = () => {
                     <Button variant="default" size="sm" onClick={() => handleViewDetails(project.id)}>
                       View Details
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAiToolSelect(project)}>
+                      <Bot className="h-4 w-4 mr-2" />
+                      AI
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleDocuments}>
                       <FileText className="h-4 w-4 mr-2" />
                       Documents
@@ -451,6 +477,10 @@ const MyCases = () => {
                   <div className="flex gap-2">
                     <Button variant="default" size="sm" onClick={() => handleViewDetails(project.id)}>
                       View Details
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAiToolSelect(project)}>
+                      <Bot className="h-4 w-4 mr-2" />
+                      AI
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleDocuments}>
                       <FileText className="h-4 w-4 mr-2" />

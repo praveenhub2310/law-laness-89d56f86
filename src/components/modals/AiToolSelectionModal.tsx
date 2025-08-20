@@ -10,9 +10,10 @@ interface AiToolSelectionModalProps {
   onClose: () => void;
   onSelect: (toolName: string) => void;
   itemName?: string;
+  caseData?: any;
 }
 
-const AiToolSelectionModal = ({ isOpen, onClose, onSelect, itemName }: AiToolSelectionModalProps) => {
+const AiToolSelectionModal = ({ isOpen, onClose, onSelect, itemName, caseData }: AiToolSelectionModalProps) => {
   const navigate = useNavigate();
 
   const aiTools = [
@@ -41,7 +42,12 @@ const AiToolSelectionModal = ({ isOpen, onClose, onSelect, itemName }: AiToolSel
 
   const handleToolSelect = (tool: any) => {
     onSelect(tool.name);
-    navigate(tool.route);
+    navigate(tool.route, { 
+      state: { 
+        selectedCase: itemName,
+        caseData: caseData
+      } 
+    });
     onClose();
   };
 
