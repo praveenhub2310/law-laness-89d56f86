@@ -175,7 +175,7 @@ function App() {
           {/* Client Routes */}
           <Route path="/dashboard/payments" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><InvoicesPayments /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/document-upload" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><DocumentUpload /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ESign /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client', 'advocate']}><DashboardLayout><ESign /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/assigned-advocate" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><AssignedAdvocate /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/case-status" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ClientCaseStatus /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/client-hearings" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ClientHearings /></DashboardLayout></RoleGuard>} />
