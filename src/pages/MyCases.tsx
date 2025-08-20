@@ -425,7 +425,7 @@ const MyCases = () => {
                       variant="default" 
                       size="sm" 
                       onClick={() => handleAiToolSelect(project)}
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 animate-pulse"
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       <Bot className="h-4 w-4 mr-2" />
                       Analyze with AI
@@ -487,7 +487,7 @@ const MyCases = () => {
                       variant="default" 
                       size="sm" 
                       onClick={() => handleAiToolSelect(project)}
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 animate-pulse"
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       <Bot className="h-4 w-4 mr-2" />
                       Analyze with AI
