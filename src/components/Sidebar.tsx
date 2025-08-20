@@ -17,7 +17,7 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className="border-r border-gray-200 bg-gradient-to-b from-blue-900 to-blue-800 [&::-webkit-scrollbar]:hidden hover:[&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-blue-600/50 [&::-webkit-scrollbar-thumb]:rounded-full">
+    <Sidebar className="border-r border-gray-200 bg-gradient-to-b from-blue-900 to-blue-800 scrollbar-none hover:scrollbar-thin hover:scrollbar-track-transparent hover:scrollbar-thumb-blue-600/50 hover:scrollbar-thumb-rounded-full [&::-webkit-scrollbar]:w-0 hover:[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-blue-600/50 [&::-webkit-scrollbar-thumb]:rounded-full">
       <AppSidebarHeader />
       <MenuContent 
         expandedItems={expandedItems}

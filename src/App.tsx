@@ -19,6 +19,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import CaseAnalyser from './pages/ai-tools/CaseAnalyser';
 import Compliance from './pages/ai-tools/Compliance';
 import CaseSummary from './pages/ai-tools/CaseSummary';
+import ScenarioGuidance from './pages/ai-tools/ScenarioGuidance';
 import ProjectsManagement from './pages/projects/ProjectsManagement';
 import AllCases from './pages/projects/AllCases';
 import ActiveCases from './pages/projects/ActiveCases';
@@ -136,6 +137,7 @@ function App() {
           <Route path="/ai-tools/case-analyser" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><CaseAnalyser /></DashboardLayout></RoleGuard>} />
           <Route path="/ai-tools/compliance" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><Compliance /></DashboardLayout></RoleGuard>} />
           <Route path="/ai-tools/case-summary" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><CaseSummary /></DashboardLayout></RoleGuard>} />
+          <Route path="/ai-tools/scenario-guidance" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><ScenarioGuidance /></DashboardLayout></RoleGuard>} />
           
           {/* Lawyer/Advocate Routes */}
           <Route path="/dashboard/templates" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Templates /></DashboardLayout></RoleGuard>} />

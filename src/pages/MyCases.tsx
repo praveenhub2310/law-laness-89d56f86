@@ -421,9 +421,14 @@ const MyCases = () => {
                     <Button variant="default" size="sm" onClick={() => handleViewDetails(project.id)}>
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleAiToolSelect(project)}>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={() => handleAiToolSelect(project)}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 animate-pulse"
+                    >
                       <Bot className="h-4 w-4 mr-2" />
-                      AI
+                      Analyze with AI
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleDocuments}>
                       <FileText className="h-4 w-4 mr-2" />
@@ -478,9 +483,14 @@ const MyCases = () => {
                     <Button variant="default" size="sm" onClick={() => handleViewDetails(project.id)}>
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleAiToolSelect(project)}>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={() => handleAiToolSelect(project)}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 animate-pulse"
+                    >
                       <Bot className="h-4 w-4 mr-2" />
-                      AI
+                      Analyze with AI
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleDocuments}>
                       <FileText className="h-4 w-4 mr-2" />

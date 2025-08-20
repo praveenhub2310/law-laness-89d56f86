@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Bot, Search, FileText, Scale } from 'lucide-react';
+import { Bot, Search, FileText, Scale, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AiToolSelectionModalProps {
@@ -37,6 +37,13 @@ const AiToolSelectionModal = ({ isOpen, onClose, onSelect, itemName, caseData }:
       icon: FileText,
       description: 'Generate comprehensive case summaries and reports',
       color: 'bg-purple-100 text-purple-600'
+    },
+    {
+      name: 'Scenario Guidance',
+      route: '/ai-tools/scenario-guidance',
+      icon: Lightbulb,
+      description: 'Get AI-powered guidance for case scenarios and strategies',
+      color: 'bg-orange-100 text-orange-600'
     }
   ];
 
@@ -53,40 +60,40 @@ const AiToolSelectionModal = ({ isOpen, onClose, onSelect, itemName, caseData }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto p-0 mx-4">
-        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
-          <DialogTitle className="flex items-center space-x-2 text-lg">
-            <Bot className="h-5 w-5 text-blue-600" />
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[85vh] overflow-hidden p-0 mx-4">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="flex items-center space-x-2 text-xl">
+            <Bot className="h-6 w-6 text-blue-600" />
             <span>Select AI Tool</span>
           </DialogTitle>
         </DialogHeader>
         
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-          <p className="text-sm text-gray-600 mb-4 sm:mb-6">
-            Choose an AI tool to process "{itemName}"
+        <div className="px-6 py-4 overflow-hidden">
+          <p className="text-sm text-gray-600 mb-6">
+            Choose an AI tool to analyze "{itemName}"
           </p>
           
-          <div className="space-y-3 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {aiTools.map((tool) => (
               <Button
                 key={tool.name}
                 variant="outline"
-                className="w-full h-auto p-3 sm:p-4 flex items-start space-x-3 text-left hover:bg-gray-50 border border-gray-200"
+                className="h-auto p-4 flex flex-col items-center space-y-3 text-center hover:bg-gray-50 border border-gray-200 hover:shadow-md transition-all duration-200 hover-scale"
                 onClick={() => handleToolSelect(tool)}
               >
-                <div className={`p-2 rounded-lg ${tool.color} flex-shrink-0`}>
-                  <tool.icon className="h-4 w-4" />
+                <div className={`p-3 rounded-xl ${tool.color} flex-shrink-0`}>
+                  <tool.icon className="h-6 w-6" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">{tool.name}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">{tool.description}</p>
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-gray-900 text-base">{tool.name}</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">{tool.description}</p>
                 </div>
               </Button>
             ))}
           </div>
           
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
           </div>
