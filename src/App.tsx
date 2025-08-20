@@ -79,6 +79,8 @@ import ClientHearings from './pages/ClientHearings';
 import ClientMeetings from './pages/ClientMeetings';
 import CaseDetails from './pages/CaseDetails';
 import Schedule from './pages/Schedule';
+import Templates from './pages/Templates';
+import MyClients from './pages/MyClients';
 
 function App() {
   return (
@@ -100,9 +102,6 @@ function App() {
           <Route path="/client-dashboard" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ClientDashboard /></DashboardLayout></RoleGuard>} />
           
           {/* Super Admin Routes */}
-          <Route path="/ai-tools/case-analyser" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CaseAnalyser /></DashboardLayout></RoleGuard>} />
-          <Route path="/ai-tools/compliance" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Compliance /></DashboardLayout></RoleGuard>} />
-          <Route path="/ai-tools/case-summary" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CaseSummary /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/projects" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><ProjectsManagement /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/projects/cases" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><AllCases /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/projects/active" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><ActiveCases /></DashboardLayout></RoleGuard>} />
@@ -116,18 +115,14 @@ function App() {
           <Route path="/dashboard/invoices" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Invoices /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/messages" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Messages /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/parties" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Parties /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Transactions /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/hr" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><HumanResources /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/accounts" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><AccountsManagement /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/claims" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><ManageClaims /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/logs" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SystemLog /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/reports" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Reports /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/settings" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Settings /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/ai-scenario" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><AiScenarioGuidance /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/cause-list" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CourtCauseList /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/drafting-tool" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DraftingTool /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/translation" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DocumentTranslation /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/fee-calculator" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
           
           {/* Admin Module Routes */}
           <Route path="/user-management" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><UserManagement /></DashboardLayout></RoleGuard>} />
@@ -137,7 +132,14 @@ function App() {
           <Route path="/security-center" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SecurityCenter /></DashboardLayout></RoleGuard>} />
           <Route path="/database-management" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DatabaseManagement /></DashboardLayout></RoleGuard>} />
           
+          {/* AI Tools - Available to advocates and super_admin */}
+          <Route path="/ai-tools/case-analyser" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><CaseAnalyser /></DashboardLayout></RoleGuard>} />
+          <Route path="/ai-tools/compliance" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><Compliance /></DashboardLayout></RoleGuard>} />
+          <Route path="/ai-tools/case-summary" element={<RoleGuard allowedRoles={['super_admin', 'advocate']}><DashboardLayout><CaseSummary /></DashboardLayout></RoleGuard>} />
+          
           {/* Lawyer/Advocate Routes */}
+          <Route path="/dashboard/templates" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Templates /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/my-clients" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MyClients /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/my-cases" element={<RoleGuard allowedRoles={['advocate', 'client']}><DashboardLayout><MyCases /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/court-calendar" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><CourtCalendar /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/time-logs" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><TimeTracker /></DashboardLayout></RoleGuard>} />
@@ -148,6 +150,12 @@ function App() {
           <Route path="/dashboard/recordings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MeetingRecordings /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/excel-upload" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ExcelUpload /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/drafting-translation" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><DraftingTranslation /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/invoices-payments" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><InvoicesPayments /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/subscription" element={<RoleGuard allowedRoles={['advocate', 'company']}><DashboardLayout><Subscription /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><Transactions /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/fee-calculator" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/cause-list" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><CourtCauseList /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/ai-scenario" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><AiScenarioGuidance /></DashboardLayout></RoleGuard>} />
           
           {/* Law Firm/Company Routes */}
           <Route path="/dashboard/assigned-cases" element={<RoleGuard allowedRoles={['company']}><DashboardLayout><AssignedCases /></DashboardLayout></RoleGuard>} />

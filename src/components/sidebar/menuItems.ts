@@ -195,15 +195,17 @@ export const menuItems: MenuItem[] = [
     roles: ["super_admin"]
   },
 
-  // Lawyer/Advocate specific items - rearranged as requested
+  // Lawyer/Advocate specific items - exact order as requested
   {
-    title: "Documents Management",
+    title: "Document Tools",
     icon: FileText,
-    path: "/dashboard/documents-management",
+    path: "/dashboard/document-tools",
     roles: ["advocate"],
     subItems: [
+      { title: "Templates", path: "/dashboard/templates", icon: FileText, roles: ["advocate"] },
       { title: "Document Analysis", path: "/dashboard/document-analysis", icon: FileSearch, roles: ["advocate"] },
-      { title: "Docs Upload", path: "/dashboard/excel-upload", icon: FileUp, roles: ["advocate"] }
+      { title: "Drafting & Translation", path: "/dashboard/drafting-translation", icon: PenTool, roles: ["advocate"] },
+      { title: "E-Sign Documents", path: "/dashboard/e-sign", icon: FileSignature, roles: ["advocate"] }
     ]
   },
   {
@@ -217,9 +219,15 @@ export const menuItems: MenuItem[] = [
     ]
   },
   {
-    title: "Court",
+    title: "My Clients",
+    icon: Users,
+    path: "/dashboard/my-clients",
+    roles: ["advocate"]
+  },
+  {
+    title: "Courts",
     icon: Calendar,
-    path: "/dashboard/court",
+    path: "/dashboard/courts",
     roles: ["advocate"],
     subItems: [
       { title: "Calendar", path: "/dashboard/court-calendar", icon: Calendar, roles: ["advocate"] },
@@ -227,15 +235,39 @@ export const menuItems: MenuItem[] = [
     ]
   },
   {
-    title: "Drafting & Translation",
-    icon: PenTool,
-    path: "/dashboard/drafting-translation",
+    title: "AI Tools",
+    icon: Bot,
+    path: "/dashboard/ai-tools",
+    roles: ["advocate"],
+    subItems: [
+      { title: "Case Analyzer", path: "/ai-tools/case-analyser", icon: Search, roles: ["advocate"] },
+      { title: "Compliance", path: "/ai-tools/compliance", icon: Shield, roles: ["advocate"] },
+      { title: "Case Summary", path: "/ai-tools/case-summary", icon: FileSearch, roles: ["advocate"] },
+      { title: "Scenario Guidance", path: "/dashboard/ai-scenario", icon: Bot, roles: ["advocate"] }
+    ]
+  },
+  {
+    title: "Financial Manage",
+    icon: CreditCard,
+    path: "/dashboard/financial",
+    roles: ["advocate"],
+    subItems: [
+      { title: "Subscription Plan", path: "/dashboard/subscription", icon: CreditCard, roles: ["advocate"] },
+      { title: "Transactions", path: "/dashboard/transactions", icon: CreditCard, roles: ["advocate"] },
+      { title: "Invoices", path: "/dashboard/invoices-payments", icon: Receipt, roles: ["advocate"] },
+      { title: "Expenses", path: "/dashboard/expense-tracker", icon: DollarSign, roles: ["advocate"] }
+    ]
+  },
+  {
+    title: "Fee Calculation",
+    icon: Calculator,
+    path: "/dashboard/fee-calculator",
     roles: ["advocate"]
   },
   {
-    title: "Cloud Storage",
-    icon: Cloud,
-    path: "/dashboard/cloud-storage",
+    title: "Court Cause List",
+    icon: Calendar,
+    path: "/dashboard/cause-list",
     roles: ["advocate"]
   },
   {
@@ -245,9 +277,9 @@ export const menuItems: MenuItem[] = [
     roles: ["advocate"]
   },
   {
-    title: "Expenses",
-    icon: DollarSign,
-    path: "/dashboard/expense-tracker",
+    title: "Cloud Storage",
+    icon: Cloud,
+    path: "/dashboard/cloud-storage",
     roles: ["advocate"]
   },
 
