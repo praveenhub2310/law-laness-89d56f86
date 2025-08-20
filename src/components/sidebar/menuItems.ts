@@ -276,13 +276,6 @@ export const menuItems: MenuItem[] = [
     path: "/dashboard/time-logs",
     roles: ["advocate"]
   },
-  {
-    title: "Cloud Storage",
-    icon: Cloud,
-    path: "/dashboard/cloud-storage",
-    roles: ["advocate"]
-  },
-
   // Law Firm/Company specific items
   {
     title: "Manage Cases",
