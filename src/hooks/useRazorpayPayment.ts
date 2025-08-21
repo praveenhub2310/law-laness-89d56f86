@@ -42,15 +42,19 @@ export const useRazorpayPayment = () => {
 
   const initiatePayment = async ({ planId, amount, currency = 'INR', planName }: PaymentOptions) => {
     try {
+      console.log('💳 Razorpay payment initiated with:', { planId, amount, currency, planName });
       setLoading(true);
 
       // Load Razorpay script
+      console.log('📦 Loading Razorpay script...');
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         throw new Error('Failed to load Razorpay SDK');
       }
+      console.log('✅ Razorpay script loaded successfully');
 
       // Create order via edge function
+      console.log('🌐 Creating Razorpay order via edge function...');
       const { data: orderData, error: orderError } = await supabase.functions.invoke(
         'create-razorpay-order',
         {
@@ -62,12 +66,17 @@ export const useRazorpayPayment = () => {
         }
       );
 
+      console.log('📋 Edge function response:', { orderData, orderError });
+
       if (orderError) throw orderError;
       if (!orderData) throw new Error('No order data received');
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+
+      console.log('👤 User authenticated:', user.email);
+      console.log('🎯 Initializing Razorpay checkout with:', orderData);
 
       // Initialize Razorpay checkout
       const options = {
@@ -86,6 +95,7 @@ export const useRazorpayPayment = () => {
         },
         handler: async (response: RazorpayPaymentData) => {
           try {
+            console.log('💰 Payment successful:', response);
             // Payment successful
             toast({
               title: "Payment Successful!",
@@ -106,6 +116,7 @@ export const useRazorpayPayment = () => {
         },
         modal: {
           ondismiss: () => {
+            console.log('❌ Payment cancelled by user');
             toast({
               title: "Payment Cancelled",
               description: "You cancelled the payment process.",
@@ -115,11 +126,12 @@ export const useRazorpayPayment = () => {
         }
       };
 
+      console.log('🚀 Opening Razorpay checkout...');
       const razorpayInstance = new window.Razorpay(options);
       razorpayInstance.open();
 
     } catch (error: any) {
-      console.error('Payment initiation error:', error);
+      console.error('💥 Payment initiation error:', error);
       toast({
         title: "Payment Error",
         description: error.message || "Failed to initiate payment. Please try again.",

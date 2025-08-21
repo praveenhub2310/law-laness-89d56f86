@@ -42,17 +42,25 @@ serve(async (req) => {
       throw new Error('Plan ID and amount are required');
     }
 
-    // Create service client to fetch payment settings
+    // Get Razorpay credentials from environment variables (more secure)
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      throw new Error('Razorpay credentials not configured in environment');
+    }
+
+    // Create service client to verify payment settings are active
     const supabaseService = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     );
 
-    // Get payment settings
+    // Verify payment settings are active (but don't fetch credentials from DB)
     const { data: paymentSettings, error: settingsError } = await supabaseService
       .from('payment_settings')
-      .select('*')
+      .select('is_active, enable_razorpay_subscription, razorpay_base_uri')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -62,16 +70,12 @@ serve(async (req) => {
       throw new Error('Payment gateway not configured or inactive');
     }
 
-    if (!paymentSettings.razorpay_key_id || !paymentSettings.razorpay_key_secret) {
-      throw new Error('Razorpay credentials not configured');
-    }
-
     if (!paymentSettings.enable_razorpay_subscription) {
       throw new Error('Razorpay subscription is disabled');
     }
 
     // Create Razorpay order
-    const razorpayAuth = btoa(`${paymentSettings.razorpay_key_id}:${paymentSettings.razorpay_key_secret}`);
+    const razorpayAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
     
     const orderData = {
       amount: Math.round(amount * 100), // Convert to paisa
@@ -121,7 +125,7 @@ serve(async (req) => {
       orderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      keyId: paymentSettings.razorpay_key_id,
+      keyId: razorpayKeyId, // Use environment variable instead
       planId: planId
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
