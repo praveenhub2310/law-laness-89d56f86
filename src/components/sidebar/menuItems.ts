@@ -241,12 +241,12 @@ export const menuItems: MenuItem[] = [
     ]
   },
   {
-    title: "Financial Manage",
+    title: "Financial Management",
     icon: CreditCard,
     path: "/dashboard/financial",
     roles: ["advocate"],
     subItems: [
-      { title: "Subscription Plan", path: "/dashboard/subscription", icon: CreditCard, roles: ["advocate"] },
+      { title: "Subscriptions", path: "/dashboard/subscription", icon: CreditCard, roles: ["advocate"] },
       { title: "Transactions", path: "/dashboard/transactions", icon: CreditCard, roles: ["advocate"] },
       { title: "Invoices", path: "/dashboard/invoices-payments", icon: Receipt, roles: ["advocate"] },
       { title: "Expenses", path: "/dashboard/expense-tracker", icon: DollarSign, roles: ["advocate"] }
