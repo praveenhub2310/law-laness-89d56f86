@@ -225,13 +225,25 @@ const Subscription = () => {
   };
 
   const handleSubscribe = async (planId: string) => {
-    if (!user) return;
+    console.log('🔵 handleSubscribe called with planId:', planId);
+    
+    if (!user) {
+      console.log('❌ No user found');
+      return;
+    }
 
     const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
+    if (!plan) {
+      console.log('❌ Plan not found for ID:', planId);
+      return;
+    }
+    
+    console.log('✅ Plan found:', plan);
+    console.log('🔧 Payment settings:', paymentSettings);
 
     // Check if payment gateway is configured and active
     if (!paymentSettings || !paymentSettings.is_active) {
+      console.log('❌ Payment settings not active:', paymentSettings);
       toast({
         title: "Payment Unavailable",
         description: "Payment gateway is currently unavailable. Please contact support.",
@@ -241,6 +253,7 @@ const Subscription = () => {
     }
 
     if (!paymentSettings.enable_razorpay_subscription) {
+      console.log('❌ Subscriptions not enabled');
       toast({
         title: "Subscriptions Unavailable", 
         description: "Subscription payments are currently disabled. Please contact support.",
@@ -248,6 +261,13 @@ const Subscription = () => {
       });
       return;
     }
+
+    console.log('🚀 Initiating payment with:', {
+      planId: plan.id,
+      amount: plan.price,
+      currency: plan.currency || 'INR',
+      planName: plan.name
+    });
 
     await initiatePayment({
       planId: plan.id,
