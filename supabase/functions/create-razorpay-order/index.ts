@@ -46,9 +46,16 @@ serve(async (req) => {
     const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
+    console.log('🔑 Checking Razorpay credentials...');
+    console.log('Key ID exists:', !!razorpayKeyId);
+    console.log('Key Secret exists:', !!razorpayKeySecret);
+
     if (!razorpayKeyId || !razorpayKeySecret) {
+      console.error('❌ Razorpay credentials missing in environment');
       throw new Error('Razorpay credentials not configured in environment');
     }
+
+    console.log('✅ Razorpay credentials found');
 
     // Create service client to verify payment settings are active
     const supabaseService = createClient(
@@ -64,13 +71,22 @@ serve(async (req) => {
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (settingsError || !paymentSettings) {
-      throw new Error('Payment gateway not configured or inactive');
+    // Use default settings if none exist in database
+    const settings = paymentSettings || {
+      is_active: true,
+      enable_razorpay_subscription: true,
+      razorpay_base_uri: 'https://api.razorpay.com/v1/'
+    };
+
+    console.log('📋 Payment settings:', settings);
+
+    if (!settings.is_active) {
+      throw new Error('Payment gateway is inactive');
     }
 
-    if (!paymentSettings.enable_razorpay_subscription) {
+    if (!settings.enable_razorpay_subscription) {
       throw new Error('Razorpay subscription is disabled');
     }
 
@@ -87,7 +103,7 @@ serve(async (req) => {
       }
     };
 
-    const razorpayResponse = await fetch(`${paymentSettings.razorpay_base_uri}/orders`, {
+    const razorpayResponse = await fetch(`${settings.razorpay_base_uri}/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${razorpayAuth}`,
