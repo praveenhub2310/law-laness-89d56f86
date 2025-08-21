@@ -34,7 +34,7 @@ const PaymentSettings = () => {
   const [settings, setSettings] = useState<PaymentSettings>({
     razorpay_key_id: '',
     razorpay_key_secret: '',
-    razorpay_webhook_uri: '',
+    razorpay_webhook_uri: 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook',
     razorpay_webhook_secret: '',
     razorpay_base_uri: 'https://api.razorpay.com/v1/',
     enable_razorpay_prepaid: true,
