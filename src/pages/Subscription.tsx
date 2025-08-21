@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRazorpayPayment } from '@/hooks/useRazorpayPayment';
+import useRazorpayPayment from '@/hooks/useRazorpayPayment';
 import { 
   CreditCard, 
   Check, 
@@ -248,25 +248,48 @@ const Subscription = () => {
   };
 
   const handleSubscribe = async (planId: string) => {
-    console.log('🔵 handleSubscribe called with planId:', planId);
+    console.log('🔵 DEBUG: handleSubscribe called with planId:', planId);
+    console.log('🔵 DEBUG: Current user:', user);
+    console.log('🔵 DEBUG: Available plans:', plans);
+    console.log('🔵 DEBUG: Payment settings:', paymentSettings);
     
     if (!user) {
-      console.log('❌ No user found');
+      console.log('❌ DEBUG: No user found');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to subscribe to a plan.",
+        variant: "destructive"
+      });
       return;
     }
 
     const plan = plans.find(p => p.id === planId);
     if (!plan) {
-      console.log('❌ Plan not found for ID:', planId);
+      console.log('❌ DEBUG: Plan not found for ID:', planId);
+      toast({
+        title: "Plan Not Found",
+        description: "The selected subscription plan could not be found.",
+        variant: "destructive"
+      });
       return;
     }
     
-    console.log('✅ Plan found:', plan);
-    console.log('🔧 Payment settings:', paymentSettings);
+    console.log('✅ DEBUG: Plan found:', plan);
+    console.log('🔧 DEBUG: Payment settings state:', paymentSettings);
 
     // Check if payment gateway is configured and active
-    if (!paymentSettings || !paymentSettings.is_active) {
-      console.log('❌ Payment settings not active:', paymentSettings);
+    if (!paymentSettings) {
+      console.log('❌ DEBUG: Payment settings is null/undefined');
+      toast({
+        title: "Payment Configuration Missing",
+        description: "Payment gateway is not configured. Please contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!paymentSettings.is_active) {
+      console.log('❌ DEBUG: Payment settings not active:', paymentSettings);
       toast({
         title: "Payment Unavailable",
         description: "Payment gateway is currently unavailable. Please contact support.",
@@ -276,7 +299,7 @@ const Subscription = () => {
     }
 
     if (!paymentSettings.enable_razorpay_subscription) {
-      console.log('❌ Subscriptions not enabled');
+      console.log('❌ DEBUG: Subscriptions not enabled in settings');
       toast({
         title: "Subscriptions Unavailable", 
         description: "Subscription payments are currently disabled. Please contact support.",
@@ -285,19 +308,29 @@ const Subscription = () => {
       return;
     }
 
-    console.log('🚀 Initiating payment with:', {
+    console.log('🚀 DEBUG: All checks passed, initiating payment with:', {
       planId: plan.id,
       amount: plan.price,
       currency: plan.currency || 'INR',
       planName: plan.name
     });
 
-    await initiatePayment({
-      planId: plan.id,
-      amount: plan.price,
-      currency: plan.currency || 'INR',
-      planName: plan.name
-    });
+    try {
+      await initiatePayment({
+        planId: plan.id,
+        amount: plan.price,
+        currency: plan.currency || 'INR',
+        planName: plan.name
+      });
+      console.log('✅ DEBUG: initiatePayment completed successfully');
+    } catch (error: any) {
+      console.error('❌ DEBUG: Error in initiatePayment:', error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to initiate payment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancelSubscription = async () => {

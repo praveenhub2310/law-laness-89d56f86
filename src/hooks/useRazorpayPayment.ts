@@ -1,6 +1,6 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from './use-toast';
 
 declare global {
   interface Window {
@@ -21,40 +21,73 @@ interface RazorpayPaymentData {
   razorpay_signature: string;
 }
 
-export const useRazorpayPayment = () => {
-  const [loading, setLoading] = useState(false);
+const useRazorpayPayment = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
+      console.log('🔧 DEBUG: Checking if Razorpay script already loaded...');
+      
       if (window.Razorpay) {
+        console.log('✅ DEBUG: Razorpay already loaded');
         resolve(true);
         return;
       }
 
+      console.log('📦 DEBUG: Loading Razorpay script from CDN...');
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
+      script.onload = () => {
+        console.log('✅ DEBUG: Razorpay script loaded successfully from CDN');
+        resolve(true);
+      };
+      script.onerror = () => {
+        console.error('❌ DEBUG: Failed to load Razorpay script from CDN');
+        resolve(false);
+      };
       document.body.appendChild(script);
     });
   };
 
   const initiatePayment = async ({ planId, amount, currency = 'INR', planName }: PaymentOptions) => {
     try {
-      console.log('💳 Razorpay payment initiated with:', { planId, amount, currency, planName });
+      console.log('💳 DEBUG: ===========================================');
+      console.log('💳 DEBUG: STARTING PAYMENT INITIATION PROCESS');
+      console.log('💳 DEBUG: ===========================================');
+      console.log('💳 DEBUG: Payment parameters:', { planId, amount, currency, planName });
+      
       setLoading(true);
 
-      // Load Razorpay script
-      console.log('📦 Loading Razorpay script...');
+      // Step 1: Load Razorpay script
+      console.log('📦 DEBUG: STEP 1 - Loading Razorpay script...');
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
+        console.error('❌ DEBUG: CRITICAL - Failed to load Razorpay SDK');
         throw new Error('Failed to load Razorpay SDK');
       }
-      console.log('✅ Razorpay script loaded successfully');
+      console.log('✅ DEBUG: STEP 1 COMPLETE - Razorpay script loaded successfully');
 
-      // Create order via edge function
-      console.log('🌐 Creating Razorpay order via edge function...');
+      // Step 2: Verify authentication
+      console.log('👤 DEBUG: STEP 2 - Verifying user authentication...');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('❌ DEBUG: Auth error:', authError);
+        throw new Error('Authentication error: ' + authError.message);
+      }
+      if (!user) {
+        console.error('❌ DEBUG: CRITICAL - User not authenticated');
+        throw new Error('User not authenticated');
+      }
+      console.log('✅ DEBUG: STEP 2 COMPLETE - User authenticated:', user.email);
+
+      // Step 3: Create order via edge function
+      console.log('🌐 DEBUG: STEP 3 - Creating Razorpay order via edge function...');
+      console.log('🌐 DEBUG: Calling supabase.functions.invoke with:', {
+        functionName: 'create-razorpay-order',
+        body: { planId, amount, currency }
+      });
+
       const { data: orderData, error: orderError } = await supabase.functions.invoke(
         'create-razorpay-order',
         {
@@ -66,57 +99,71 @@ export const useRazorpayPayment = () => {
         }
       );
 
-      console.log('📋 Edge function response:', { orderData, orderError });
+      console.log('📋 DEBUG: STEP 3 RESPONSE - Edge function completed');
+      console.log('📋 DEBUG: Order data received:', orderData);
+      console.log('📋 DEBUG: Order error (if any):', orderError);
 
-      if (orderError) throw orderError;
-      if (!orderData) throw new Error('No order data received');
+      if (orderError) {
+        console.error('❌ DEBUG: CRITICAL - Order creation failed:', orderError);
+        throw new Error(`Order creation failed: ${orderError.message || JSON.stringify(orderError)}`);
+      }
+      if (!orderData) {
+        console.error('❌ DEBUG: CRITICAL - No order data received from edge function');
+        throw new Error('No order data received from payment service');
+      }
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      console.log('✅ DEBUG: STEP 3 COMPLETE - Order created successfully');
+      console.log('✅ DEBUG: Order details:', {
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        keyId: orderData.keyId ? 'Present' : 'Missing'
+      });
 
-      console.log('👤 User authenticated:', user.email);
-      console.log('🎯 Initializing Razorpay checkout with:', orderData);
+      // Step 4: Verify Razorpay is available
+      console.log('🔍 DEBUG: STEP 4 - Verifying Razorpay SDK availability...');
+      if (!window.Razorpay) {
+        console.error('❌ DEBUG: CRITICAL - Razorpay not available on window object');
+        throw new Error('Razorpay SDK not loaded properly');
+      }
+      console.log('✅ DEBUG: STEP 4 COMPLETE - Razorpay SDK confirmed available');
 
-      // Initialize Razorpay checkout
-      const options = {
+      // Step 5: Initialize Razorpay checkout
+      console.log('🎯 DEBUG: STEP 5 - Initializing Razorpay checkout...');
+      const razorpayOptions = {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'Legal Management System',
-        description: `Subscription: ${planName}`,
+        name: "AkraLegal",
+        description: `${planName} Subscription`,
         order_id: orderData.orderId,
         prefill: {
-          name: user.user_metadata?.first_name || user.email?.split('@')[0] || 'User',
+          name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email,
           email: user.email,
+          contact: user.user_metadata?.phone || ''
         },
         theme: {
-          color: '#2563eb' // Primary color
+          color: "#0070f3"
         },
         handler: async (response: RazorpayPaymentData) => {
           try {
-            console.log('💰 Payment successful:', response);
-            // Payment successful
+            console.log('💰 DEBUG: PAYMENT SUCCESS - Response received:', response);
             toast({
               title: "Payment Successful!",
-              description: `Your ${planName} subscription is now active.`,
+              description: `Welcome to ${planName}! Your subscription is now active.`,
             });
-
-            // The webhook will handle the backend updates
-            // You can add additional UI updates here if needed
-            window.location.reload();
           } catch (error: any) {
-            console.error('Payment handler error:', error);
+            console.error('❌ DEBUG: Error in payment success handler:', error);
             toast({
-              title: "Payment Processing Error",
-              description: "Payment was successful but there was an issue updating your subscription. Please contact support.",
+              title: "Payment Verification Failed",
+              description: "Payment completed but verification failed. Please contact support.",
               variant: "destructive"
             });
           }
         },
         modal: {
           ondismiss: () => {
-            console.log('❌ Payment cancelled by user');
+            console.log('❌ DEBUG: Payment modal dismissed by user');
             toast({
               title: "Payment Cancelled",
               description: "You cancelled the payment process.",
@@ -126,18 +173,40 @@ export const useRazorpayPayment = () => {
         }
       };
 
-      console.log('🚀 Opening Razorpay checkout...');
-      const razorpayInstance = new window.Razorpay(options);
+      console.log('🎯 DEBUG: Razorpay options prepared:', {
+        key: razorpayOptions.key ? 'Present' : 'Missing',
+        amount: razorpayOptions.amount,
+        currency: razorpayOptions.currency,
+        order_id: razorpayOptions.order_id,
+        name: razorpayOptions.name
+      });
+
+      console.log('🚀 DEBUG: Creating Razorpay instance...');
+      const razorpayInstance = new window.Razorpay(razorpayOptions);
+      
+      console.log('🚀 DEBUG: Opening Razorpay checkout modal...');
       razorpayInstance.open();
+      
+      console.log('✅ DEBUG: STEP 5 COMPLETE - Razorpay checkout modal opened');
+      console.log('✅ DEBUG: ===========================================');
+      console.log('✅ DEBUG: PAYMENT INITIATION PROCESS COMPLETED');
+      console.log('✅ DEBUG: ===========================================');
 
     } catch (error: any) {
-      console.error('💥 Payment initiation error:', error);
+      console.error('💥 DEBUG: ===========================================');
+      console.error('💥 DEBUG: PAYMENT INITIATION FAILED');
+      console.error('💥 DEBUG: ===========================================');
+      console.error('💥 DEBUG: Error message:', error.message);
+      console.error('💥 DEBUG: Error object:', error);
+      console.error('💥 DEBUG: Error stack:', error.stack);
+      
       toast({
         title: "Payment Error",
         description: error.message || "Failed to initiate payment. Please try again.",
         variant: "destructive"
       });
     } finally {
+      console.log('🏁 DEBUG: Setting loading state to false');
       setLoading(false);
     }
   };
@@ -147,3 +216,5 @@ export const useRazorpayPayment = () => {
     loading
   };
 };
+
+export default useRazorpayPayment;
