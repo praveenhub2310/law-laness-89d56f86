@@ -349,9 +349,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           razorpay_base_uri: string | null
-          razorpay_key_id: string | null
-          razorpay_key_secret: string | null
-          razorpay_webhook_secret: string | null
           razorpay_webhook_uri: string | null
           updated_at: string
           updated_by: string | null
@@ -363,9 +360,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           razorpay_base_uri?: string | null
-          razorpay_key_id?: string | null
-          razorpay_key_secret?: string | null
-          razorpay_webhook_secret?: string | null
           razorpay_webhook_uri?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -377,9 +371,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           razorpay_base_uri?: string | null
-          razorpay_key_id?: string | null
-          razorpay_key_secret?: string | null
-          razorpay_webhook_secret?: string | null
           razorpay_webhook_uri?: string | null
           updated_at?: string
           updated_by?: string | null

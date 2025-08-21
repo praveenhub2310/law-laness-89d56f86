@@ -6,16 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Save, Eye, EyeOff, Key, Webhook, Globe, Shield } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Save, Key, Webhook, Globe, Shield, Lock, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PaymentSettings {
   id?: string;
-  razorpay_key_id: string;
-  razorpay_key_secret: string;
   razorpay_webhook_uri: string;
-  razorpay_webhook_secret: string;
   razorpay_base_uri: string;
   enable_razorpay_prepaid: boolean;
   enable_razorpay_subscription: boolean;
@@ -27,15 +25,8 @@ const PaymentSettings = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showSecrets, setShowSecrets] = useState({
-    keySecret: false,
-    webhookSecret: false
-  });
   const [settings, setSettings] = useState<PaymentSettings>({
-    razorpay_key_id: '',
-    razorpay_key_secret: '',
     razorpay_webhook_uri: 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook',
-    razorpay_webhook_secret: '',
     razorpay_base_uri: 'https://api.razorpay.com/v1/',
     enable_razorpay_prepaid: true,
     enable_razorpay_subscription: true,
@@ -152,15 +143,8 @@ const PaymentSettings = () => {
     }));
   };
 
-  const toggleSecretVisibility = (field: 'keySecret' | 'webhookSecret') => {
-    setShowSecrets(prev => ({
-      ...prev,
-      [field]: !prev[field]
-    }));
-  };
-
   const getStatusBadge = () => {
-    if (settings.is_active && settings.razorpay_key_id && settings.razorpay_key_secret) {
+    if (settings.is_active) {
       return <Badge className="bg-success text-success-foreground">Active</Badge>;
     }
     return <Badge variant="secondary">Inactive</Badge>;
@@ -186,6 +170,15 @@ const PaymentSettings = () => {
         {getStatusBadge()}
       </div>
 
+      {/* Security Notice */}
+      <Alert className="border-success">
+        <Shield className="h-4 w-4" />
+        <AlertDescription>
+          <strong>🔐 Security Enhanced:</strong> Payment credentials are now securely managed via environment variables. 
+          This protects your sensitive API keys from potential database breaches.
+        </AlertDescription>
+      </Alert>
+
       <Card className="border-border">
         <CardHeader className="space-y-1">
           <CardTitle className="flex items-center gap-2">
@@ -193,47 +186,51 @@ const PaymentSettings = () => {
             Razorpay Configuration
           </CardTitle>
           <CardDescription>
-            Configure your Razorpay API credentials and settings
+            Configure your Razorpay settings and manage secure credentials
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* API Credentials */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="key_id">Razorpay Key ID</Label>
-              <Input
-                id="key_id"
-                placeholder="rzp_test_..."
-                value={settings.razorpay_key_id}
-                onChange={(e) => handleInputChange('razorpay_key_id', e.target.value)}
-              />
+          {/* Secure Credentials Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-success" />
+              <Label className="text-base font-medium">Secure Credentials Management</Label>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="key_secret">Razorpay Key Secret</Label>
-              <div className="relative">
-                <Input
-                  id="key_secret"
-                  type={showSecrets.keySecret ? 'text' : 'password'}
-                  placeholder="Enter secret key"
-                  value={settings.razorpay_key_secret}
-                  onChange={(e) => handleInputChange('razorpay_key_secret', e.target.value)}
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => toggleSecretVisibility('keySecret')}
-                >
-                  {showSecrets.keySecret ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p><strong>Razorpay API credentials are securely managed via environment secrets.</strong></p>
+                  <p>Your credentials are stored in:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li><code>RAZORPAY_KEY_ID</code> - Your Razorpay API Key ID</li>
+                    <li><code>RAZORPAY_KEY_SECRET</code> - Your Razorpay API Secret</li>
+                  </ul>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    These credentials are encrypted and only accessible to your edge functions.
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.open('https://supabase.com/dashboard/project/ibaqunlwzzoonbsnajbk/settings/functions', '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Manage Secrets
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.open('https://dashboard.razorpay.com/app/keys', '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Razorpay Dashboard
+              </Button>
             </div>
           </div>
 
@@ -246,43 +243,17 @@ const PaymentSettings = () => {
               <Label className="text-base font-medium">Webhook Configuration</Label>
             </div>
             
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="webhook_uri">Webhook URI</Label>
-                <Input
-                  id="webhook_uri"
-                  placeholder="https://your-domain.com/api/razorpay-webhook"
-                  value={settings.razorpay_webhook_uri}
-                  onChange={(e) => handleInputChange('razorpay_webhook_uri', e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="webhook_secret">Webhook Secret</Label>
-                <div className="relative">
-                  <Input
-                    id="webhook_secret"
-                    type={showSecrets.webhookSecret ? 'text' : 'password'}
-                    placeholder="Enter webhook secret"
-                    value={settings.razorpay_webhook_secret}
-                    onChange={(e) => handleInputChange('razorpay_webhook_secret', e.target.value)}
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                    onClick={() => toggleSecretVisibility('webhookSecret')}
-                  >
-                    {showSecrets.webhookSecret ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="webhook_uri">Webhook URI</Label>
+              <Input
+                id="webhook_uri"
+                value={settings.razorpay_webhook_uri}
+                onChange={(e) => handleInputChange('razorpay_webhook_uri', e.target.value)}
+                placeholder="https://your-domain.com/functions/v1/razorpay-webhook"
+              />
+              <p className="text-sm text-muted-foreground">
+                Configure this URL in your Razorpay webhook settings
+              </p>
             </div>
           </div>
 
@@ -299,6 +270,9 @@ const PaymentSettings = () => {
               value={settings.razorpay_base_uri}
               onChange={(e) => handleInputChange('razorpay_base_uri', e.target.value)}
             />
+            <p className="text-sm text-muted-foreground">
+              Default Razorpay API endpoint (usually no need to change)
+            </p>
           </div>
 
           <Separator />
