@@ -111,6 +111,12 @@ const CloudStorage = () => {
     });
   };
 
+  const clearRecentFiles = () => {
+    setRecentFiles([]);
+    localStorage.removeItem('recentFiles');
+    toast.success('Recent files cleared');
+  };
+
 
   const fetchDriveFiles = async (folderId: string = 'root') => {
     console.log(`📁 fetchDriveFiles called with folder: ${folderId}`);
@@ -793,7 +799,20 @@ const CloudStorage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Files</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Files</CardTitle>
+            {recentFiles.length > 0 && (
+              <Button
+                onClick={clearRecentFiles}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Clear Recent Files
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {recentFiles.length === 0 ? (
