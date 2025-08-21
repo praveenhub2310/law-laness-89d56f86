@@ -64,7 +64,7 @@ import DocumentUpload from './pages/DocumentUpload';
 import ESign from './pages/ESign';
 import AssignedAdvocate from './pages/AssignedAdvocate';
 import AiScenarioGuidance from './pages/AiScenarioGuidance';
-import CourtCauseList from './pages/CourtCauseList';
+import CauseList from './pages/CauseList';
 import DraftingTool from './pages/DraftingTool';
 import DocumentTranslation from './pages/DocumentTranslation';
 import CourtFeeCalculator from './pages/CourtFeeCalculator';
@@ -156,7 +156,7 @@ function App() {
           <Route path="/dashboard/subscription" element={<RoleGuard allowedRoles={['advocate', 'company']}><DashboardLayout><Subscription /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><Transactions /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/fee-calculator" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/cause-list" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><CourtCauseList /></DashboardLayout></RoleGuard>} />
+          <Route path="/cause-list" element={<RoleGuard allowedRoles={['advocate', 'super_admin', 'company']}><DashboardLayout><CauseList /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/ai-scenario" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><AiScenarioGuidance /></DashboardLayout></RoleGuard>} />
           
           {/* Law Firm/Company Routes */}

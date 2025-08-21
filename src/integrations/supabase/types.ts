@@ -58,6 +58,42 @@ export type Database = {
           },
         ]
       }
+      cause_list: {
+        Row: {
+          case_number: string
+          court_name: string
+          created_at: string
+          date: string
+          id: string
+          judge_name: string
+          parties: string
+          status: Database["public"]["Enums"]["cause_status"]
+          updated_at: string
+        }
+        Insert: {
+          case_number: string
+          court_name: string
+          created_at?: string
+          date: string
+          id?: string
+          judge_name: string
+          parties: string
+          status?: Database["public"]["Enums"]["cause_status"]
+          updated_at?: string
+        }
+        Update: {
+          case_number?: string
+          court_name?: string
+          created_at?: string
+          date?: string
+          id?: string
+          judge_name?: string
+          parties?: string
+          status?: Database["public"]["Enums"]["cause_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           client_type: string | null
@@ -616,6 +652,7 @@ export type Database = {
     }
     Enums: {
       case_status: "active" | "closed" | "pending" | "draft"
+      cause_status: "scheduled" | "in_progress" | "completed" | "adjourned"
       document_status: "active" | "draft" | "archived"
       user_role: "super_admin" | "company" | "advocate" | "client"
     }
@@ -746,6 +783,7 @@ export const Constants = {
   public: {
     Enums: {
       case_status: ["active", "closed", "pending", "draft"],
+      cause_status: ["scheduled", "in_progress", "completed", "adjourned"],
       document_status: ["active", "draft", "archived"],
       user_role: ["super_admin", "company", "advocate", "client"],
     },

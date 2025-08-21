@@ -171,10 +171,10 @@ export const menuItems: MenuItem[] = [
     roles: ["super_admin"]
   },
   {
-    title: "Court Cause List",
+    title: "Cause List",
     icon: Calendar,
-    path: "/dashboard/cause-list",
-    roles: ["super_admin"]
+    path: "/cause-list",
+    roles: ["super_admin", "advocate", "company"]
   },
   {
     title: "Drafting Tool",
@@ -265,9 +265,9 @@ export const menuItems: MenuItem[] = [
     roles: ["advocate"]
   },
   {
-    title: "Court Cause List",
+    title: "Cause List",
     icon: Calendar,
-    path: "/dashboard/cause-list",
+    path: "/cause-list",
     roles: ["advocate"]
   },
   {
@@ -353,6 +353,12 @@ export const menuItems: MenuItem[] = [
     title: "Translation Tools",
     icon: FileText,
     path: "/dashboard/firm-translation",
+    roles: ["company"]
+  },
+  {
+    title: "Cause List",
+    icon: Calendar,
+    path: "/cause-list",
     roles: ["company"]
   },
 
