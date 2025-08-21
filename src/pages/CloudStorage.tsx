@@ -17,7 +17,9 @@ import {
   RefreshCw,
   Upload,
   Plus,
-  X
+  X,
+  List,
+  Grid3X3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
@@ -49,6 +51,7 @@ const CloudStorage = () => {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Component mounting - load recent files and fetch drive files if connected
   useEffect(() => {
@@ -107,8 +110,8 @@ const CloudStorage = () => {
       console.log('🌐 Making API call...');
       const response = await window.gapi.client.drive.files.list({
         q: query,
-        pageSize: 50,
-        fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink,webContentLink,parents)',
+        pageSize: 100,
+        fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink,webContentLink,parents,thumbnailLink)',
         orderBy: 'folder,name'
       });
       
@@ -257,10 +260,34 @@ const CloudStorage = () => {
             }
           });
 
-          xhr.onload = () => {
+          xhr.onload = async () => {
             if (xhr.status === 200) {
-              const result = JSON.parse(xhr.responseText);
-              resolve(result);
+              const uploadResult = JSON.parse(xhr.responseText);
+              
+              // Fetch complete file metadata after upload
+              try {
+                const token = localStorage.getItem('google_drive_token');
+                const metadataResponse = await fetch(
+                  `https://www.googleapis.com/drive/v3/files/${uploadResult.id}?fields=id,name,mimeType,modifiedTime,size,webViewLink,webContentLink,parents,thumbnailLink`,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  }
+                );
+                
+                if (metadataResponse.ok) {
+                  const completeFile = await metadataResponse.json();
+                  resolve(completeFile);
+                } else {
+                  // Fallback to basic upload result if metadata fetch fails
+                  resolve(uploadResult);
+                }
+              } catch (metadataError) {
+                console.error('Failed to fetch complete metadata:', metadataError);
+                // Fallback to basic upload result
+                resolve(uploadResult);
+              }
             } else {
               reject(new Error(`Upload failed: ${xhr.statusText}`));
             }
@@ -269,7 +296,7 @@ const CloudStorage = () => {
           xhr.onerror = () => reject(new Error('Upload failed'));
 
           const token = localStorage.getItem('google_drive_token');
-          xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+          xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime,size,webViewLink,webContentLink,parents');
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
           xhr.send(form);
         });
@@ -277,7 +304,7 @@ const CloudStorage = () => {
 
       const uploadedFiles = await Promise.all(uploadPromises);
       
-      // Add uploaded files to recent files
+      // Add uploaded files to recent files with complete metadata
       uploadedFiles.forEach(file => addToRecentFiles(file));
       
       // Refresh the current folder to show new files
@@ -388,6 +415,24 @@ const CloudStorage = () => {
               <CardTitle>Google Drive Files</CardTitle>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">{files.length} items</Badge>
+                <div className="flex items-center gap-1 border rounded-md p-1">
+                  <Button
+                    onClick={() => setViewMode('list')}
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                  >
+                    <List className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    onClick={() => setViewMode('grid')}
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                  >
+                    <Grid3X3 className="h-3 w-3" />
+                  </Button>
+                </div>
                 <Button
                   onClick={() => fetchDriveFiles(currentFolder)}
                   variant="ghost"
@@ -535,7 +580,7 @@ const CloudStorage = () => {
                 <Folder className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-sm text-muted-foreground">No files found in this folder</p>
               </div>
-            ) : (
+            ) : viewMode === 'list' ? (
               <div className="space-y-2">
                 {files.map((file) => (
                   <div
@@ -590,6 +635,64 @@ const CloudStorage = () => {
                         </div>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex flex-col items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (file.mimeType === 'application/vnd.google-apps.folder') {
+                        navigateToFolder(file);
+                      } else {
+                        previewFile(file);
+                      }
+                    }}
+                  >
+                    <div className="flex-shrink-0 mb-2">
+                      {file.mimeType === 'application/vnd.google-apps.folder' ? (
+                        <Folder className="h-8 w-8 text-blue-500" />
+                      ) : (
+                        <File className="h-8 w-8 text-gray-500" />
+                      )}
+                    </div>
+                    <p className="text-xs font-medium text-center truncate w-full" title={file.name}>
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {file.mimeType === 'application/vnd.google-apps.folder' ? 'Folder' : formatFileSize(file.size)}
+                    </p>
+                    {file.mimeType !== 'application/vnd.google-apps.folder' && (
+                      <div className="flex items-center space-x-1 mt-2">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            previewFile(file);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          title="Preview"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadFile(file);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          title="Download"
+                        >
+                          <Download className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
