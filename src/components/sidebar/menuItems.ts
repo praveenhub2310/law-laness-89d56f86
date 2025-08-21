@@ -27,7 +27,8 @@ import {
   Calculator,
   Banknote,
   Cloud,
-  FileSignature
+  FileSignature,
+  Wallet
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -162,6 +163,12 @@ export const menuItems: MenuItem[] = [
     title: "Settings",
     icon: Settings,
     path: "/dashboard/settings",
+    roles: ["super_admin"]
+  },
+  {
+    title: "Payment Settings",
+    icon: Wallet,
+    path: "/dashboard/payment-settings",
     roles: ["super_admin"]
   },
   {

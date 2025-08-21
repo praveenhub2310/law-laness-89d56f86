@@ -82,6 +82,7 @@ import CaseDetails from './pages/CaseDetails';
 import Schedule from './pages/Schedule';
 import Templates from './pages/Templates';
 import MyClients from './pages/MyClients';
+import PaymentSettings from './pages/PaymentSettings';
 
 function App() {
   return (
@@ -122,6 +123,7 @@ function App() {
           <Route path="/dashboard/logs" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SystemLog /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/reports" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Reports /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/settings" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Settings /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/payment-settings" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><PaymentSettings /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/drafting-tool" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DraftingTool /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/translation" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DocumentTranslation /></DashboardLayout></RoleGuard>} />
           

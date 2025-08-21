@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRazorpayPayment } from '@/hooks/useRazorpayPayment';
 import { 
   CreditCard, 
   Check, 
@@ -72,9 +73,11 @@ interface Invoice {
 const Subscription = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { initiatePayment, loading: paymentLoading } = useRazorpayPayment();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [paymentSettings, setPaymentSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [billingHistoryOpen, setBillingHistoryOpen] = useState(false);
@@ -104,21 +107,35 @@ const Subscription = () => {
     try {
       setLoading(true);
       
-      // Fetch available plans
-      const { data: plansData, error: plansError } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('is_active', true)
-        .order('price', { ascending: true });
+      // Fetch available plans and payment settings in parallel
+      const [plansResponse, paymentSettingsResponse] = await Promise.all([
+        supabase
+          .from('subscription_plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true }),
+        supabase
+          .from('payment_settings')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+      ]);
 
-      if (plansError) throw plansError;
+      if (plansResponse.error) throw plansResponse.error;
       
       // Transform the data to match our interface
-      const transformedPlans = (plansData || []).map(plan => ({
+      const transformedPlans = (plansResponse.data || []).map(plan => ({
         ...plan,
         features: Array.isArray(plan.features) ? plan.features.map(f => String(f)) : []
       }));
       setPlans(transformedPlans);
+
+      // Set payment settings (might not exist yet)
+      if (paymentSettingsResponse.data) {
+        setPaymentSettings(paymentSettingsResponse.data);
+      }
 
       // Fetch current user subscription
       if (user) {
@@ -209,43 +226,35 @@ const Subscription = () => {
 
   const handleSubscribe = async (planId: string) => {
     if (!user) return;
-    
-    try {
-      setActionLoading(true);
-      
-      // Create subscription
-      const currentDate = new Date();
-      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, currentDate.getDate());
-      
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: user.id,
-          plan_id: planId,
-          status: 'active',
-          current_period_start: currentDate.toISOString(),
-          current_period_end: nextMonth.toISOString(),
-          payment_method: 'Credit Card'
-        });
 
-      if (error) throw error;
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
 
+    // Check if payment gateway is configured and active
+    if (!paymentSettings || !paymentSettings.is_active) {
       toast({
-        title: "Success",
-        description: "Successfully subscribed to plan",
+        title: "Payment Unavailable",
+        description: "Payment gateway is currently unavailable. Please contact support.",
+        variant: "destructive"
       });
-      
-      fetchSubscriptionData();
-    } catch (error) {
-      console.error('Error subscribing:', error);
-      toast({
-        title: "Error",
-        description: "Failed to subscribe to plan",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
+      return;
     }
+
+    if (!paymentSettings.enable_razorpay_subscription) {
+      toast({
+        title: "Subscriptions Unavailable", 
+        description: "Subscription payments are currently disabled. Please contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    await initiatePayment({
+      planId: plan.id,
+      amount: plan.price,
+      currency: plan.currency || 'INR',
+      planName: plan.name
+    });
   };
 
   const handleCancelSubscription = async () => {

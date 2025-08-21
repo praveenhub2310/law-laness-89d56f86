@@ -341,6 +341,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_settings: {
+        Row: {
+          created_at: string
+          enable_razorpay_prepaid: boolean | null
+          enable_razorpay_subscription: boolean | null
+          id: string
+          is_active: boolean | null
+          razorpay_base_uri: string | null
+          razorpay_key_id: string | null
+          razorpay_key_secret: string | null
+          razorpay_webhook_secret: string | null
+          razorpay_webhook_uri: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          enable_razorpay_prepaid?: boolean | null
+          enable_razorpay_subscription?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          razorpay_base_uri?: string | null
+          razorpay_key_id?: string | null
+          razorpay_key_secret?: string | null
+          razorpay_webhook_secret?: string | null
+          razorpay_webhook_uri?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          enable_razorpay_prepaid?: boolean | null
+          enable_razorpay_subscription?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          razorpay_base_uri?: string | null
+          razorpay_key_id?: string | null
+          razorpay_key_secret?: string | null
+          razorpay_webhook_secret?: string | null
+          razorpay_webhook_uri?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -500,6 +545,10 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           payment_date: string | null
+          payment_method: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          razorpay_signature: string | null
           status: string
           subscription_id: string
           updated_at: string
@@ -513,6 +562,10 @@ export type Database = {
           invoice_date?: string
           invoice_number: string
           payment_date?: string | null
+          payment_method?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
           status?: string
           subscription_id: string
           updated_at?: string
@@ -526,6 +579,10 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           payment_date?: string | null
+          payment_method?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
           status?: string
           subscription_id?: string
           updated_at?: string
@@ -733,8 +790,11 @@ export type Database = {
           current_period_end: string
           current_period_start: string
           id: string
+          next_billing_date: string | null
           payment_method: string | null
+          payment_status: string | null
           plan_id: string
+          razorpay_subscription_id: string | null
           status: string
           updated_at: string
           user_id: string
@@ -745,8 +805,11 @@ export type Database = {
           current_period_end: string
           current_period_start: string
           id?: string
+          next_billing_date?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           plan_id: string
+          razorpay_subscription_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -757,8 +820,11 @@ export type Database = {
           current_period_end?: string
           current_period_start?: string
           id?: string
+          next_billing_date?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           plan_id?: string
+          razorpay_subscription_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
