@@ -12,7 +12,14 @@ import {
   Crown,
   Zap,
   AlertCircle,
-  Loader2
+  Loader2,
+  Star,
+  Shield,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -26,6 +33,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface SubscriptionPlan {
   id: string;
@@ -65,6 +77,23 @@ const Subscription = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [billingHistoryOpen, setBillingHistoryOpen] = useState(false);
+
+  // Check if plan is about to expire (within 7 days)
+  const isExpiringSoon = (endDate: string) => {
+    const expiryDate = new Date(endDate);
+    const today = new Date();
+    const diffTime = expiryDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7 && diffDays > 0;
+  };
+
+  const getDaysUntilExpiry = (endDate: string) => {
+    const expiryDate = new Date(endDate);
+    const today = new Date();
+    const diffTime = expiryDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   useEffect(() => {
     fetchSubscriptionData();
@@ -310,52 +339,91 @@ const Subscription = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-8">
       <div className="flex items-center gap-2">
         <CreditCard className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Subscriptions</h1>
+        <h1 className="text-3xl font-bold">Financial Management</h1>
       </div>
+
+      {/* Expiry Warning Banner */}
+      {currentSubscription && 
+       currentSubscription.status === 'active' && 
+       isExpiringSoon(currentSubscription.current_period_end) && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/10">
+          <CardContent className="flex items-center gap-4 p-4">
+            <AlertCircle className="h-5 w-5 text-amber-600" />
+            <div className="flex-1">
+              <p className="font-medium text-amber-800 dark:text-amber-200">
+                Your plan expires in {getDaysUntilExpiry(currentSubscription.current_period_end)} days
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Renew now to avoid service interruption
+              </p>
+            </div>
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Renew Now
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Current Active Plan */}
       {currentSubscription && (
-        <Card className="border-2 border-primary bg-gradient-to-r from-primary/5 to-primary/10">
+        <Card className="border-2 border-primary bg-gradient-to-br from-primary/5 via-primary/3 to-primary/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-16 translate-x-16"></div>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="h-5 w-5 text-primary" />
-                Current Active Plan
+            <div className="flex items-center justify-between relative">
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Crown className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Current Active Plan</h3>
+                  <p className="text-sm text-muted-foreground">Your subscription details</p>
+                </div>
               </CardTitle>
               {getStatusBadge(currentSubscription.status)}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Plan Name</p>
-                <p className="font-semibold text-lg">{currentSubscription.plan.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Price</p>
-                <p className="font-semibold text-lg">
-                  ₹{currentSubscription.plan.price} / Month
+          <CardContent className="space-y-6 relative">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center p-4 bg-background/50 rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Plan Name</p>
+                <p className="text-lg font-bold">{currentSubscription.plan.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {currentSubscription.plan.name === 'Starter' ? 'Solo Lawyers & Small Firms' : 'Growing Firms & Legal Teams'}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Renewal Date</p>
-                <p className="font-semibold">{formatDate(currentSubscription.current_period_end)}</p>
+              <div className="text-center p-4 bg-background/50 rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Price</p>
+                <p className="text-2xl font-bold text-primary">₹{currentSubscription.plan.price}</p>
+                <p className="text-xs text-muted-foreground">per month</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Payment Method</p>
-                <p className="font-semibold">{currentSubscription.payment_method || 'Not set'}</p>
+              <div className="text-center p-4 bg-background/50 rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Renewal Date</p>
+                <p className="font-semibold">{formatDate(currentSubscription.current_period_end)}</p>
+                <p className="text-xs text-muted-foreground">Auto-renewal</p>
+              </div>
+              <div className="text-center p-4 bg-background/50 rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Payment Method</p>
+                <p className="font-semibold flex items-center justify-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  {currentSubscription.payment_method || 'Not set'}
+                </p>
+                <Button variant="link" size="sm" className="text-xs p-0">
+                  <Settings className="h-3 w-3 mr-1" />
+                  Update
+                </Button>
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2 pt-4">
+            <div className="flex flex-wrap gap-3 pt-4 border-t">
               {currentSubscription.status === 'active' && (
                 <>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" disabled={actionLoading}>
+                      <Button variant="outline" disabled={actionLoading} className="flex-1 sm:flex-none">
                         Cancel Subscription
                       </Button>
                     </AlertDialogTrigger>
@@ -363,7 +431,7 @@ const Subscription = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your current billing period.
+                          Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your current billing period on {formatDate(currentSubscription.current_period_end)}.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -375,10 +443,16 @@ const Subscription = () => {
                     </AlertDialogContent>
                   </AlertDialog>
                   
+                  <Button variant="outline" className="flex-1 sm:flex-none">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Renew Now
+                  </Button>
+                  
                   {invoices.length > 0 && (
                     <Button 
                       variant="outline" 
                       onClick={() => handleDownloadInvoice(invoices[0].id)}
+                      className="flex-1 sm:flex-none"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download Invoice
@@ -393,120 +467,176 @@ const Subscription = () => {
 
       {/* Available Plans */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Available Plans</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {plans.map((plan) => (
-            <Card key={plan.id} className={`relative ${
-              currentSubscription?.plan_id === plan.id 
-                ? 'border-2 border-primary shadow-lg' 
-                : 'hover:shadow-lg transition-shadow'
-            }`}>
-              {currentSubscription?.plan_id === plan.id && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-primary text-primary-foreground">
-                    <Crown className="h-3 w-3 mr-1" />
-                    Current Plan
-                  </Badge>
-                </div>
-              )}
-              
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    {plan.name === 'Growth' ? (
-                      <Zap className="h-5 w-5 text-primary" />
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-2">Choose Your Plan</h2>
+          <p className="text-muted-foreground">Select the perfect plan for your legal practice</p>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {plans.map((plan, index) => {
+            const isCurrentPlan = currentSubscription?.plan_id === plan.id;
+            const isRecommended = plan.name === 'Growth';
+            const isStarter = plan.name === 'Starter';
+            
+            return (
+              <Card 
+                key={plan.id} 
+                className={`relative transition-all duration-300 hover:shadow-xl min-h-[600px] flex flex-col ${
+                  isCurrentPlan 
+                    ? 'border-2 border-primary shadow-2xl scale-105' 
+                    : 'hover:scale-105 hover:border-primary/50'
+                } ${isCurrentPlan ? 'bg-gradient-to-br from-primary/5 to-primary/10' : ''}`}
+              >
+                {/* Ribbon Badge */}
+                {(isCurrentPlan || isRecommended) && (
+                  <div className={`absolute -top-3 -right-3 z-10 px-4 py-1 text-xs font-bold text-white rounded-full shadow-lg ${
+                    isCurrentPlan ? 'bg-primary' : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                  }`}>
+                    {isCurrentPlan ? (
+                      <><Crown className="h-3 w-3 mr-1 inline" />Current Plan</>
                     ) : (
-                      <Crown className="h-5 w-5 text-muted-foreground" />
+                      <><Star className="h-3 w-3 mr-1 inline" />Recommended</>
                     )}
-                    {plan.name}
-                  </span>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold">₹{plan.price}</div>
+                  </div>
+                )}
+                
+                <CardHeader className="text-center pb-4">
+                  <div className="flex justify-center mb-4">
+                    <div className={`p-4 rounded-full ${isStarter ? 'bg-blue-100 dark:bg-blue-900/20' : 'bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/20 dark:to-indigo-900/20'}`}>
+                      {isStarter ? (
+                        <Crown className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                      ) : (
+                        <Zap className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <CardTitle className="text-2xl font-bold mb-2">{plan.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {isStarter ? 'For Solo Lawyers & Small Firms' : 'For Growing Firms & Legal Teams'}
+                  </p>
+                  
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-primary mb-1">₹{plan.price}</div>
                     <div className="text-sm text-muted-foreground">per month</div>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Features:</h4>
-                  <ul className="space-y-1">
-                    {plan.features.map((feature: string, index: number) => (
-                      <li key={index} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                </CardHeader>
                 
-                <div className="pt-4">
-                  {currentSubscription?.plan_id === plan.id ? (
-                    <Button disabled className="w-full">
-                      <Check className="h-4 w-4 mr-2" />
-                      Current Plan
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="w-full"
-                      onClick={() => handleSubscribe(plan.id)}
-                      disabled={actionLoading || !!currentSubscription}
-                    >
-                      {actionLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <>
-                          {currentSubscription ? 'Upgrade to' : 'Get Started'}
-                          {plan.name === 'Growth' && <Zap className="h-4 w-4 ml-2" />}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardContent className="flex-1 flex flex-col">
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-4 text-center">What's Included:</h4>
+                    <div className="grid grid-cols-1 gap-2 mb-6">
+                      {plan.features.map((feature: string, featureIndex: number) => (
+                        <div key={featureIndex} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="mt-0.5">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          </div>
+                          <span className="text-sm font-medium">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 mt-auto">
+                    {isCurrentPlan ? (
+                      <Button disabled className="w-full h-12 text-base font-semibold">
+                        <Check className="h-5 w-5 mr-2" />
+                        Current Plan
+                      </Button>
+                    ) : (
+                      <Button 
+                        className={`w-full h-12 text-base font-semibold transition-all ${
+                          isRecommended 
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg' 
+                            : ''
+                        }`}
+                        onClick={() => handleSubscribe(plan.id)}
+                        disabled={actionLoading || !!currentSubscription}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        ) : (
+                          <>
+                            {currentSubscription ? 'Upgrade to' : 'Get Started'}
+                            {isRecommended && <Zap className="h-5 w-5 ml-2" />}
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
-      {/* Recent Invoices */}
+      {/* Billing History */}
       {invoices.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Invoices</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {invoices.slice(0, 5).map((invoice) => (
-                <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{invoice.invoice_number}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(invoice.invoice_date)}
-                      </p>
+          <Collapsible open={billingHistoryOpen} onOpenChange={setBillingHistoryOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="hover:bg-muted/50 cursor-pointer transition-colors">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Billing History
+                  </span>
+                  {billingHistoryOpen ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {invoices.map((invoice) => (
+                    <div key={invoice.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Calendar className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">{invoice.invoice_number}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(invoice.invoice_date)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-lg font-bold">₹{invoice.amount}</p>
+                          <Badge 
+                            variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {invoice.status === 'paid' ? (
+                              <><Check className="h-3 w-3 mr-1" />Paid</>
+                            ) : (
+                              <><AlertCircle className="h-3 w-3 mr-1" />Pending</>
+                            )}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadInvoice(invoice.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold">₹{invoice.amount}</p>
-                      <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>
-                        {invoice.status}
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadInvoice(invoice.id)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
       )}
     </div>
