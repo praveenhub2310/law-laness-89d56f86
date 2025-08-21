@@ -14,14 +14,17 @@ import {
   Eye,
   Home,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Plus,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Google API configuration
 const GOOGLE_CLIENT_ID = '1048512211591-7isrimn9n6q2a6jh1ra23iktoilkbc3e.apps.googleusercontent.com';
 const GOOGLE_API_KEY = 'AIzaSyAdpCkgEOgsSeF_Ofa5nWOcUTZQZE-_bvk';
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 // Interfaces
 interface GoogleDriveFile {
@@ -64,6 +67,9 @@ const CloudStorage = () => {
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Drive' }]);
   const [isGapiLoaded, setIsGapiLoaded] = useState(false);
   const [recentFiles, setRecentFiles] = useState<GoogleDriveFile[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
 
   // Component mounting and Google API initialization
   useEffect(() => {
@@ -74,23 +80,45 @@ const CloudStorage = () => {
     // Initialize Google API
     initializeGoogleAPI();
     loadRecentFiles();
-    checkExistingConnection();
+    
+    // Check connection with retry logic for better persistence
+    const checkConnection = async () => {
+      let attempts = 0;
+      while (attempts < 5) {
+        const success = await checkExistingConnection();
+        if (success || attempts >= 4) break;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+    };
+    checkConnection();
   }, []);
 
-  const checkExistingConnection = async () => {
+  const checkExistingConnection = async (): Promise<boolean> => {
     // Wait for API initialization to complete
     let attempts = 0;
-    while (!isGapiLoaded && attempts < 10) {
+    while (!isGapiLoaded && attempts < 15) {
       await new Promise(resolve => setTimeout(resolve, 500));
       attempts++;
     }
     
     const savedProfile = localStorage.getItem('google_drive_profile');
     const savedToken = localStorage.getItem('google_drive_token');
+    const savedExpiry = localStorage.getItem('google_drive_token_expiry');
     
     if (savedProfile && savedToken && isGapiLoaded) {
       try {
         console.log('🔍 Checking existing connection...');
+        
+        // Check if token is expired
+        if (savedExpiry && new Date().getTime() > parseInt(savedExpiry)) {
+          console.log('⏰ Token has expired, clearing stored data...');
+          localStorage.removeItem('google_drive_profile');
+          localStorage.removeItem('google_drive_token');
+          localStorage.removeItem('google_drive_token_expiry');
+          return false;
+        }
+        
         const profile = JSON.parse(savedProfile);
         
         // Test if the token is still valid by making a simple API call
@@ -115,17 +143,23 @@ const CloudStorage = () => {
           // Fetch files for the restored connection
           await fetchDriveFiles('root');
           toast.success(`Welcome back, ${profile.name}!`);
+          return true;
         } else {
           console.log('❌ Existing token is invalid, clearing stored data...');
           localStorage.removeItem('google_drive_profile');
           localStorage.removeItem('google_drive_token');
+          localStorage.removeItem('google_drive_token_expiry');
+          return false;
         }
       } catch (error) {
         console.error('Error checking existing connection:', error);
         localStorage.removeItem('google_drive_profile');
         localStorage.removeItem('google_drive_token');
+        localStorage.removeItem('google_drive_token_expiry');
+        return false;
       }
     }
+    return false;
   };
 
   const loadRecentFiles = () => {
@@ -347,6 +381,10 @@ const CloudStorage = () => {
               localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
               localStorage.setItem('google_drive_token', tokenResponse.access_token);
               
+              // Store token expiry (tokens typically last 1 hour)
+              const expiryTime = new Date().getTime() + (55 * 60 * 1000); // 55 minutes
+              localStorage.setItem('google_drive_token_expiry', expiryTime.toString());
+              
               console.log('📁 Fetching initial files...');
               await fetchDriveFiles('root');
               
@@ -410,6 +448,7 @@ const CloudStorage = () => {
     
     localStorage.removeItem('google_drive_profile');
     localStorage.removeItem('google_drive_token');
+    localStorage.removeItem('google_drive_token_expiry');
     localStorage.removeItem('recentFiles');
     console.log('✅ Disconnection completed');
     toast.success('Disconnected from Google Drive');
@@ -534,6 +573,97 @@ const CloudStorage = () => {
       window.open(file.webContentLink, '_blank');
     } else {
       toast.error('Download not available for this file');
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    setSelectedFiles(files);
+  };
+
+  const removeSelectedFile = (index: number) => {
+    if (selectedFiles) {
+      const dt = new DataTransfer();
+      Array.from(selectedFiles).forEach((file, i) => {
+        if (i !== index) dt.items.add(file);
+      });
+      setSelectedFiles(dt.files);
+    }
+  };
+
+  const uploadFiles = async () => {
+    if (!selectedFiles || !isConnected) {
+      toast.error('Please select files and ensure you are connected to Google Drive');
+      return;
+    }
+
+    setUploading(true);
+    const newProgress: {[key: string]: number} = {};
+
+    try {
+      const uploadPromises = Array.from(selectedFiles).map(async (file, index) => {
+        const fileKey = `${file.name}_${index}`;
+        newProgress[fileKey] = 0;
+        setUploadProgress({ ...newProgress });
+
+        const metadata = {
+          name: file.name,
+          parents: currentFolder === 'root' ? undefined : [currentFolder],
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+        
+        return new Promise<GoogleDriveFile>((resolve, reject) => {
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded * 100) / e.total);
+              setUploadProgress(prev => ({ ...prev, [fileKey]: progress }));
+            }
+          });
+
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              const result = JSON.parse(xhr.responseText);
+              resolve(result);
+            } else {
+              reject(new Error(`Upload failed: ${xhr.statusText}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error('Upload failed'));
+
+          const token = localStorage.getItem('google_drive_token');
+          xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          xhr.send(form);
+        });
+      });
+
+      const uploadedFiles = await Promise.all(uploadPromises);
+      
+      // Add uploaded files to recent files
+      uploadedFiles.forEach(file => addToRecentFiles(file));
+      
+      // Refresh the current folder to show new files
+      await fetchDriveFiles(currentFolder);
+      
+      // Clear selected files
+      setSelectedFiles(null);
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      
+      toast.success(`Successfully uploaded ${uploadedFiles.length} file(s)`);
+      
+    } catch (error: any) {
+      console.error('Upload failed:', error);
+      toast.error(`Upload failed: ${error.message}`);
+    } finally {
+      setUploading(false);
+      setUploadProgress({});
     }
   };
 
@@ -731,6 +861,109 @@ const CloudStorage = () => {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isConnected && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload Files
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center space-y-2"
+                >
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-sm font-medium">Click to select files</span>
+                  <span className="text-xs text-muted-foreground">
+                    Select multiple files to upload to your Google Drive
+                  </span>
+                </label>
+              </div>
+
+              {selectedFiles && selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Selected Files:</h4>
+                  <div className="space-y-2">
+                    {Array.from(selectedFiles).map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <File className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <p className="text-sm font-medium">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {uploading && uploadProgress[`${file.name}_${index}`] !== undefined && (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-primary transition-all duration-300"
+                                  style={{ width: `${uploadProgress[`${file.name}_${index}`]}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {uploadProgress[`${file.name}_${index}`]}%
+                              </span>
+                            </div>
+                          )}
+                          {!uploading && (
+                            <Button
+                              onClick={() => removeSelectedFile(index)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="text-sm text-muted-foreground">
+                      {selectedFiles.length} file(s) selected
+                    </span>
+                    <Button
+                      onClick={uploadFiles}
+                      disabled={uploading}
+                      className="flex items-center gap-2"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          Upload to Drive
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
