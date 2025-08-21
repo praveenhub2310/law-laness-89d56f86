@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Cloud, 
   Loader2, 
@@ -19,7 +20,8 @@ import {
   Plus,
   X,
   List,
-  Grid3X3
+  Grid3X3,
+  FolderOpen
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
@@ -44,11 +46,13 @@ interface BreadcrumbItem {
 const CloudStorage = () => {
   const { isConnected, userProfile, isConnecting, isGapiLoaded, connect, disconnect } = useGoogleDrive();
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
+  const [folders, setFolders] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('root');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Drive' }]);
   const [recentFiles, setRecentFiles] = useState<GoogleDriveFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [selectedUploadFolder, setSelectedUploadFolder] = useState('root');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -58,11 +62,30 @@ const CloudStorage = () => {
     console.log('🚀 CloudStorage component mounted successfully!');
     loadRecentFiles();
     
-    // If already connected, fetch files
+    // If already connected, fetch files and folders
     if (isConnected && isGapiLoaded) {
       fetchDriveFiles('root');
+      fetchAllFolders();
     }
   }, [isConnected, isGapiLoaded]);
+
+  const fetchAllFolders = async () => {
+    if (!isGapiLoaded || !isConnected) return;
+    
+    try {
+      const response = await window.gapi.client.drive.files.list({
+        q: "mimeType='application/vnd.google-apps.folder' and trashed=false",
+        pageSize: 100,
+        fields: 'files(id,name,parents)',
+        orderBy: 'name'
+      });
+      
+      const folders = response.result.files || [];
+      setFolders(folders);
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+    }
+  };
 
 
   const loadRecentFiles = () => {
@@ -202,13 +225,62 @@ const CloudStorage = () => {
     }
   };
 
-  const downloadFile = (file: GoogleDriveFile) => {
+  const downloadFile = async (file: GoogleDriveFile) => {
     addToRecentFiles(file);
-    if (file.webContentLink) {
-      window.open(file.webContentLink, '_blank');
-    } else {
-      toast.error('Download not available for this file');
+    
+    try {
+      const token = localStorage.getItem('google_drive_token');
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      // Use the export API for Google Workspace files, direct download for others
+      let downloadUrl;
+      if (file.mimeType.startsWith('application/vnd.google-apps.')) {
+        // Handle Google Workspace files (Docs, Sheets, etc.)
+        const exportMimeType = getExportMimeType(file.mimeType);
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${exportMimeType}`;
+      } else {
+        // Handle regular files
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+      }
+
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('File downloaded successfully');
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast.error(`Download failed: ${error.message}`);
     }
+  };
+
+  const getExportMimeType = (googleMimeType: string) => {
+    const mimeTypeMap: { [key: string]: string } = {
+      'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.google-apps.drawing': 'image/png'
+    };
+    return mimeTypeMap[googleMimeType] || 'application/pdf';
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,7 +315,7 @@ const CloudStorage = () => {
 
         const metadata = {
           name: file.name,
-          parents: currentFolder === 'root' ? undefined : [currentFolder],
+          parents: selectedUploadFolder === 'root' ? undefined : [selectedUploadFolder],
         };
 
         const form = new FormData();
@@ -454,6 +526,24 @@ const CloudStorage = () => {
               </div>
               
               <div className="space-y-4">
+                {/* Folder Selection */}
+                <div className="flex items-center gap-3">
+                  <FolderOpen className="h-5 w-5 text-primary" />
+                  <Select value={selectedUploadFolder} onValueChange={setSelectedUploadFolder}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select upload folder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="root">My Drive (Root)</SelectItem>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          📁 {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center bg-background">
                   <input
                     id="file-upload"
@@ -469,7 +559,7 @@ const CloudStorage = () => {
                     <Plus className="h-6 w-6 text-muted-foreground" />
                     <span className="text-sm font-medium">Click to select files</span>
                     <span className="text-xs text-muted-foreground">
-                      Upload files directly to your Google Drive
+                      Upload files to the selected folder
                     </span>
                   </label>
                 </div>
@@ -639,7 +729,7 @@ const CloudStorage = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {files.map((file) => (
                   <div
                     key={file.id}
