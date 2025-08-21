@@ -120,7 +120,7 @@ const Subscription = () => {
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
       ]);
 
       if (plansResponse.error) throw plansResponse.error;
@@ -133,8 +133,31 @@ const Subscription = () => {
       setPlans(transformedPlans);
 
       // Set payment settings (might not exist yet)
+      console.log('💳 Payment settings response:', paymentSettingsResponse);
       if (paymentSettingsResponse.data) {
+        console.log('✅ Payment settings loaded:', paymentSettingsResponse.data);
         setPaymentSettings(paymentSettingsResponse.data);
+      } else {
+        console.log('⚠️ No payment settings found, creating default settings...');
+        // Create default payment settings if none exist
+        const { data: defaultSettings, error: createError } = await supabase
+          .from('payment_settings')
+          .insert([{
+            razorpay_webhook_uri: 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook',
+            razorpay_base_uri: 'https://api.razorpay.com/v1/',
+            enable_razorpay_prepaid: true,
+            enable_razorpay_subscription: true,
+            is_active: true
+          }])
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error('❌ Failed to create default payment settings:', createError);
+        } else {
+          console.log('✅ Default payment settings created:', defaultSettings);
+          setPaymentSettings(defaultSettings);
+        }
       }
 
       // Fetch current user subscription
