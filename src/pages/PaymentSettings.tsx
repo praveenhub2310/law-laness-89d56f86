@@ -66,9 +66,9 @@ const PaymentSettings = () => {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
 
@@ -164,78 +164,96 @@ const PaymentSettings = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Payment Settings</h1>
           <p className="text-muted-foreground">
-            Configure Razorpay payment gateway for subscription and transaction processing
+            Configure Razorpay payment gateway settings. Sensitive credentials are managed securely via environment variables.
           </p>
         </div>
         {getStatusBadge()}
       </div>
 
       {/* Security Notice */}
-      <Alert className="border-success">
-        <Shield className="h-4 w-4" />
-        <AlertDescription>
-          <strong>🔐 Security Enhanced:</strong> Payment credentials are now securely managed via environment variables. 
-          This protects your sensitive API keys from potential database breaches.
+      <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+        <Shield className="h-4 w-4 text-green-600 dark:text-green-400" />
+        <AlertDescription className="text-green-800 dark:text-green-200">
+          <strong>Security Enhanced:</strong> Payment gateway credentials (API keys and secrets) are now stored securely in environment variables, not in the database. This protects your sensitive payment data from unauthorized access.
         </AlertDescription>
       </Alert>
 
+      {/* API Credentials Security Info */}
       <Card className="border-border">
         <CardHeader className="space-y-1">
           <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-primary" />
-            Razorpay Configuration
+            <Lock className="h-5 w-5 text-primary" />
+            Secure Credential Management
           </CardTitle>
           <CardDescription>
-            Configure your Razorpay settings and manage secure credentials
+            Your Razorpay API credentials are managed via Supabase environment secrets
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Secure Credentials Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Lock className="h-5 w-5 text-success" />
-              <Label className="text-base font-medium">Secure Credentials Management</Label>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                Razorpay Key ID
+              </Label>
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Stored in environment secrets</span>
+                <Badge variant="outline" className="ml-auto">Secure</Badge>
+              </div>
             </div>
             
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p><strong>Razorpay API credentials are securely managed via environment secrets.</strong></p>
-                  <p>Your credentials are stored in:</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li><code>RAZORPAY_KEY_ID</code> - Your Razorpay API Key ID</li>
-                    <li><code>RAZORPAY_KEY_SECRET</code> - Your Razorpay API Secret</li>
-                  </ul>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    These credentials are encrypted and only accessible to your edge functions.
-                  </p>
-                </div>
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.open('https://supabase.com/dashboard/project/ibaqunlwzzoonbsnajbk/settings/functions', '_blank')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Manage Secrets
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.open('https://dashboard.razorpay.com/app/keys', '_blank')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Razorpay Dashboard
-              </Button>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                Razorpay Key Secret
+              </Label>
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Stored in environment secrets</span>
+                <Badge variant="outline" className="ml-auto">Secure</Badge>
+              </div>
             </div>
           </div>
 
-          <Separator />
+          <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div className="space-y-2">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">Credential Management</h4>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  To update your Razorpay credentials, contact your system administrator. 
+                  Credentials are managed securely via Supabase environment variables and cannot be viewed or modified through this interface.
+                </p>
+                <Button variant="outline" size="sm" className="mt-2" asChild>
+                  <a 
+                    href="https://supabase.com/dashboard/project/ibaqunlwzzoonbsnajbk/settings/functions" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    View Environment Secrets
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Configuration Settings */}
+      <Card className="border-border">
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center gap-2">
+            <Webhook className="h-5 w-5 text-primary" />
+            Gateway Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure non-sensitive Razorpay settings and features
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
           {/* Webhook Configuration */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -249,10 +267,11 @@ const PaymentSettings = () => {
                 id="webhook_uri"
                 value={settings.razorpay_webhook_uri}
                 onChange={(e) => handleInputChange('razorpay_webhook_uri', e.target.value)}
-                placeholder="https://your-domain.com/functions/v1/razorpay-webhook"
+                readOnly
+                className="bg-muted"
               />
-              <p className="text-sm text-muted-foreground">
-                Configure this URL in your Razorpay webhook settings
+              <p className="text-xs text-muted-foreground">
+                Use this URL in your Razorpay dashboard webhook settings. Webhook secret is managed securely via environment variables.
               </p>
             </div>
           </div>
@@ -270,8 +289,8 @@ const PaymentSettings = () => {
               value={settings.razorpay_base_uri}
               onChange={(e) => handleInputChange('razorpay_base_uri', e.target.value)}
             />
-            <p className="text-sm text-muted-foreground">
-              Default Razorpay API endpoint (usually no need to change)
+            <p className="text-xs text-muted-foreground">
+              The base API endpoint for Razorpay. Use the test endpoint for development.
             </p>
           </div>
 
