@@ -171,12 +171,6 @@ export const menuItems: MenuItem[] = [
     roles: ["super_admin"]
   },
   {
-    title: "Cause List",
-    icon: Calendar,
-    path: "/cause-list",
-    roles: ["super_admin", "advocate", "company"]
-  },
-  {
     title: "Drafting Tool",
     icon: PenTool,
     path: "/dashboard/drafting-tool",
@@ -262,12 +256,6 @@ export const menuItems: MenuItem[] = [
     title: "Fee Calculation",
     icon: Calculator,
     path: "/dashboard/fee-calculator",
-    roles: ["advocate"]
-  },
-  {
-    title: "Cause List",
-    icon: Calendar,
-    path: "/cause-list",
     roles: ["advocate"]
   },
   {
@@ -359,7 +347,7 @@ export const menuItems: MenuItem[] = [
     title: "Cause List",
     icon: Calendar,
     path: "/cause-list",
-    roles: ["company"]
+    roles: ["super_admin", "advocate", "company"]
   },
 
   // Client specific items - rearranged as requested
