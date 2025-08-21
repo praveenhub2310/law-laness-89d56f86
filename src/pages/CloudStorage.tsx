@@ -20,11 +20,7 @@ import {
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
-
-// Google API configuration
-const GOOGLE_CLIENT_ID = '1048512211591-7isrimn9n6q2a6jh1ra23iktoilkbc3e.apps.googleusercontent.com';
-const GOOGLE_API_KEY = 'AIzaSyAdpCkgEOgsSeF_Ofa5nWOcUTZQZE-_bvk';
-const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 
 // Interfaces
 interface GoogleDriveFile {
@@ -43,154 +39,28 @@ interface BreadcrumbItem {
   name: string;
 }
 
-interface UserProfile {
-  email: string;
-  name: string;
-  picture?: string;
-}
-
-// Global Google API declarations
-declare global {
-  interface Window {
-    gapi: any;
-    google: any;
-  }
-}
-
 const CloudStorage = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { isConnected, userProfile, isConnecting, isGapiLoaded, connect, disconnect } = useGoogleDrive();
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('root');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Drive' }]);
-  const [isGapiLoaded, setIsGapiLoaded] = useState(false);
   const [recentFiles, setRecentFiles] = useState<GoogleDriveFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
 
-  // Component mounting and Google API initialization
+  // Component mounting - load recent files and fetch drive files if connected
   useEffect(() => {
     console.log('🚀 CloudStorage component mounted successfully!');
-    console.log('📍 Current location:', window.location.href);
-    console.log('⏰ Timestamp:', new Date().toISOString());
-    
-    // Initialize Google API
-    initializeGoogleAPI();
     loadRecentFiles();
     
-    // Check connection with enhanced retry logic for better persistence
-    const checkConnection = async () => {
-      let attempts = 0;
-      while (attempts < 10) { // Increased attempts for better reliability
-        const success = await checkExistingConnection();
-        if (success || attempts >= 9) break;
-        await new Promise(resolve => setTimeout(resolve, 500)); // Faster retry intervals
-        attempts++;
-      }
-    };
-    checkConnection();
-    
-    // Set up periodic connection check to maintain session
-    const connectionCheckInterval = setInterval(() => {
-      if (isConnected) {
-        checkExistingConnection();
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
-    
-    return () => {
-      clearInterval(connectionCheckInterval);
-    };
-  }, []);
-
-  const checkExistingConnection = async (): Promise<boolean> => {
-    // Wait for API initialization to complete with better timeout handling
-    let attempts = 0;
-    while (!isGapiLoaded && attempts < 30) { // Increased attempts for reliability
-      await new Promise(resolve => setTimeout(resolve, 200)); // Faster checks
-      attempts++;
+    // If already connected, fetch files
+    if (isConnected && isGapiLoaded) {
+      fetchDriveFiles('root');
     }
-    
-    const savedProfile = localStorage.getItem('google_drive_profile');
-    const savedToken = localStorage.getItem('google_drive_token');
-    const savedExpiry = localStorage.getItem('google_drive_token_expiry');
-    
-    if (savedProfile && savedToken && isGapiLoaded) {
-      try {
-        console.log('🔍 Checking existing connection...');
-        
-        // Check if token is expired with more generous buffer
-        if (savedExpiry && new Date().getTime() > (parseInt(savedExpiry) - 5 * 60 * 1000)) { // 5 min buffer
-          console.log('⏰ Token will expire soon, clearing stored data...');
-          await refreshOrClearToken();
-          return false;
-        }
-        
-        const profile = JSON.parse(savedProfile);
-        
-        // Test if the token is still valid by making a simple API call with retry logic
-        let testResponse;
-        let retryCount = 0;
-        
-        while (retryCount < 3) {
-          try {
-            testResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-              headers: {
-                'Authorization': `Bearer ${savedToken}`
-              }
-            });
-            break;
-          } catch (error) {
-            retryCount++;
-            if (retryCount >= 3) throw error;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        
-        if (testResponse && testResponse.ok) {
-          console.log('✅ Existing token is valid, restoring connection...');
-          setUserProfile(profile);
-          setIsConnected(true);
-          
-          // Set the token for gapi client
-          if (window.gapi?.client) {
-            window.gapi.client.setToken({
-              access_token: savedToken
-            });
-          }
-          
-          // Fetch files for the restored connection
-          await fetchDriveFiles('root');
-          
-          // Only show welcome message if this is a fresh page load
-          if (!isConnected) {
-            toast.success(`Welcome back, ${profile.name}!`);
-          }
-          return true;
-        } else {
-          console.log('❌ Existing token is invalid, clearing stored data...');
-          await refreshOrClearToken();
-          return false;
-        }
-      } catch (error) {
-        console.error('Error checking existing connection:', error);
-        await refreshOrClearToken();
-        return false;
-      }
-    }
-    return false;
-  };
+  }, [isConnected, isGapiLoaded]);
 
-  const refreshOrClearToken = async () => {
-    localStorage.removeItem('google_drive_profile');
-    localStorage.removeItem('google_drive_token');
-    localStorage.removeItem('google_drive_token_expiry');
-    setIsConnected(false);
-    setUserProfile(null);
-    setFiles([]);
-  };
 
   const loadRecentFiles = () => {
     const saved = localStorage.getItem('recentFiles');
@@ -215,276 +85,6 @@ const CloudStorage = () => {
     });
   };
 
-  const initializeGoogleAPI = async () => {
-    try {
-      console.log('🔧 Starting Google API initialization...');
-      
-      // Load Google Identity Services script
-      if (!window.google) {
-        console.log('📥 Loading Google Identity Services script...');
-        await loadGoogleIdentityScript();
-        console.log('✅ Google Identity Services script loaded');
-      } else {
-        console.log('📋 Google Identity Services already available');
-      }
-      
-      // Load Google API script for Drive API
-      if (!window.gapi) {
-        console.log('📥 Loading Google API script...');
-        await loadGoogleAPIScript();
-        console.log('✅ Google API script loaded');
-      } else {
-        console.log('📋 Google API script already available');
-      }
-      
-      // Load gapi client
-      console.log('🔌 Loading gapi client...');
-      await new Promise<void>((resolve, reject) => {
-        window.gapi.load('client', {
-          callback: () => {
-            console.log('✅ Gapi client loaded successfully');
-            resolve();
-          },
-          onerror: () => {
-            console.error('❌ Failed to load gapi client');
-            reject(new Error('Failed to load gapi client'));
-          }
-        });
-      });
-      
-      // Initialize the client
-      console.log('⚙️ Initializing Google client...');
-      await window.gapi.client.init({
-        apiKey: GOOGLE_API_KEY,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
-      });
-      
-      console.log('✅ Google client initialized successfully');
-      setIsGapiLoaded(true);
-      console.log('🎉 Google API initialization completed!');
-      toast.success('Google Drive integration ready!');
-      
-    } catch (error) {
-      console.error('❌ Google API initialization failed:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name
-      });
-      
-      // Set to true anyway so user can try to connect
-      setIsGapiLoaded(true);
-      toast.error('Google API initialization had issues, but you can try connecting');
-    }
-  };
-
-  const loadGoogleIdentityScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        console.log('📦 Google Identity Services script loaded');
-        setTimeout(() => {
-          if (window.google) {
-            console.log('✅ window.google is now available');
-            resolve();
-          } else {
-            console.error('❌ window.google still not available');
-            reject(new Error('Google Identity Services not available'));
-          }
-        }, 100);
-      };
-      
-      script.onerror = (error) => {
-        console.error('❌ Failed to load Google Identity Services:', error);
-        reject(new Error('Failed to load Google Identity Services'));
-      };
-      
-      document.head.appendChild(script);
-    });
-  };
-
-  const loadGoogleAPIScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        console.log('📦 Google API script element loaded');
-        setTimeout(() => {
-          if (window.gapi) {
-            console.log('✅ window.gapi is now available');
-            resolve();
-          } else {
-            console.error('❌ window.gapi still not available after script load');
-            reject(new Error('Google API not available after script load'));
-          }
-        }, 100);
-      };
-      
-      script.onerror = (error) => {
-        console.error('❌ Failed to load Google API script:', error);
-        reject(new Error('Failed to load Google API script'));
-      };
-      
-      console.log('📥 Appending Google API script to document head...');
-      document.head.appendChild(script);
-    });
-  };
-
-  const handleConnect = async () => {
-    console.log('🔗 Connect button clicked');
-    console.log('🔍 isGapiLoaded:', isGapiLoaded);
-    console.log('🔍 window.gapi exists:', !!window.gapi);
-    console.log('🔍 window.google exists:', !!window.google);
-    
-    if (!isGapiLoaded) {
-      console.log('⚠️ Google API not ready yet');
-      toast.error('Google API not ready. Please wait and try again.');
-      return;
-    }
-
-    if (!window.gapi || !window.google) {
-      console.error('❌ Required Google APIs not available');
-      toast.error('Google APIs not loaded. Please refresh the page.');
-      return;
-    }
-
-    console.log('🔗 Starting Google Drive connection...');
-    setIsConnecting(true);
-    
-    try {
-      console.log('🔐 Initializing Google Identity Services OAuth...');
-      
-      // Use the modern Google Identity Services
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPES,
-        callback: async (tokenResponse: any) => {
-          console.log('🎉 Token response received:', tokenResponse);
-          
-          if (tokenResponse.access_token) {
-            console.log('✅ Access token obtained successfully');
-            
-            // Set the access token for gapi client
-            window.gapi.client.setToken({
-              access_token: tokenResponse.access_token
-            });
-            
-            try {
-              console.log('👤 Fetching user profile...');
-              
-              // Get user info using the People API
-              const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: {
-                  'Authorization': `Bearer ${tokenResponse.access_token}`
-                }
-              });
-              
-              if (!userResponse.ok) {
-                throw new Error(`Failed to fetch user info: ${userResponse.status}`);
-              }
-              
-              const userData = await userResponse.json();
-              console.log('📋 User data received:', {
-                email: userData.email,
-                name: userData.name,
-                hasImage: !!userData.picture
-              });
-              
-              const userProfile: UserProfile = {
-                email: userData.email,
-                name: userData.name,
-                picture: userData.picture
-              };
-              
-              console.log('💾 Setting user profile and connection state...');
-              setUserProfile(userProfile);
-              setIsConnected(true);
-              
-              console.log('🗃️ Storing credentials in localStorage...');
-              localStorage.setItem('google_drive_profile', JSON.stringify(userProfile));
-              localStorage.setItem('google_drive_token', tokenResponse.access_token);
-              
-              // Store token expiry with more conservative timing (50 minutes for 1-hour tokens)
-              const expiryTime = new Date().getTime() + (50 * 60 * 1000); // 50 minutes for safety
-              localStorage.setItem('google_drive_token_expiry', expiryTime.toString());
-              localStorage.setItem('google_drive_connected_at', new Date().getTime().toString());
-              
-              console.log('📁 Fetching initial files...');
-              await fetchDriveFiles('root');
-              
-              console.log('🎉 Connection process completed successfully!');
-              toast.success(`Connected as ${userProfile.name}!`);
-              
-            } catch (error: any) {
-              console.error('💥 Error during profile fetch:', error);
-              toast.error(`Failed to get user profile: ${error.message}`);
-            } finally {
-              setIsConnecting(false);
-            }
-          } else {
-            console.error('❌ No access token in response');
-            toast.error('Failed to get access token');
-            setIsConnecting(false);
-          }
-        },
-        error_callback: (error: any) => {
-          console.error('💥 OAuth error:', error);
-          toast.error(`OAuth error: ${error.message || 'Unknown error'}`);
-          setIsConnecting(false);
-        }
-      });
-      
-      console.log('🚀 Requesting access token...');
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-      
-    } catch (error: any) {
-      console.error('💥 Connection setup failed:', error);
-      toast.error(`Failed to setup connection: ${error?.message || 'Unknown error'}`);
-      setIsConnecting(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    console.log('🔌 Disconnecting from Google Drive...');
-    
-    try {
-      // Revoke the token if available
-      const token = localStorage.getItem('google_drive_token');
-      if (token && window.google?.accounts?.oauth2) {
-        console.log('🔐 Revoking access token...');
-        window.google.accounts.oauth2.revoke(token);
-      }
-      
-      // Clear gapi client token
-      if (window.gapi?.client) {
-        window.gapi.client.setToken(null);
-      }
-    } catch (error) {
-      console.error('Error during token revocation:', error);
-    }
-    
-    setIsConnected(false);
-    setUserProfile(null);
-    setFiles([]);
-    setCurrentFolder('root');
-    setBreadcrumbs([{ id: 'root', name: 'My Drive' }]);
-    setRecentFiles([]);
-    
-    localStorage.removeItem('google_drive_profile');
-    localStorage.removeItem('google_drive_token');
-    localStorage.removeItem('google_drive_token_expiry');
-    localStorage.removeItem('google_drive_connected_at');
-    localStorage.removeItem('recentFiles');
-    console.log('✅ Disconnection completed');
-    toast.success('Disconnected from Google Drive');
-  };
 
   const fetchDriveFiles = async (folderId: string = 'root') => {
     console.log(`📁 fetchDriveFiles called with folder: ${folderId}`);
@@ -537,10 +137,10 @@ const CloudStorage = () => {
       
       // If there's an auth error, the connection might have failed
       if (error?.status === 401 || error?.message?.includes('unauthorized')) {
-        console.log('🔐 Authentication error detected, resetting connection');
-        setIsConnected(false);
-        setUserProfile(null);
+        console.log('🔐 Authentication error detected, clearing connection');
         localStorage.removeItem('google_drive_profile');
+        localStorage.removeItem('google_drive_token');
+        localStorage.removeItem('google_drive_token_expiry');
         toast.error('Authentication expired. Please reconnect.');
       } else {
         toast.error('Failed to fetch files');
@@ -718,7 +318,7 @@ const CloudStorage = () => {
                   Connect your Google Drive account to access documents directly.
                 </p>
                 <Button 
-                  onClick={handleConnect}
+                  onClick={connect}
                   disabled={isConnecting || !isGapiLoaded}
                   className="w-full"
                 >
@@ -753,7 +353,7 @@ const CloudStorage = () => {
                       </p>
                     </div>
                     <Button 
-                      onClick={handleDisconnect}
+                      onClick={disconnect}
                       variant="outline"
                       size="sm"
                       className="flex items-center gap-2"
