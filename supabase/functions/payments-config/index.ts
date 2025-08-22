@@ -29,8 +29,11 @@ serve(async (req) => {
 
     console.info('[CONFIG] 🔍 Environment check:', {
       keyIdPresent: !!razorpayKeyId,
+      keyIdValue: razorpayKeyId ? `${razorpayKeyId.slice(0, 8)}...` : 'null',
       keySecretPresent: !!razorpayKeySecret,
-      webhookSecretPresent: !!razorpayWebhookSecret
+      keySecretValue: razorpayKeySecret ? `${razorpayKeySecret.slice(0, 8)}...` : 'null',
+      webhookSecretPresent: !!razorpayWebhookSecret,
+      webhookSecretValue: razorpayWebhookSecret ? `${razorpayWebhookSecret.slice(0, 8)}...` : 'null'
     });
 
     // Fetch payment settings from database
