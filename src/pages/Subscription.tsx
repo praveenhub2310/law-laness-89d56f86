@@ -323,10 +323,14 @@ const Subscription = () => {
   };
 
   const handleSubscribe = async (planId: string) => {
+    console.log('🔵 DEBUG: ========================================');
+    console.log('🔵 DEBUG: HANDLE SUBSCRIBE CALLED - START');
+    console.log('🔵 DEBUG: ========================================');
     console.log('🔵 DEBUG: handleSubscribe called with planId:', planId);
     console.log('🔵 DEBUG: Current user:', user);
     console.log('🔵 DEBUG: Available plans:', plans);
     console.log('🔵 DEBUG: Payment settings:', paymentSettings);
+    console.log('🔵 DEBUG: Health check state:', healthCheck);
     
     if (!user) {
       console.log('❌ DEBUG: No user found');
