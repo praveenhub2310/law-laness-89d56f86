@@ -397,21 +397,35 @@ const Subscription = () => {
       planName: plan.name
     });
 
+    console.log('🚀 DEBUG: All checks passed, initiating payment with:', {
+      planId: plan.id,
+      amount: plan.price,
+      currency: plan.currency || 'INR',
+      planName: plan.name
+    });
+
+    // Force set loading state
+    setActionLoading(true);
+
     try {
-      await initiatePayment({
+      console.log('📞 DEBUG: Calling initiatePayment function...');
+      const result = await initiatePayment({
         planId: plan.id,
         amount: plan.price,
         currency: plan.currency || 'INR',
         planName: plan.name
       });
-      console.log('✅ DEBUG: initiatePayment completed successfully');
-    } catch (error: any) {
-      console.error('❌ DEBUG: Error in initiatePayment:', error);
+      console.log('✅ DEBUG: Payment result:', result);
+    } catch (error) {
+      console.error('❌ DEBUG: Payment error:', error);
       toast({
-        title: "Payment Failed",
-        description: error.message || "Failed to initiate payment. Please try again.",
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Failed to initiate payment",
         variant: "destructive"
       });
+    } finally {
+      setActionLoading(false);
+      console.log('🔄 DEBUG: Payment process completed');
     }
   };
 
@@ -761,22 +775,29 @@ const Subscription = () => {
                         Current Plan
                       </Button>
                     ) : (
-                      <Button 
-                        className={`w-full h-12 text-base font-semibold transition-all ${
-                          isRecommended 
-                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg' 
-                            : ''
-                        }`}
-                        onClick={() => handleSubscribe(plan.id)}
-                        disabled={
-                          actionLoading || 
-                          paymentLoading || 
-                          !!currentSubscription || 
-                          !healthCheck.scriptLoaded || 
-                          !healthCheck.settingsLoaded ||
-                          !healthCheck.keyIdPresent
-                        }
-                      >
+                       <Button 
+                         className={`w-full h-12 text-base font-semibold transition-all ${
+                           isRecommended 
+                             ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg' 
+                             : ''
+                         }`}
+                         onClick={(e) => {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           console.log('🚨 BUTTON CLICKED! Plan ID:', plan.id);
+                           console.log('🚨 Health check:', healthCheck);
+                           console.log('🚨 Button disabled check:', {
+                             actionLoading,
+                             paymentLoading,
+                             hasCurrentSubscription: !!currentSubscription,
+                             scriptLoaded: healthCheck.scriptLoaded,
+                             settingsLoaded: healthCheck.settingsLoaded,
+                             keyIdPresent: healthCheck.keyIdPresent
+                           });
+                           handleSubscribe(plan.id);
+                         }}
+                         disabled={false} // Force enable for debugging
+                       >
                         {(actionLoading || paymentLoading) ? (
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                         ) : !healthCheck.scriptLoaded ? (
