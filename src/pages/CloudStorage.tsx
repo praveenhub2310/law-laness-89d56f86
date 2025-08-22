@@ -44,7 +44,7 @@ interface BreadcrumbItem {
 }
 
 const CloudStorage = () => {
-  const { isConnected, userProfile, isConnecting, isGapiLoaded, connect, disconnect } = useGoogleDrive();
+  const { isConnected, userProfile, isConnecting, isGapiLoaded, isConfigured, connect, disconnect } = useGoogleDrive();
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
   const [folders, setFolders] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -417,7 +417,20 @@ const CloudStorage = () => {
             <CardTitle>Google Drive Integration</CardTitle>
           </CardHeader>
           <CardContent>
-            {!isConnected ? (
+            {!isConfigured ? (
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">
+                  Google Drive integration requires API credentials to be configured.
+                </p>
+                <Button 
+                  onClick={() => window.open('/google-drive-setup', '_blank')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Setup Google Drive Integration
+                </Button>
+              </div>
+            ) : !isConnected ? (
               <>
                 <p className="text-muted-foreground mb-4">
                   Connect your Google Drive account to access documents directly.

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 
-// Google API configuration
-const GOOGLE_CLIENT_ID = '1048512211591-7isrimn9n6q2a6jh1ra23iktoilkbc3e.apps.googleusercontent.com';
-const GOOGLE_API_KEY = 'AIzaSyAdpCkgEOgsSeF_Ofa5nWOcUTZQZE-_bvk';
+// Google API configuration - Use environment variables or show setup screen
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
 const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 interface UserProfile {
@@ -17,6 +17,7 @@ interface GoogleDriveContextType {
   userProfile: UserProfile | null;
   isConnecting: boolean;
   isGapiLoaded: boolean;
+  isConfigured: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   checkConnection: () => Promise<boolean>;
@@ -36,11 +37,18 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isGapiLoaded, setIsGapiLoaded] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
 
   // Initialize Google API on provider mount
   useEffect(() => {
     console.log('🚀 GoogleDriveProvider initializing...');
-    initializeGoogleAPI();
+    if (GOOGLE_CLIENT_ID && GOOGLE_API_KEY) {
+      setIsConfigured(true);
+      initializeGoogleAPI();
+    } else {
+      console.log('⚠️ Google Drive credentials not configured');
+      setIsGapiLoaded(true); // Allow UI to show setup screen
+    }
   }, []);
 
   // Check existing connection after API is loaded
@@ -217,6 +225,11 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const connect = async (): Promise<void> => {
+    if (!isConfigured) {
+      toast.error('Google Drive API credentials not configured. Please set up your Google Cloud project.');
+      return;
+    }
+    
     if (!isGapiLoaded || !window.gapi || !window.google) {
       toast.error('Google API not ready. Please refresh the page.');
       return;
@@ -322,6 +335,7 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
     userProfile,
     isConnecting,
     isGapiLoaded,
+    isConfigured,
     connect,
     disconnect,
     checkConnection,
