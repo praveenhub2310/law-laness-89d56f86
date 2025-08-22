@@ -42,38 +42,53 @@ serve(async (req) => {
       throw new Error('Plan ID and amount are required');
     }
 
-    // Get Razorpay credentials from environment variables (more secure)
-    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID')?.trim();
-    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')?.trim();
-
-    console.info('[CREATE-ORDER] 🔑 Checking Razorpay credentials...');
-    console.info('[CREATE-ORDER] Key ID exists:', !!razorpayKeyId);
-    console.info('[CREATE-ORDER] Key Secret exists:', !!razorpayKeySecret);
+    // Get Razorpay credentials from environment variables  
+    console.info('[CREATE-ORDER] 🔧 Function redeployed - Reading fresh credentials...');
     
-    // Debug environment variables more thoroughly
+    // Get all environment variable names for debugging
     const allEnvVars = Deno.env.toObject();
-    const razorpayKeys = Object.keys(allEnvVars).filter(key => key.includes('RAZORPAY'));
-    console.info('[CREATE-ORDER] All Razorpay env keys:', razorpayKeys);
+    const allKeys = Object.keys(allEnvVars);
+    const razorpayKeys = allKeys.filter(key => key.includes('RAZORPAY'));
+    console.info('[CREATE-ORDER] All environment keys count:', allKeys.length);
+    console.info('[CREATE-ORDER] Razorpay-related keys:', razorpayKeys);
     
-    // Check raw values to debug whitespace issues
-    const rawKeyId = Deno.env.get('RAZORPAY_KEY_ID');
-    const rawKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-    console.info('[CREATE-ORDER] Raw Key ID:', JSON.stringify(rawKeyId));
-    console.info('[CREATE-ORDER] Raw Key Secret present:', !!rawKeySecret);
+    // Try different variations of the key names
+    const keyIdVariations = [
+      'RAZORPAY_KEY_ID',
+      'RAZORPAY_KEY_ID\r\n\r\n', // From the logs, this variation exists
+    ];
     
-    if (razorpayKeyId) {
-      console.info('[CREATE-ORDER] Key ID (masked):', razorpayKeyId.substring(0, 12) + '***');
-      console.info('[CREATE-ORDER] Key ID length:', razorpayKeyId.length);
+    let razorpayKeyId = '';
+    let razorpayKeySecret = '';
+    
+    // Try to find the correct key ID
+    for (const keyName of keyIdVariations) {
+      const value = Deno.env.get(keyName);
+      if (value && value.trim()) {
+        razorpayKeyId = value.trim();
+        console.info('[CREATE-ORDER] Found Key ID using:', keyName);
+        break;
+      }
     }
     
-    if (razorpayKeySecret) {
-      console.info('[CREATE-ORDER] Key Secret length:', razorpayKeySecret.length);
+    // Get the secret
+    const rawSecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    if (rawSecret && rawSecret.trim()) {
+      razorpayKeySecret = rawSecret.trim();
+    }
+    
+    console.info('[CREATE-ORDER] 🔑 Credential check results:');
+    console.info('[CREATE-ORDER] Key ID found:', !!razorpayKeyId, 'Length:', razorpayKeyId.length);
+    console.info('[CREATE-ORDER] Key Secret found:', !!razorpayKeySecret, 'Length:', razorpayKeySecret.length);
+    
+    if (razorpayKeyId) {
+      console.info('[CREATE-ORDER] Key ID starts with:', razorpayKeyId.substring(0, 8) + '***');
     }
 
     if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error('[CREATE-ORDER] ❌ Razorpay credentials missing in environment');
-      console.error('[CREATE-ORDER] Available env vars:', Object.keys(Deno.env.toObject()).filter(key => key.includes('RAZOR')));
-      throw new Error('Razorpay credentials not configured in environment');
+      console.error('[CREATE-ORDER] ❌ Credentials still missing after all attempts');
+      console.error('[CREATE-ORDER] All Razorpay env vars:', razorpayKeys.map(key => `${key}: ${!!Deno.env.get(key)}`));
+      throw new Error('Razorpay credentials not configured properly. Please check secrets configuration.');
     }
 
     console.info('[CREATE-ORDER] ✅ Razorpay credentials found');
