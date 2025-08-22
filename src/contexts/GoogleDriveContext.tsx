@@ -63,15 +63,18 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       // Load Google Identity Services script
       if (!window.google) {
+        console.log('Loading Google Identity Services...');
         await loadGoogleIdentityScript();
       }
       
       // Load Google API script for Drive API
       if (!window.gapi) {
+        console.log('Loading Google API script...');
         await loadGoogleAPIScript();
       }
       
       // Load gapi client
+      console.log('Loading gapi client...');
       await new Promise<void>((resolve, reject) => {
         window.gapi.load('client', {
           callback: () => {
@@ -86,6 +89,7 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
       });
       
       // Initialize the client
+      console.log('Initializing gapi client...');
       await window.gapi.client.init({
         apiKey: GOOGLE_API_KEY,
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
@@ -96,7 +100,8 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
     } catch (error) {
       console.error('❌ Google API initialization failed:', error);
-      setIsGapiLoaded(true); // Set to true anyway so user can try to connect
+      toast.error('Failed to initialize Google API. Please refresh the page.');
+      setIsGapiLoaded(false);
     }
   };
 
@@ -217,8 +222,15 @@ export const GoogleDriveProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const connect = async (): Promise<void> => {
-    if (!isGapiLoaded || !window.gapi || !window.google) {
-      toast.error('Google API not ready. Please refresh the page.');
+    if (!window.gapi || !window.google) {
+      toast.error('Google API is still loading. Please wait a moment and try again.');
+      // Try to reinitialize
+      await initializeGoogleAPI();
+      return;
+    }
+
+    if (!isGapiLoaded) {
+      toast.error('Google API not ready yet. Please wait a moment and try again.');
       return;
     }
 

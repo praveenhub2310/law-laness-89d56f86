@@ -424,7 +424,7 @@ const CloudStorage = () => {
                 </p>
                 <Button 
                   onClick={connect}
-                  disabled={isConnecting || !isGapiLoaded}
+                  disabled={isConnecting}
                   className="w-full"
                 >
                   {isConnecting ? (
@@ -433,7 +433,10 @@ const CloudStorage = () => {
                       Connecting...
                     </>
                   ) : !isGapiLoaded ? (
-                    'Initializing...'
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Initializing Google API...
+                    </>
                   ) : (
                     'Connect Google Drive'
                   )}
