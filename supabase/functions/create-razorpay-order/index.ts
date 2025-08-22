@@ -50,6 +50,17 @@ serve(async (req) => {
     console.info('[CREATE-ORDER] Key ID exists:', !!razorpayKeyId);
     console.info('[CREATE-ORDER] Key Secret exists:', !!razorpayKeySecret);
     
+    // Debug environment variables more thoroughly
+    const allEnvVars = Deno.env.toObject();
+    const razorpayKeys = Object.keys(allEnvVars).filter(key => key.includes('RAZORPAY'));
+    console.info('[CREATE-ORDER] All Razorpay env keys:', razorpayKeys);
+    
+    // Check raw values to debug whitespace issues
+    const rawKeyId = Deno.env.get('RAZORPAY_KEY_ID');
+    const rawKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    console.info('[CREATE-ORDER] Raw Key ID:', JSON.stringify(rawKeyId));
+    console.info('[CREATE-ORDER] Raw Key Secret present:', !!rawKeySecret);
+    
     if (razorpayKeyId) {
       console.info('[CREATE-ORDER] Key ID (masked):', razorpayKeyId.substring(0, 12) + '***');
       console.info('[CREATE-ORDER] Key ID length:', razorpayKeyId.length);
