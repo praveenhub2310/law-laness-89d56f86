@@ -34,6 +34,18 @@ serve(async (req) => {
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
     const razorpayWebhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET');
 
+    // Debug: Check if secrets exist at all
+    const allEnvVars = Deno.env.toObject();
+    const razorpayKeys = Object.keys(allEnvVars).filter(k => k.includes('RAZORPAY'));
+    
+    console.info('[CONFIG] 🔍 Environment vars check:', {
+      supabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+      serviceKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      allRazorpayKeys: razorpayKeys,
+      keyIdRaw: razorpayKeyId,
+      keyIdLength: razorpayKeyId ? razorpayKeyId.length : 0,
+    });
+
     console.info('[CONFIG] 🔍 Environment check:', {
       keyIdPresent: !!razorpayKeyId,
       keyIdValue: razorpayKeyId ? `${razorpayKeyId.slice(0, 8)}...` : 'null',
