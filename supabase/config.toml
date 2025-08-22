@@ -43,6 +43,9 @@ verify_jwt = false
 [functions.payments-config]
 verify_jwt = false
 
+[functions.test-razorpay]
+verify_jwt = false
+
 [realtime]
 enabled = true
 # Bind realtime via either IPv4 or IPv6. (default: IPv6)

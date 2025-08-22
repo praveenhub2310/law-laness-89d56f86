@@ -364,6 +364,11 @@ const Subscription = () => {
     setActionLoading(true);
 
     try {
+      console.log('🧪 DEBUG: Testing edge function connectivity first...');
+      const { data: testData, error: testError } = await supabase.functions.invoke('test-razorpay');
+      console.log('🧪 DEBUG: Test result:', testData);
+      console.log('🧪 DEBUG: Test error:', testError);
+      
       console.log('📞 DEBUG: Calling initiatePayment function...');
       const result = await initiatePayment({
         planId: plan.id,
