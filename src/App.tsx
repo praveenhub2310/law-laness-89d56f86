@@ -1,10 +1,7 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
 import QueryClient from './QueryClient';
-import ErrorBoundary from './components/ErrorBoundary';
-import GoogleDriveSetup from './components/GoogleDriveSetup';
 import Index from './pages/Index';
 import Login from './pages/Login';
 import RoleSelection from './pages/RoleSelection';
@@ -86,15 +83,12 @@ import Schedule from './pages/Schedule';
 import Templates from './pages/Templates';
 import MyClients from './pages/MyClients';
 import PaymentSettings from './pages/PaymentSettings';
-import ESignDocuments from './pages/ESignDocuments';
-import MyClientsPage from './pages/MyClientsPage';
 
 function App() {
   return (
-    <ErrorBoundary>
-      <QueryClient>
-        <BrowserRouter>
-          <Routes>
+    <QueryClient>
+      <BrowserRouter>
+        <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/role-selection" element={<RoleSelection />} />
@@ -120,34 +114,7 @@ function App() {
           <Route path="/dashboard/agencies" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Agencies /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/documents" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Documents /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/links" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><ImportantLinks /></DashboardLayout></RoleGuard>} />
-          {/* E-Sign Documents */}
-          <Route path="/e-sign-documents" element={
-            <RoleGuard allowedRoles={['super_admin', 'company', 'advocate']}>
-              <DashboardLayout>
-                <ErrorBoundary>
-                  <ESignDocuments />
-                </ErrorBoundary>
-              </DashboardLayout>
-            </RoleGuard>
-          } />
-
-          {/* Google Drive Setup */}
-          <Route path="/google-drive-setup" element={
-            <ErrorBoundary>
-              <GoogleDriveSetup />
-            </ErrorBoundary>
-          } />
-
-          {/* Enhanced routes with error boundaries */}
-          <Route path="/dashboard/invoices" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><ErrorBoundary><Invoices /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><ErrorBoundary><Transactions /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/hearings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ErrorBoundary><ViewHearings /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/recordings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ErrorBoundary><MeetingRecordings /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/my-clients" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ErrorBoundary><MyClientsPage /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client', 'advocate']}><DashboardLayout><ErrorBoundary><ESignDocuments /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          
-          {/* Keep existing dashboard/invoices route but move above */}
-          <Route path="/dashboard/invoices-enhanced" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Invoices /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/invoices" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Invoices /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/messages" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Messages /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/parties" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Parties /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/hr" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><HumanResources /></DashboardLayout></RoleGuard>} />
@@ -176,12 +143,23 @@ function App() {
           
           {/* Lawyer/Advocate Routes */}
           <Route path="/dashboard/templates" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Templates /></DashboardLayout></RoleGuard>} />
-          {/* Update existing routes with error boundaries */}
-          <Route path="/dashboard/my-clients" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ErrorBoundary><MyClientsPage /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><ErrorBoundary><Transactions /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/hearings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ErrorBoundary><ViewHearings /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/recordings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ErrorBoundary><MeetingRecordings /></ErrorBoundary></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client', 'advocate']}><DashboardLayout><ErrorBoundary><ESignDocuments /></ErrorBoundary></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/my-clients" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MyClients /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/my-cases" element={<RoleGuard allowedRoles={['advocate', 'client']}><DashboardLayout><MyCases /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/court-calendar" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><CourtCalendar /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/time-logs" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><TimeTracker /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/expense-tracker" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ExpenseTracker /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/profile" element={<RoleGuard allowedRoles={['advocate', 'client', 'company']}><DashboardLayout><Profile /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/document-analysis" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><DocumentAnalysis /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/hearings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ViewHearings /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/recordings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MeetingRecordings /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/excel-upload" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ExcelUpload /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/drafting-translation" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><DraftingTranslation /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/invoices-payments" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><InvoicesPayments /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/subscription" element={<RoleGuard allowedRoles={['advocate', 'company']}><DashboardLayout><Subscription /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><Transactions /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/fee-calculator" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
+          <Route path="/cause-list" element={<RoleGuard allowedRoles={['advocate', 'super_admin', 'company']}><DashboardLayout><CauseList /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/ai-scenario" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><AiScenarioGuidance /></DashboardLayout></RoleGuard>} />
           
           {/* Law Firm/Company Routes */}
           <Route path="/dashboard/assigned-cases" element={<RoleGuard allowedRoles={['company']}><DashboardLayout><AssignedCases /></DashboardLayout></RoleGuard>} />
@@ -201,7 +179,7 @@ function App() {
           {/* Client Routes */}
           <Route path="/dashboard/payments" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><InvoicesPayments /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/document-upload" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><DocumentUpload /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client', 'advocate']}><DashboardLayout><ErrorBoundary><ESignDocuments /></ErrorBoundary></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client', 'advocate']}><DashboardLayout><ESign /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/assigned-advocate" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><AssignedAdvocate /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/case-status" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ClientCaseStatus /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/client-hearings" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><ClientHearings /></DashboardLayout></RoleGuard>} />
@@ -217,11 +195,9 @@ function App() {
           
           {/* Catch all route */}
           <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </BrowserRouter>
-      </QueryClient>
-    </ErrorBoundary>
+        </Routes>
+      </BrowserRouter>
+    </QueryClient>
   );
 }
 

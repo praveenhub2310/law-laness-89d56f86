@@ -21,7 +21,7 @@ interface PaymentSettings {
   updated_at?: string;
 }
 
-const PaymentSettings: React.FC = () => {
+const PaymentSettings = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,6 +36,7 @@ const PaymentSettings: React.FC = () => {
   useEffect(() => {
     fetchPaymentSettings();
     
+    // Set up realtime subscription for payment settings
     const channel = supabase
       .channel('payment-settings-changes')
       .on(
@@ -45,7 +46,8 @@ const PaymentSettings: React.FC = () => {
           schema: 'public',
           table: 'payment_settings'
         },
-        () => {
+        (payload) => {
+          console.log('Payment settings changed:', payload);
           fetchPaymentSettings();
         }
       )
@@ -71,7 +73,7 @@ const PaymentSettings: React.FC = () => {
       }
 
       if (data) {
-        setSettings(prev => ({ ...prev, ...data }));
+        setSettings(data);
       }
     } catch (error: any) {
       console.error('Error fetching payment settings:', error);
@@ -99,6 +101,7 @@ const PaymentSettings: React.FC = () => {
 
       let result;
       if (settings.id) {
+        // Update existing settings
         result = await supabase
           .from('payment_settings')
           .update(dataToSave)
@@ -106,6 +109,7 @@ const PaymentSettings: React.FC = () => {
           .select()
           .single();
       } else {
+        // Create new settings
         result = await supabase
           .from('payment_settings')
           .insert([dataToSave])

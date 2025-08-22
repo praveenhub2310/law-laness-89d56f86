@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import useRazorpayPayment from '@/hooks/useRazorpayPayment';
+import { useRazorpayPayment } from '@/hooks/useRazorpayPayment';
 import { 
   CreditCard, 
   Check, 
@@ -81,17 +81,6 @@ const Subscription = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [billingHistoryOpen, setBillingHistoryOpen] = useState(false);
-  
-  // Health check state
-  const [healthCheck, setHealthCheck] = useState({
-    settingsLoaded: false,
-    prepaidEnabled: false,
-    subscriptionEnabled: false,
-    keyIdPresent: false,
-    scriptLoaded: false,
-    canCreateOrder: false,
-    webhookReachable: false
-  });
 
   // Check if plan is about to expire (within 7 days)
   const isExpiringSoon = (endDate: string) => {
@@ -112,62 +101,26 @@ const Subscription = () => {
   useEffect(() => {
     fetchSubscriptionData();
     setupRealtimeSubscriptions();
-    
-    // Force load Razorpay script immediately
-    const loadScript = () => {
-      if (window.Razorpay) {
-        console.info('[RZP] ✅ Razorpay already loaded');
-        setHealthCheck(prev => ({ ...prev, scriptLoaded: true }));
-        return;
-      }
-
-      console.info('[RZP] 📦 Force loading Razorpay script...');
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => {
-        console.info('[RZP] ✅ Razorpay script loaded successfully');
-        setHealthCheck(prev => ({ ...prev, scriptLoaded: true }));
-      };
-      script.onerror = (error) => {
-        console.error('[RZP] ❌ Failed to load Razorpay script:', error);
-        setHealthCheck(prev => ({ ...prev, scriptLoaded: false }));
-      };
-      document.head.appendChild(script);
-    };
-
-    // Load script immediately
-    loadScript();
-    
-    // Listen for Razorpay script load events
-    const handleRazorpayLoaded = (event: any) => {
-      console.info('[RZP] 📡 Razorpay load event received:', event.detail);
-      setHealthCheck(prev => ({
-        ...prev,
-        scriptLoaded: event.detail.loaded
-      }));
-    };
-
-    window.addEventListener('razorpay-loaded', handleRazorpayLoaded);
-
-    return () => {
-      window.removeEventListener('razorpay-loaded', handleRazorpayLoaded);
-    };
   }, [user]);
 
   const fetchSubscriptionData = async () => {
     try {
       setLoading(true);
-      console.info('[RZP] 🔄 Starting subscription data fetch...');
       
-      // Fetch available plans and config validation in parallel
-      const [plansResponse, configResponse] = await Promise.all([
+      // Fetch available plans and payment settings in parallel
+      const [plansResponse, paymentSettingsResponse] = await Promise.all([
         supabase
           .from('subscription_plans')
           .select('*')
           .eq('is_active', true)
           .order('price', { ascending: true }),
-        // Call config endpoint for health check
-        supabase.functions.invoke('payments-config').catch(() => null)
+        supabase
+          .from('payment_settings')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
       ]);
 
       if (plansResponse.error) throw plansResponse.error;
@@ -178,62 +131,11 @@ const Subscription = () => {
         features: Array.isArray(plan.features) ? plan.features.map(f => String(f)) : []
       }));
       setPlans(transformedPlans);
-      console.info('[RZP] 📋 Plans loaded:', transformedPlans.length);
 
-      // Check if we have payment config endpoint
-      let configData = null;
-      if (configResponse?.data) {
-        configData = configResponse.data;
-        console.info('[RZP] ✅ Payment config loaded:', configData);
-      } else if (configResponse?.error) {
-        console.info('[RZP] ⚠️ Config endpoint error:', configResponse.error);
-      } else {
-        console.info('[RZP] ⚠️ Config endpoint not available, using fallback');
+      // Set payment settings (might not exist yet)
+      if (paymentSettingsResponse.data) {
+        setPaymentSettings(paymentSettingsResponse.data);
       }
-
-      // Fallback to payment_settings table
-      const { data: paymentSettingsData } = await supabase
-        .from('payment_settings')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const finalSettings = configData || paymentSettingsData || {
-        id: 'default',
-        razorpay_webhook_uri: 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook',
-        razorpay_base_uri: 'https://api.razorpay.com/v1/',
-        enable_razorpay_prepaid: true,
-        enable_razorpay_subscription: true,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      };
-
-      console.info('[RZP] 🔧 Final settings:', finalSettings);
-      setPaymentSettings(finalSettings);
-      
-      // TEMPORARY FIX: Force Key ID to true since secrets are configured
-      const hasKeyId = !!(configData?.key_id && configData.key_id.length > 0);
-      const hasSecretsConfigured = true; // Force to true since we know secrets are set
-      
-      console.info('[RZP] 🔑 Key ID check:', { 
-        hasConfigData: !!configData, 
-        keyId: configData?.key_id, 
-        hasKeyId,
-        hasSecretsConfigured,
-        forcingTrue: !hasKeyId && hasSecretsConfigured
-      });
-      
-      setHealthCheck(prev => ({
-        ...prev,
-        settingsLoaded: !!finalSettings,
-        prepaidEnabled: true, // Force to true since Razorpay supports both
-        subscriptionEnabled: true, // Force to true since Razorpay supports both
-        keyIdPresent: hasKeyId || hasSecretsConfigured, // Force true temporarily
-        canCreateOrder: hasKeyId || hasSecretsConfigured,
-        webhookReachable: true // Assume webhook is reachable for now
-      }));
 
       // Fetch current user subscription
       if (user) {
@@ -323,77 +225,25 @@ const Subscription = () => {
   };
 
   const handleSubscribe = async (planId: string) => {
-    console.log('🔵 DEBUG: ========================================');
-    console.log('🔵 DEBUG: HANDLE SUBSCRIBE CALLED - START');
-    console.log('🔵 DEBUG: ========================================');
-    console.log('🔵 DEBUG: handleSubscribe called with planId:', planId);
-    console.log('🔵 DEBUG: Current user:', user);
-    console.log('🔵 DEBUG: Available plans:', plans);
-    console.log('🔵 DEBUG: Payment settings:', paymentSettings);
-    console.log('🔵 DEBUG: Health check state:', healthCheck);
+    console.log('🔵 handleSubscribe called with planId:', planId);
     
     if (!user) {
-      console.log('❌ DEBUG: No user found');
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to subscribe to a plan.",
-        variant: "destructive"
-      });
+      console.log('❌ No user found');
       return;
     }
 
     const plan = plans.find(p => p.id === planId);
     if (!plan) {
-      console.log('❌ DEBUG: Plan not found for ID:', planId);
-      toast({
-        title: "Plan Not Found",
-        description: "The selected subscription plan could not be found.",
-        variant: "destructive"
-      });
+      console.log('❌ Plan not found for ID:', planId);
       return;
     }
     
-    console.log('✅ DEBUG: Plan found:', plan);
-    console.log('🔧 DEBUG: Payment settings state:', paymentSettings);
+    console.log('✅ Plan found:', plan);
+    console.log('🔧 Payment settings:', paymentSettings);
 
-    // BYPASS ALL PAYMENT CHECKS - FORCE PROCEED TO PAYMENT
-    console.log('✅ DEBUG: FORCED BYPASS - All payment checks passed');
-    console.log('🚀 DEBUG: Proceeding directly to payment initiation');
-
-    // Force set loading state
-    setActionLoading(true);
-
-    try {
-      console.log('🧪 DEBUG: Testing edge function connectivity first...');
-      const { data: testData, error: testError } = await supabase.functions.invoke('test-razorpay');
-      console.log('🧪 DEBUG: Test result:', testData);
-      console.log('🧪 DEBUG: Test error:', testError);
-      
-      console.log('📞 DEBUG: Calling initiatePayment function...');
-      const result = await initiatePayment({
-        planId: plan.id,
-        amount: plan.price,
-        currency: plan.currency || 'INR',
-        planName: plan.name
-      });
-      console.log('✅ DEBUG: Payment result:', result);
-    } catch (error) {
-      console.error('❌ DEBUG: Payment error:', error);
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Failed to initiate payment",
-        variant: "destructive"
-      });
-    } finally {
-      setActionLoading(false);
-      console.log('🔄 DEBUG: Payment process completed');
-    }
-
-    // Force enable subscriptions temporarily since we know Razorpay is configured
-    const subscriptionsEnabled = true; // Override database setting
-    
-    if (!paymentSettings.is_active) {
-      console.log('❌ DEBUG: Payment settings not active:', paymentSettings);
+    // Check if payment gateway is configured and active
+    if (!paymentSettings || !paymentSettings.is_active) {
+      console.log('❌ Payment settings not active:', paymentSettings);
       toast({
         title: "Payment Unavailable",
         description: "Payment gateway is currently unavailable. Please contact support.",
@@ -402,8 +252,8 @@ const Subscription = () => {
       return;
     }
 
-    if (!subscriptionsEnabled) {
-      console.log('❌ DEBUG: Subscriptions not enabled in settings');
+    if (!paymentSettings.enable_razorpay_subscription) {
+      console.log('❌ Subscriptions not enabled');
       toast({
         title: "Subscriptions Unavailable", 
         description: "Subscription payments are currently disabled. Please contact support.",
@@ -412,43 +262,19 @@ const Subscription = () => {
       return;
     }
 
-    console.log('🚀 DEBUG: All checks passed, initiating payment with:', {
+    console.log('🚀 Initiating payment with:', {
       planId: plan.id,
       amount: plan.price,
       currency: plan.currency || 'INR',
       planName: plan.name
     });
 
-    console.log('🚀 DEBUG: All checks passed, initiating payment with:', {
+    await initiatePayment({
       planId: plan.id,
       amount: plan.price,
       currency: plan.currency || 'INR',
       planName: plan.name
     });
-
-    // Force set loading state
-    setActionLoading(true);
-
-    try {
-      console.log('📞 DEBUG: Calling initiatePayment function...');
-      const result = await initiatePayment({
-        planId: plan.id,
-        amount: plan.price,
-        currency: plan.currency || 'INR',
-        planName: plan.name
-      });
-      console.log('✅ DEBUG: Payment result:', result);
-    } catch (error) {
-      console.error('❌ DEBUG: Payment error:', error);
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Failed to initiate payment",
-        variant: "destructive"
-      });
-    } finally {
-      setActionLoading(false);
-      console.log('🔄 DEBUG: Payment process completed');
-    }
   };
 
   const handleCancelSubscription = async () => {
@@ -547,56 +373,6 @@ const Subscription = () => {
         <CreditCard className="h-6 w-6" />
         <h1 className="text-3xl font-bold">Financial Management</h1>
       </div>
-
-      {/* Health Check Banner */}
-      <Card className={`border-2 ${
-        healthCheck.settingsLoaded && healthCheck.keyIdPresent && healthCheck.scriptLoaded
-          ? 'border-green-200 bg-green-50 dark:bg-green-950/10'
-          : 'border-red-200 bg-red-50 dark:bg-red-950/10'
-      }`}>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 mb-3">
-            <Settings className="h-5 w-5" />
-            <h3 className="font-semibold">Payment System Health Check</h3>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
-            <div className={`flex items-center gap-1 ${healthCheck.settingsLoaded ? 'text-green-600' : 'text-red-600'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.settingsLoaded ? 'bg-green-600' : 'bg-red-600'}`}></div>
-              Settings
-            </div>
-            <div className={`flex items-center gap-1 ${healthCheck.prepaidEnabled ? 'text-green-600' : 'text-yellow-600'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.prepaidEnabled ? 'bg-green-600' : 'bg-yellow-600'}`}></div>
-              Prepaid
-            </div>
-            <div className={`flex items-center gap-1 ${healthCheck.subscriptionEnabled ? 'text-green-600' : 'text-yellow-600'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.subscriptionEnabled ? 'bg-green-600' : 'bg-yellow-600'}`}></div>
-              Subscription
-            </div>
-            <div className={`flex items-center gap-1 ${healthCheck.keyIdPresent ? 'text-green-600' : 'text-red-600'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.keyIdPresent ? 'bg-green-600' : 'bg-red-600'}`}></div>
-              Key ID
-            </div>
-            <div className={`flex items-center gap-1 ${healthCheck.scriptLoaded ? 'text-green-600' : 'text-yellow-600'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.scriptLoaded ? 'bg-green-600' : 'bg-yellow-600'}`}></div>
-              Script
-            </div>
-            <div className={`flex items-center gap-1 ${healthCheck.canCreateOrder ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.canCreateOrder ? 'bg-green-600' : 'bg-gray-400'}`}></div>
-              Order
-            </div>
-            <div className={`flex items-center gap-1 ${healthCheck.webhookReachable ? 'text-green-600' : 'text-gray-400'}`}>
-              <div className={`w-2 h-2 rounded-full ${healthCheck.webhookReachable ? 'bg-green-600' : 'bg-gray-400'}`}></div>
-              Webhook
-            </div>
-          </div>
-          {(!healthCheck.settingsLoaded || !healthCheck.keyIdPresent) && (
-            <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/20 rounded text-sm">
-              <strong>Admin Payment Settings Incomplete:</strong> Payment gateway configuration is missing or incomplete. 
-              Please check Admin → Payment Settings.
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Expiry Warning Banner */}
       {currentSubscription && 
@@ -797,54 +573,17 @@ const Subscription = () => {
                         Current Plan
                       </Button>
                     ) : (
-                       <Button 
-                         className={`w-full h-12 text-base font-semibold transition-all ${
-                           isRecommended 
-                             ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg' 
-                             : ''
-                         }`}
-                         onClick={(e) => {
-                           console.log('🚨🚨🚨 RAW BUTTON CLICK DETECTED! 🚨🚨🚨');
-                           e.preventDefault();
-                           e.stopPropagation();
-                           
-                           // Basic sanity checks
-                           console.log('Plan object:', plan);
-                           console.log('Plan ID:', plan?.id);
-                           console.log('handleSubscribe function:', typeof handleSubscribe);
-                           console.log('User object:', user);
-                           
-                           if (!plan || !plan.id) {
-                             console.error('❌ No plan or plan.id found!');
-                             return;
-                           }
-                           
-                           if (typeof handleSubscribe !== 'function') {
-                             console.error('❌ handleSubscribe is not a function!');
-                             return;
-                           }
-                           
-                           console.log('✅ Calling handleSubscribe with:', plan.id);
-                           try {
-                             handleSubscribe(plan.id);
-                           } catch (err) {
-                             console.error('❌ Error calling handleSubscribe:', err);
-                           }
-                         }}
-                         disabled={false} // Force enable for debugging
-                       >
-                        {(actionLoading || paymentLoading) ? (
+                      <Button 
+                        className={`w-full h-12 text-base font-semibold transition-all ${
+                          isRecommended 
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg' 
+                            : ''
+                        }`}
+                        onClick={() => handleSubscribe(plan.id)}
+                        disabled={actionLoading || !!currentSubscription}
+                      >
+                        {actionLoading ? (
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        ) : !healthCheck.scriptLoaded ? (
-                          <>
-                            <AlertCircle className="h-5 w-5 mr-2" />
-                            Script Loading...
-                          </>
-                        ) : !healthCheck.settingsLoaded || !healthCheck.keyIdPresent ? (
-                          <>
-                            <AlertCircle className="h-5 w-5 mr-2" />
-                            Config Missing
-                          </>
                         ) : (
                           <>
                             {currentSubscription ? 'Upgrade to' : 'Get Started'}
