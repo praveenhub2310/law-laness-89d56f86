@@ -782,19 +782,32 @@ const Subscription = () => {
                              : ''
                          }`}
                          onClick={(e) => {
+                           console.log('🚨🚨🚨 RAW BUTTON CLICK DETECTED! 🚨🚨🚨');
                            e.preventDefault();
                            e.stopPropagation();
-                           console.log('🚨 BUTTON CLICKED! Plan ID:', plan.id);
-                           console.log('🚨 Health check:', healthCheck);
-                           console.log('🚨 Button disabled check:', {
-                             actionLoading,
-                             paymentLoading,
-                             hasCurrentSubscription: !!currentSubscription,
-                             scriptLoaded: healthCheck.scriptLoaded,
-                             settingsLoaded: healthCheck.settingsLoaded,
-                             keyIdPresent: healthCheck.keyIdPresent
-                           });
-                           handleSubscribe(plan.id);
+                           
+                           // Basic sanity checks
+                           console.log('Plan object:', plan);
+                           console.log('Plan ID:', plan?.id);
+                           console.log('handleSubscribe function:', typeof handleSubscribe);
+                           console.log('User object:', user);
+                           
+                           if (!plan || !plan.id) {
+                             console.error('❌ No plan or plan.id found!');
+                             return;
+                           }
+                           
+                           if (typeof handleSubscribe !== 'function') {
+                             console.error('❌ handleSubscribe is not a function!');
+                             return;
+                           }
+                           
+                           console.log('✅ Calling handleSubscribe with:', plan.id);
+                           try {
+                             handleSubscribe(plan.id);
+                           } catch (err) {
+                             console.error('❌ Error calling handleSubscribe:', err);
+                           }
                          }}
                          disabled={false} // Force enable for debugging
                        >
