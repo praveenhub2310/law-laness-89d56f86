@@ -30,9 +30,9 @@ serve(async (req) => {
     );
 
     // Get Razorpay credentials from environment (secure)
-    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
-    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-    const razorpayWebhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET');
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID')?.trim();
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')?.trim();
+    const razorpayWebhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET')?.trim();
 
     // Debug: Check if secrets exist at all
     const allEnvVars = Deno.env.toObject();
@@ -68,11 +68,11 @@ serve(async (req) => {
 
     // Return safe configuration (never expose secrets to client)
     const config = {
-      key_id: razorpayKeyId || 'rzp_test_PLACEHOLDER', // Temporary fallback for testing
+      key_id: razorpayKeyId || null,
       prepaid_enabled: paymentSettings?.enable_razorpay_prepaid ?? true,
       subscription_enabled: paymentSettings?.enable_razorpay_subscription ?? true,
       gateway_active: paymentSettings?.is_active ?? true,
-      credentials_configured: true, // Force true temporarily
+      credentials_configured: !!(razorpayKeyId && razorpayKeySecret),
       webhook_configured: !!razorpayWebhookSecret,
       base_uri: paymentSettings?.razorpay_base_uri ?? 'https://api.razorpay.com/v1/',
       webhook_uri: paymentSettings?.razorpay_webhook_uri ?? 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook'
