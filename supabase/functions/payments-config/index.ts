@@ -15,6 +15,13 @@ serve(async (req) => {
   try {
     console.info('[CONFIG] 🔧 Fetching payment configuration...');
 
+    // Debug: Log all environment variables
+    console.info('[CONFIG] 🔍 Environment vars check:', {
+      supabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+      serviceKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      allEnvKeys: Object.keys(Deno.env.toObject()).filter(k => k.startsWith('RAZORPAY')),
+    });
+
     // Create service client to read payment settings
     const supabaseService = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
