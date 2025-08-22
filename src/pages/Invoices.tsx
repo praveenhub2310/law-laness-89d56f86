@@ -2,68 +2,139 @@
 import React from 'react';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
-import { useDataManager } from '@/hooks/useDataManager';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useAuth } from '@/contexts/AuthContext';
+import { downloadInvoicePDF, previewInvoicePDF } from '@/utils/pdfGenerator';
+import { useToast } from '@/hooks/use-toast';
 
 const Invoices = () => {
-  const initialInvoicesData = [
-    {
-      id: "INV-2024-001",
-      clientName: "Michael Johnson",
-      caseNumber: "CASE-2024-001",
-      amount: "$5,250.00",
-      issueDate: "2024-01-10",
-      dueDate: "2024-01-25",
-      status: "Paid",
-      paymentMethod: "Bank Transfer",
-      description: "Legal consultation and case preparation",
-      hours: 15,
-      hourlyRate: "$350.00",
-      taxAmount: "$525.00"
-    },
-    {
-      id: "INV-2024-002",
-      clientName: "Robert Smith",
-      caseNumber: "CASE-2024-002",
-      amount: "$3,800.00",
-      issueDate: "2024-01-08",
-      dueDate: "2024-01-23",
-      status: "Pending",
-      paymentMethod: "Check",
-      description: "Property dispute legal services",
-      hours: 12,
-      hourlyRate: "$300.00",
-      taxAmount: "$380.00"
-    },
-    {
-      id: "INV-2024-003",
-      clientName: "TechCorp Inc.",
-      caseNumber: "CASE-2024-003",
-      amount: "$12,500.00",
-      issueDate: "2024-01-05",
-      dueDate: "2024-01-20",
-      status: "Overdue",
-      paymentMethod: "Corporate Transfer",
-      description: "Corporate contract review and analysis",
-      hours: 35,
-      hourlyRate: "$350.00",
-      taxAmount: "$1,250.00"
-    }
-  ];
-
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const {
-    data,
+    data: invoices,
+    loading,
     addItem,
     updateItem,
-    deleteItem,
-    exportData
-  } = useDataManager({
-    initialData: initialInvoicesData,
-    entityName: 'Invoice'
+    deleteItem
+  } = useSupabaseData({
+    table: 'invoices',
+    select: `
+      *,
+      client:profiles!invoices_client_id_fkey(first_name, last_name, email),
+      lawyer:profiles!invoices_lawyer_id_fkey(first_name, last_name, email)
+    `,
+    filters: user?.role === 'client' ? { client_id: user.id } : {},
+    orderBy: { column: 'created_at', ascending: false },
+    realtime: true
   });
 
+  // Generate auto invoice number
+  const generateInvoiceNumber = () => {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const random = Math.floor(Math.random() * 9000) + 1000;
+    return `INV-${year}${month}-${random}`;
+  };
+
+  // Handle adding new invoice
+  const handleAddInvoice = async (formData: any) => {
+    const invoiceData = {
+      invoice_number: generateInvoiceNumber(),
+      client_id: formData.client_id || user?.id,
+      lawyer_id: user?.id,
+      services: formData.services ? JSON.parse(formData.services) : [
+        {
+          description: formData.description,
+          quantity: 1,
+          rate: parseFloat(formData.amount) || 0
+        }
+      ],
+      subtotal: parseFloat(formData.amount) || 0,
+      tax_amount: parseFloat(formData.tax_amount) || 0,
+      discount_amount: parseFloat(formData.discount_amount) || 0,
+      total_amount: (parseFloat(formData.amount) || 0) + (parseFloat(formData.tax_amount) || 0) - (parseFloat(formData.discount_amount) || 0),
+      issued_date: formData.issued_date || new Date().toISOString().split('T')[0],
+      due_date: formData.due_date,
+      status: formData.status || 'unpaid',
+      notes: formData.notes
+    };
+    
+    await addItem(invoiceData);
+  };
+
+  // Handle PDF download
+  const handleDownloadPDF = (invoice: any) => {
+    const pdfData = {
+      ...invoice,
+      clientName: invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'Client',
+      clientEmail: invoice.client?.email,
+      lawyerName: invoice.lawyer ? `${invoice.lawyer.first_name} ${invoice.lawyer.last_name}` : 'Lawyer',
+      lawyerEmail: invoice.lawyer?.email,
+      companyName: 'Legal Services Firm'
+    };
+    
+    downloadInvoicePDF(pdfData);
+    toast({
+      title: 'Success',
+      description: 'Invoice PDF downloaded successfully.'
+    });
+  };
+
+  // Handle PDF preview
+  const handlePreviewPDF = (invoice: any) => {
+    const pdfData = {
+      ...invoice,
+      clientName: invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'Client',
+      clientEmail: invoice.client?.email,
+      lawyerName: invoice.lawyer ? `${invoice.lawyer.first_name} ${invoice.lawyer.last_name}` : 'Lawyer',
+      lawyerEmail: invoice.lawyer?.email,
+      companyName: 'Legal Services Firm'
+    };
+    
+    previewInvoicePDF(pdfData);
+  };
+
+  // Format data for display
+  const formattedData = invoices.map(invoice => ({
+    ...invoice, // Keep all original properties
+    clientName: invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'N/A',
+    amount: `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
+    issueDate: new Date(invoice.issued_date).toLocaleDateString(),
+    dueDate: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A',
+    taxAmount: `$${invoice.tax_amount?.toFixed(2) || '0.00'}`
+  }));
+
+  const handleExportData = () => {
+    const csvData = invoices.map(invoice => ({
+      'Invoice Number': invoice.invoice_number,
+      'Client Name': invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'N/A',
+      'Amount': `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
+      'Issue Date': new Date(invoice.issued_date).toLocaleDateString(),
+      'Due Date': invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A',
+      'Status': invoice.status,
+      'Tax Amount': `$${invoice.tax_amount?.toFixed(2) || '0.00'}`,
+      'Notes': invoice.notes || ''
+    }));
+    
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'invoices.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Remove the case number column since it's not in the database
   const columns = [
     {
-      key: 'id',
+      key: 'invoice_number',
       label: 'Invoice #',
       sortable: true,
       filterable: true
@@ -71,12 +142,6 @@ const Invoices = () => {
     {
       key: 'clientName',
       label: 'Client Name',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'caseNumber',
-      label: 'Case Number',
       sortable: true,
       filterable: true
     },
@@ -103,64 +168,45 @@ const Invoices = () => {
       label: 'Status',
       sortable: true,
       filterable: true,
-      filterOptions: ['Paid', 'Pending', 'Overdue', 'Draft'],
+      filterOptions: ['paid', 'unpaid', 'overdue', 'draft'],
       render: (value: string) => {
         const colors = {
-          'Paid': 'bg-green-100 text-green-800',
-          'Pending': 'bg-yellow-100 text-yellow-800',
-          'Overdue': 'bg-red-100 text-red-800',
-          'Draft': 'bg-gray-100 text-gray-800'
+          'paid': 'bg-green-100 text-green-800',
+          'unpaid': 'bg-yellow-100 text-yellow-800',
+          'overdue': 'bg-red-100 text-red-800',
+          'draft': 'bg-gray-100 text-gray-800'
         };
         return (
           <Badge className={colors[value as keyof typeof colors]}>
-            {value}
+            {value.charAt(0).toUpperCase() + value.slice(1)}
           </Badge>
         );
       }
     },
     {
-      key: 'paymentMethod',
-      label: 'Payment Method',
+      key: 'taxAmount',
+      label: 'Tax Amount',
       sortable: true,
-      filterable: true
-    },
-    {
-      key: 'hours',
-      label: 'Hours',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'hourlyRate',
-      label: 'Rate/Hour',
-      sortable: true,
-      filterable: true
+      filterable: false
     }
   ];
 
   const fields = [
-    { key: 'clientName', label: 'Client Name', type: 'text' as const, required: true },
-    { key: 'caseNumber', label: 'Case Number', type: 'text' as const, required: true },
-    { key: 'amount', label: 'Amount', type: 'text' as const, required: true },
-    { key: 'issueDate', label: 'Issue Date', type: 'date' as const, required: true },
-    { key: 'dueDate', label: 'Due Date', type: 'date' as const, required: true },
+    { key: 'client_id', label: 'Client ID', type: 'text' as const, required: true },
+    { key: 'amount', label: 'Amount ($)', type: 'number' as const, required: true },
+    { key: 'issued_date', label: 'Issue Date', type: 'date' as const, required: true },
+    { key: 'due_date', label: 'Due Date', type: 'date' as const },
     { 
       key: 'status', 
       label: 'Status', 
       type: 'select' as const,
-      options: ['Paid', 'Pending', 'Overdue', 'Draft'],
+      options: ['paid', 'unpaid', 'overdue', 'draft'],
       required: true 
     },
-    { 
-      key: 'paymentMethod', 
-      label: 'Payment Method', 
-      type: 'select' as const,
-      options: ['Bank Transfer', 'Check', 'Corporate Transfer', 'Credit Card', 'Cash']
-    },
-    { key: 'description', label: 'Description', type: 'textarea' as const, required: true },
-    { key: 'hours', label: 'Hours', type: 'number' as const, required: true },
-    { key: 'hourlyRate', label: 'Hourly Rate', type: 'text' as const, required: true },
-    { key: 'taxAmount', label: 'Tax Amount', type: 'text' as const }
+    { key: 'description', label: 'Service Description', type: 'textarea' as const, required: true },
+    { key: 'tax_amount', label: 'Tax Amount ($)', type: 'number' as const },
+    { key: 'discount_amount', label: 'Discount Amount ($)', type: 'number' as const },
+    { key: 'notes', label: 'Notes', type: 'textarea' as const }
   ];
 
   return (
@@ -168,14 +214,18 @@ const Invoices = () => {
       <DataTable
         title="Invoices Management"
         columns={columns}
-        data={data}
+        data={formattedData}
         fields={fields}
-        searchPlaceholder="Search invoices by client name, case number, or invoice ID..."
-        onAdd={addItem}
+        searchPlaceholder="Search invoices by client name, invoice number, or status..."
+        onAdd={handleAddInvoice}
         onEdit={updateItem}
         onDelete={deleteItem}
-        onExport={exportData}
+        onExport={handleExportData}
+        onPreview={handlePreviewPDF}
+        onDownload={handleDownloadPDF}
         entityName="Invoice"
+        showPreviewAction
+        loading={loading}
       />
     </div>
   );
