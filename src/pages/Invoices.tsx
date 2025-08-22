@@ -194,6 +194,32 @@ const Invoices = () => {
     }
   };
 
+  const handleStatusUpdate = async (invoiceId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: newStatus,
+          payment_date: newStatus === 'paid' ? new Date().toISOString() : null
+        })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Invoice marked as ${newStatus}`
+      });
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update invoice status',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const generatePDF = (invoice: Invoice) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
@@ -493,6 +519,14 @@ const Invoices = () => {
                   <Button size="sm" variant="outline" onClick={() => generatePDF(invoice)}>
                     <FileDown className="h-3 w-3 mr-1" />
                     PDF
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handleStatusUpdate(invoice.id, invoice.status === 'paid' ? 'unpaid' : 'paid')}
+                    className={invoice.status === 'paid' ? 'text-yellow-600' : 'text-green-600'}
+                  >
+                    Mark as {invoice.status === 'paid' ? 'Unpaid' : 'Paid'}
                   </Button>
                 </div>
               </div>

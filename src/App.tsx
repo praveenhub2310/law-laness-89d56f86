@@ -84,6 +84,7 @@ import Templates from './pages/Templates';
 import MyClients from './pages/MyClients';
 import PaymentSettings from './pages/PaymentSettings';
 import ESignDocuments from './pages/ESignDocuments';
+import MyClientsPage from './pages/MyClientsPage';
 
 function App() {
   return (
@@ -144,7 +145,7 @@ function App() {
           
           {/* Lawyer/Advocate Routes */}
           <Route path="/dashboard/templates" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Templates /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/my-clients" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MyClients /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/my-clients" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MyClientsPage /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/my-cases" element={<RoleGuard allowedRoles={['advocate', 'client']}><DashboardLayout><MyCases /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/court-calendar" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><CourtCalendar /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/time-logs" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><TimeTracker /></DashboardLayout></RoleGuard>} />
