@@ -27,23 +27,27 @@ const useRazorpayPayment = () => {
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
-      console.log('🔧 DEBUG: Checking if Razorpay script already loaded...');
+      console.info('[RZP] 🔧 Checking if Razorpay script already loaded...');
       
       if (window.Razorpay) {
-        console.log('✅ DEBUG: Razorpay already loaded');
+        console.info('[RZP] ✅ Razorpay already loaded');
         resolve(true);
         return;
       }
 
-      console.log('📦 DEBUG: Loading Razorpay script from CDN...');
+      console.info('[RZP] 📦 Loading Razorpay script from CDN...');
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => {
-        console.log('✅ DEBUG: Razorpay script loaded successfully from CDN');
+        console.info('[RZP] ✅ Razorpay script loaded successfully from CDN');
+        // Notify parent component
+        window.dispatchEvent(new CustomEvent('razorpay-loaded', { detail: { loaded: true } }));
         resolve(true);
       };
-      script.onerror = () => {
-        console.error('❌ DEBUG: Failed to load Razorpay script from CDN');
+      script.onerror = (error) => {
+        console.error('[RZP] ❌ Failed to load Razorpay script from CDN:', error);
+        console.error('[RZP] 🔍 This might be due to ad-block or CSP restrictions');
+        window.dispatchEvent(new CustomEvent('razorpay-loaded', { detail: { loaded: false, error } }));
         resolve(false);
       };
       document.body.appendChild(script);

@@ -46,16 +46,21 @@ serve(async (req) => {
     const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
-    console.log('🔑 Checking Razorpay credentials...');
-    console.log('Key ID exists:', !!razorpayKeyId);
-    console.log('Key Secret exists:', !!razorpayKeySecret);
+    console.info('[CREATE-ORDER] 🔑 Checking Razorpay credentials...');
+    console.info('[CREATE-ORDER] Key ID exists:', !!razorpayKeyId);
+    console.info('[CREATE-ORDER] Key Secret exists:', !!razorpayKeySecret);
+    
+    if (razorpayKeyId) {
+      console.info('[CREATE-ORDER] Key ID (masked):', razorpayKeyId.substring(0, 8) + '***');
+    }
 
     if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error('❌ Razorpay credentials missing in environment');
+      console.error('[CREATE-ORDER] ❌ Razorpay credentials missing in environment');
+      console.error('[CREATE-ORDER] Available env vars:', Object.keys(Deno.env.toObject()).filter(key => key.includes('RAZOR')));
       throw new Error('Razorpay credentials not configured in environment');
     }
 
-    console.log('✅ Razorpay credentials found');
+    console.info('[CREATE-ORDER] ✅ Razorpay credentials found');
 
     // Create service client to verify payment settings are active
     const supabaseService = createClient(
@@ -80,13 +85,15 @@ serve(async (req) => {
       razorpay_base_uri: 'https://api.razorpay.com/v1/'
     };
 
-    console.log('📋 Payment settings:', settings);
+    console.info('[CREATE-ORDER] 📋 Payment settings:', settings);
 
     if (!settings.is_active) {
+      console.error('[CREATE-ORDER] ❌ Payment gateway is inactive');
       throw new Error('Payment gateway is inactive');
     }
 
     if (!settings.enable_razorpay_subscription) {
+      console.error('[CREATE-ORDER] ❌ Razorpay subscription is disabled');
       throw new Error('Razorpay subscription is disabled');
     }
 
@@ -103,7 +110,14 @@ serve(async (req) => {
       }
     };
 
-    const razorpayResponse = await fetch(`${settings.razorpay_base_uri}/orders`, {
+    console.info('[CREATE-ORDER] 🚀 Creating Razorpay order with data:', {
+      amount: orderData.amount,
+      currency: orderData.currency,
+      receipt: orderData.receipt,
+      notes: orderData.notes
+    });
+
+    const razorpayResponse = await fetch(`${settings.razorpay_base_uri}orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${razorpayAuth}`,
@@ -112,15 +126,25 @@ serve(async (req) => {
       body: JSON.stringify(orderData)
     });
 
+    console.info('[CREATE-ORDER] 📡 Razorpay API response status:', razorpayResponse.status);
+
     if (!razorpayResponse.ok) {
       const errorText = await razorpayResponse.text();
-      throw new Error(`Razorpay API error: ${errorText}`);
+      console.error('[CREATE-ORDER] ❌ Razorpay API error:', errorText);
+      throw new Error(`Razorpay API error (${razorpayResponse.status}): ${errorText}`);
     }
 
     const razorpayOrder = await razorpayResponse.json();
+    console.info('[CREATE-ORDER] ✅ Razorpay order created:', {
+      id: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      status: razorpayOrder.status
+    });
 
     // Create subscription invoice record
-    const { error: invoiceError } = await supabaseService
+    console.info('[CREATE-ORDER] 📝 Creating invoice record...');
+    const { data: invoiceData, error: invoiceError } = await supabaseService
       .from('subscription_invoices')
       .insert({
         subscription_id: null, // Will be updated after successful payment
@@ -130,28 +154,43 @@ serve(async (req) => {
         status: 'pending',
         razorpay_order_id: razorpayOrder.id,
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
-      });
+      })
+      .select()
+      .single();
 
     if (invoiceError) {
-      console.error('Error creating invoice:', invoiceError);
+      console.error('[CREATE-ORDER] ⚠️ Error creating invoice:', invoiceError);
+      // Don't fail the order creation if invoice fails
+    } else {
+      console.info('[CREATE-ORDER] ✅ Invoice created:', invoiceData?.id);
     }
 
     // Return order details for frontend
-    return new Response(JSON.stringify({
+    const responseData = {
       orderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      keyId: razorpayKeyId, // Use environment variable instead
+      keyId: razorpayKeyId,
       planId: planId
-    }), {
+    };
+    
+    console.info('[CREATE-ORDER] 🎉 Order created successfully, returning:', {
+      ...responseData,
+      keyId: razorpayKeyId.substring(0, 8) + '***' // Mask key for logging
+    });
+
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error: any) {
-    console.error('Error creating Razorpay order:', error);
+    console.error('[CREATE-ORDER] 💥 Error creating Razorpay order:', error);
+    console.error('[CREATE-ORDER] Error stack:', error.stack);
+    
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to create payment order' 
+      error: error.message || 'Failed to create payment order',
+      details: error.stack ? error.stack.split('\n')[0] : 'Unknown error'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

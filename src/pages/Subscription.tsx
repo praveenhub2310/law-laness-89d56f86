@@ -81,6 +81,17 @@ const Subscription = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [billingHistoryOpen, setBillingHistoryOpen] = useState(false);
+  
+  // Health check state
+  const [healthCheck, setHealthCheck] = useState({
+    settingsLoaded: false,
+    prepaidEnabled: false,
+    subscriptionEnabled: false,
+    keyIdPresent: false,
+    scriptLoaded: false,
+    canCreateOrder: false,
+    webhookReachable: false
+  });
 
   // Check if plan is about to expire (within 7 days)
   const isExpiringSoon = (endDate: string) => {
@@ -101,26 +112,42 @@ const Subscription = () => {
   useEffect(() => {
     fetchSubscriptionData();
     setupRealtimeSubscriptions();
+    
+    // Listen for Razorpay script load events
+    const handleRazorpayLoaded = (event: any) => {
+      console.info('[RZP] 📡 Razorpay load event received:', event.detail);
+      setHealthCheck(prev => ({
+        ...prev,
+        scriptLoaded: event.detail.loaded
+      }));
+    };
+
+    window.addEventListener('razorpay-loaded', handleRazorpayLoaded);
+    
+    // Check if script is already loaded
+    if (window.Razorpay) {
+      setHealthCheck(prev => ({ ...prev, scriptLoaded: true }));
+    }
+
+    return () => {
+      window.removeEventListener('razorpay-loaded', handleRazorpayLoaded);
+    };
   }, [user]);
 
   const fetchSubscriptionData = async () => {
     try {
       setLoading(true);
+      console.info('[RZP] 🔄 Starting subscription data fetch...');
       
-      // Fetch available plans and payment settings in parallel
-      const [plansResponse, paymentSettingsResponse] = await Promise.all([
+      // Fetch available plans and config validation in parallel
+      const [plansResponse, configResponse] = await Promise.all([
         supabase
           .from('subscription_plans')
           .select('*')
           .eq('is_active', true)
           .order('price', { ascending: true }),
-        supabase
-          .from('payment_settings')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        // Call config endpoint for health check
+        supabase.functions.invoke('payments-config').catch(() => null)
       ]);
 
       if (plansResponse.error) throw plansResponse.error;
@@ -131,27 +158,49 @@ const Subscription = () => {
         features: Array.isArray(plan.features) ? plan.features.map(f => String(f)) : []
       }));
       setPlans(transformedPlans);
+      console.info('[RZP] 📋 Plans loaded:', transformedPlans.length);
 
-      // Set payment settings (might not exist yet)
-      console.log('💳 Payment settings response:', paymentSettingsResponse);
-      if (paymentSettingsResponse.data) {
-        console.log('✅ Payment settings loaded:', paymentSettingsResponse.data);
-        setPaymentSettings(paymentSettingsResponse.data);
+      // Check if we have payment config endpoint
+      let configData = null;
+      if (configResponse?.data) {
+        configData = configResponse.data;
+        console.info('[RZP] ✅ Payment config loaded:', configData);
+      } else if (configResponse?.error) {
+        console.info('[RZP] ⚠️ Config endpoint error:', configResponse.error);
       } else {
-        console.log('⚠️ No payment settings found, using default enabled state');
-        // Use default settings when none exist (don't try to create due to RLS restrictions)
-        const defaultSettings = {
-          id: 'default',
-          razorpay_webhook_uri: 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook',
-          razorpay_base_uri: 'https://api.razorpay.com/v1/',
-          enable_razorpay_prepaid: true,
-          enable_razorpay_subscription: true,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        };
-        console.log('✅ Using default payment settings:', defaultSettings);
-        setPaymentSettings(defaultSettings);
+        console.info('[RZP] ⚠️ Config endpoint not available, using fallback');
       }
+
+      // Fallback to payment_settings table
+      const { data: paymentSettingsData } = await supabase
+        .from('payment_settings')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const finalSettings = configData || paymentSettingsData || {
+        id: 'default',
+        razorpay_webhook_uri: 'https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/razorpay-webhook',
+        razorpay_base_uri: 'https://api.razorpay.com/v1/',
+        enable_razorpay_prepaid: true,
+        enable_razorpay_subscription: true,
+        is_active: true,
+        updated_at: new Date().toISOString()
+      };
+
+      console.info('[RZP] 🔧 Final settings:', finalSettings);
+      setPaymentSettings(finalSettings);
+      
+      // Update health check
+      setHealthCheck(prev => ({
+        ...prev,
+        settingsLoaded: !!finalSettings,
+        prepaidEnabled: finalSettings.enable_razorpay_prepaid,
+        subscriptionEnabled: finalSettings.enable_razorpay_subscription,
+        keyIdPresent: !!configData?.key_id
+      }));
 
       // Fetch current user subscription
       if (user) {
@@ -423,6 +472,56 @@ const Subscription = () => {
         <h1 className="text-3xl font-bold">Financial Management</h1>
       </div>
 
+      {/* Health Check Banner */}
+      <Card className={`border-2 ${
+        healthCheck.settingsLoaded && healthCheck.keyIdPresent && healthCheck.scriptLoaded
+          ? 'border-green-200 bg-green-50 dark:bg-green-950/10'
+          : 'border-red-200 bg-red-50 dark:bg-red-950/10'
+      }`}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4 mb-3">
+            <Settings className="h-5 w-5" />
+            <h3 className="font-semibold">Payment System Health Check</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
+            <div className={`flex items-center gap-1 ${healthCheck.settingsLoaded ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.settingsLoaded ? 'bg-green-600' : 'bg-red-600'}`}></div>
+              Settings
+            </div>
+            <div className={`flex items-center gap-1 ${healthCheck.prepaidEnabled ? 'text-green-600' : 'text-yellow-600'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.prepaidEnabled ? 'bg-green-600' : 'bg-yellow-600'}`}></div>
+              Prepaid
+            </div>
+            <div className={`flex items-center gap-1 ${healthCheck.subscriptionEnabled ? 'text-green-600' : 'text-yellow-600'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.subscriptionEnabled ? 'bg-green-600' : 'bg-yellow-600'}`}></div>
+              Subscription
+            </div>
+            <div className={`flex items-center gap-1 ${healthCheck.keyIdPresent ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.keyIdPresent ? 'bg-green-600' : 'bg-red-600'}`}></div>
+              Key ID
+            </div>
+            <div className={`flex items-center gap-1 ${healthCheck.scriptLoaded ? 'text-green-600' : 'text-yellow-600'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.scriptLoaded ? 'bg-green-600' : 'bg-yellow-600'}`}></div>
+              Script
+            </div>
+            <div className={`flex items-center gap-1 ${healthCheck.canCreateOrder ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.canCreateOrder ? 'bg-green-600' : 'bg-gray-400'}`}></div>
+              Order
+            </div>
+            <div className={`flex items-center gap-1 ${healthCheck.webhookReachable ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-2 h-2 rounded-full ${healthCheck.webhookReachable ? 'bg-green-600' : 'bg-gray-400'}`}></div>
+              Webhook
+            </div>
+          </div>
+          {(!healthCheck.settingsLoaded || !healthCheck.keyIdPresent) && (
+            <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/20 rounded text-sm">
+              <strong>Admin Payment Settings Incomplete:</strong> Payment gateway configuration is missing or incomplete. 
+              Please check Admin → Payment Settings.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Expiry Warning Banner */}
       {currentSubscription && 
        currentSubscription.status === 'active' && 
@@ -629,10 +728,27 @@ const Subscription = () => {
                             : ''
                         }`}
                         onClick={() => handleSubscribe(plan.id)}
-                        disabled={actionLoading || !!currentSubscription}
+                        disabled={
+                          actionLoading || 
+                          paymentLoading || 
+                          !!currentSubscription || 
+                          !healthCheck.scriptLoaded || 
+                          !healthCheck.settingsLoaded ||
+                          !healthCheck.keyIdPresent
+                        }
                       >
-                        {actionLoading ? (
+                        {(actionLoading || paymentLoading) ? (
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        ) : !healthCheck.scriptLoaded ? (
+                          <>
+                            <AlertCircle className="h-5 w-5 mr-2" />
+                            Script Loading...
+                          </>
+                        ) : !healthCheck.settingsLoaded || !healthCheck.keyIdPresent ? (
+                          <>
+                            <AlertCircle className="h-5 w-5 mr-2" />
+                            Config Missing
+                          </>
                         ) : (
                           <>
                             {currentSubscription ? 'Upgrade to' : 'Get Started'}
