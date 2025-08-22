@@ -21,18 +21,15 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get payment settings for webhook validation
-    const { data: paymentSettings, error: settingsError } = await supabaseService
-      .from('payment_settings')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (settingsError || !paymentSettings) {
-      throw new Error('Payment settings not found');
+    // Get webhook secret from environment
+    const webhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET');
+    
+    if (!webhookSecret) {
+      console.error('❌ Razorpay webhook secret missing in environment');
+      throw new Error('Webhook secret not configured');
     }
+
+    console.log('✅ Webhook secret found');
 
     // Get webhook body and signature
     const body = await req.text();
@@ -43,13 +40,14 @@ serve(async (req) => {
     }
 
     // Verify webhook signature
-    if (paymentSettings.razorpay_webhook_secret) {
-      const expectedSignature = await generateSignature(body, paymentSettings.razorpay_webhook_secret);
-      
-      if (signature !== expectedSignature) {
-        throw new Error('Invalid webhook signature');
-      }
+    const expectedSignature = await generateSignature(body, webhookSecret);
+    
+    if (signature !== expectedSignature) {
+      console.error('❌ Invalid webhook signature');
+      throw new Error('Invalid webhook signature');
     }
+
+    console.log('✅ Webhook signature verified');
 
     // Parse webhook payload
     const payload = JSON.parse(body);
