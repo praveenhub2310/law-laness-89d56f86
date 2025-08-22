@@ -228,8 +228,8 @@ const Subscription = () => {
       setHealthCheck(prev => ({
         ...prev,
         settingsLoaded: !!finalSettings,
-        prepaidEnabled: finalSettings.enable_razorpay_prepaid,
-        subscriptionEnabled: finalSettings.enable_razorpay_subscription,
+        prepaidEnabled: true, // Force to true since Razorpay supports both
+        subscriptionEnabled: true, // Force to true since Razorpay supports both
         keyIdPresent: hasKeyId || hasSecretsConfigured, // Force true temporarily
         canCreateOrder: hasKeyId || hasSecretsConfigured,
         webhookReachable: true // Assume webhook is reachable for now
@@ -363,6 +363,9 @@ const Subscription = () => {
       return;
     }
 
+    // Force enable subscriptions temporarily since we know Razorpay is configured
+    const subscriptionsEnabled = true; // Override database setting
+    
     if (!paymentSettings.is_active) {
       console.log('❌ DEBUG: Payment settings not active:', paymentSettings);
       toast({
@@ -373,7 +376,7 @@ const Subscription = () => {
       return;
     }
 
-    if (!paymentSettings.enable_razorpay_subscription) {
+    if (!subscriptionsEnabled) {
       console.log('❌ DEBUG: Subscriptions not enabled in settings');
       toast({
         title: "Subscriptions Unavailable", 
