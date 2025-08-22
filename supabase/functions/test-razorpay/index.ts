@@ -13,12 +13,12 @@ serve(async (req) => {
   try {
     console.log('[TEST] 🧪 Test function called successfully');
     
-    // Check if secrets exist
-    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
-    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    // Check if secrets exist - using new secret names
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID_NEW');
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET_NEW');
     
-    console.log('[TEST] 🔑 Key ID exists:', !!razorpayKeyId);
-    console.log('[TEST] 🔑 Key Secret exists:', !!razorpayKeySecret);
+    console.log('[TEST] 🔑 NEW Key ID exists:', !!razorpayKeyId);
+    console.log('[TEST] 🔑 NEW Key Secret exists:', !!razorpayKeySecret);
     
     if (razorpayKeyId) {
       console.log('[TEST] 🔑 Key ID length:', razorpayKeyId.length);
@@ -29,7 +29,8 @@ serve(async (req) => {
       success: true,
       keyIdPresent: !!razorpayKeyId,
       keySecretPresent: !!razorpayKeySecret,
-      message: 'Test function working'
+      keyIdLength: razorpayKeyId ? razorpayKeyId.length : 0,
+      message: 'Test function working with NEW secrets'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

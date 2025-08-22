@@ -42,53 +42,23 @@ serve(async (req) => {
       throw new Error('Plan ID and amount are required');
     }
 
-    // Get Razorpay credentials from environment variables  
-    console.info('[CREATE-ORDER] 🔧 Function redeployed - Reading fresh credentials...');
+    // Get Razorpay credentials from NEW environment variables
+    console.info('[CREATE-ORDER] 🔧 Using NEW secret names to avoid cache issues...');
     
-    // Get all environment variable names for debugging
-    const allEnvVars = Deno.env.toObject();
-    const allKeys = Object.keys(allEnvVars);
-    const razorpayKeys = allKeys.filter(key => key.includes('RAZORPAY'));
-    console.info('[CREATE-ORDER] All environment keys count:', allKeys.length);
-    console.info('[CREATE-ORDER] Razorpay-related keys:', razorpayKeys);
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID_NEW')?.trim();
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET_NEW')?.trim();
     
-    // Try different variations of the key names
-    const keyIdVariations = [
-      'RAZORPAY_KEY_ID',
-      'RAZORPAY_KEY_ID\r\n\r\n', // From the logs, this variation exists
-    ];
-    
-    let razorpayKeyId = '';
-    let razorpayKeySecret = '';
-    
-    // Try to find the correct key ID
-    for (const keyName of keyIdVariations) {
-      const value = Deno.env.get(keyName);
-      if (value && value.trim()) {
-        razorpayKeyId = value.trim();
-        console.info('[CREATE-ORDER] Found Key ID using:', keyName);
-        break;
-      }
-    }
-    
-    // Get the secret
-    const rawSecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-    if (rawSecret && rawSecret.trim()) {
-      razorpayKeySecret = rawSecret.trim();
-    }
-    
-    console.info('[CREATE-ORDER] 🔑 Credential check results:');
-    console.info('[CREATE-ORDER] Key ID found:', !!razorpayKeyId, 'Length:', razorpayKeyId.length);
-    console.info('[CREATE-ORDER] Key Secret found:', !!razorpayKeySecret, 'Length:', razorpayKeySecret.length);
+    console.info('[CREATE-ORDER] 🔑 NEW Key ID found:', !!razorpayKeyId);
+    console.info('[CREATE-ORDER] 🔑 NEW Key Secret found:', !!razorpayKeySecret);
     
     if (razorpayKeyId) {
-      console.info('[CREATE-ORDER] Key ID starts with:', razorpayKeyId.substring(0, 8) + '***');
+      console.info('[CREATE-ORDER] 🔑 NEW Key ID length:', razorpayKeyId.length);
+      console.info('[CREATE-ORDER] 🔑 NEW Key ID preview:', razorpayKeyId.substring(0, 8) + '***');
     }
 
     if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error('[CREATE-ORDER] ❌ Credentials still missing after all attempts');
-      console.error('[CREATE-ORDER] All Razorpay env vars:', razorpayKeys.map(key => `${key}: ${!!Deno.env.get(key)}`));
-      throw new Error('Razorpay credentials not configured properly. Please check secrets configuration.');
+      console.error('[CREATE-ORDER] ❌ NEW Razorpay credentials still missing');
+      throw new Error('Razorpay credentials not configured with new secret names');
     }
 
     console.info('[CREATE-ORDER] ✅ Razorpay credentials found');

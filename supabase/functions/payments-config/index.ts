@@ -29,9 +29,9 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get Razorpay credentials from environment (secure)
-    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID')?.trim();
-    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')?.trim();
+    // Get Razorpay credentials from environment (secure) - using NEW secret names
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID_NEW')?.trim();
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET_NEW')?.trim();
     const razorpayWebhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET')?.trim();
 
     // Debug: Check if secrets exist at all
