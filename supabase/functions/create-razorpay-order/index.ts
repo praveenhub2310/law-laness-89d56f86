@@ -43,15 +43,20 @@ serve(async (req) => {
     }
 
     // Get Razorpay credentials from environment variables (more secure)
-    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
-    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID')?.trim();
+    const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')?.trim();
 
     console.info('[CREATE-ORDER] 🔑 Checking Razorpay credentials...');
     console.info('[CREATE-ORDER] Key ID exists:', !!razorpayKeyId);
     console.info('[CREATE-ORDER] Key Secret exists:', !!razorpayKeySecret);
     
     if (razorpayKeyId) {
-      console.info('[CREATE-ORDER] Key ID (masked):', razorpayKeyId.substring(0, 8) + '***');
+      console.info('[CREATE-ORDER] Key ID (masked):', razorpayKeyId.substring(0, 12) + '***');
+      console.info('[CREATE-ORDER] Key ID length:', razorpayKeyId.length);
+    }
+    
+    if (razorpayKeySecret) {
+      console.info('[CREATE-ORDER] Key Secret length:', razorpayKeySecret.length);
     }
 
     if (!razorpayKeyId || !razorpayKeySecret) {
