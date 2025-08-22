@@ -78,7 +78,7 @@ const Transactions = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setTransactions(data || []);
+        setTransactions((data as any) || []);
       } catch (error) {
         console.error('Error fetching transactions:', error);
         toast({

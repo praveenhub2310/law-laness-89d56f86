@@ -106,7 +106,10 @@ const MeetingRecordings = () => {
           .order('meeting_date', { ascending: false });
 
         if (error) throw error;
-        setRecordings(data || []);
+        setRecordings((data?.map(record => ({
+          ...record,
+          participants: Array.isArray(record.participants) ? record.participants : []
+        })) as any) || []);
       } catch (error) {
         console.error('Error fetching recordings:', error);
         toast({

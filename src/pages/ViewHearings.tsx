@@ -102,7 +102,7 @@ const ViewHearings = () => {
           .order('hearing_date', { ascending: true });
 
         if (error) throw error;
-        setHearings(data || []);
+        setHearings((data as any) || []);
       } catch (error) {
         console.error('Error fetching hearings:', error);
         toast({
