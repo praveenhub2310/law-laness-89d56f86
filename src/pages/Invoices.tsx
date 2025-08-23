@@ -21,8 +21,8 @@ const Invoices = () => {
     table: 'invoices',
     select: `
       *,
-      client:profiles!invoices_client_id_fkey(first_name, last_name, email),
-      lawyer:profiles!invoices_lawyer_id_fkey(first_name, last_name, email)
+      client:profiles!client_id(first_name, last_name, email),
+      lawyer:profiles!lawyer_id(first_name, last_name, email)
     `,
     filters: user?.role === 'client' ? { client_id: user.id } : {},
     orderBy: { column: 'created_at', ascending: false },
