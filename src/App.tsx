@@ -59,7 +59,6 @@ import UserManagement from './pages/UserManagement';
 import SystemSettings from './pages/SystemSettings';
 import SecurityCenter from './pages/SecurityCenter';
 import DatabaseManagement from './pages/DatabaseManagement';
-import InvoicesPayments from './pages/InvoicesPayments';
 import DocumentUpload from './pages/DocumentUpload';
 import ESign from './pages/ESign';
 import AssignedAdvocate from './pages/AssignedAdvocate';
@@ -154,7 +153,7 @@ function App() {
           <Route path="/dashboard/recordings" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><MeetingRecordings /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/excel-upload" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><ExcelUpload /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/drafting-translation" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><DraftingTranslation /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/invoices-payments" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><InvoicesPayments /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/invoices-payments" element={<RoleGuard allowedRoles={['advocate']}><DashboardLayout><Invoices /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/subscription" element={<RoleGuard allowedRoles={['advocate', 'company']}><DashboardLayout><Subscription /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/transactions" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><Transactions /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/fee-calculator" element={<RoleGuard allowedRoles={['advocate', 'super_admin']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
@@ -177,7 +176,7 @@ function App() {
           <Route path="/dashboard/firm-translation" element={<RoleGuard allowedRoles={['company']}><DashboardLayout><DocumentTranslation /></DashboardLayout></RoleGuard>} />
           
           {/* Client Routes */}
-          <Route path="/dashboard/payments" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><InvoicesPayments /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/payments" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><Invoices /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/document-upload" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><DocumentUpload /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/e-sign" element={<RoleGuard allowedRoles={['client', 'advocate']}><DashboardLayout><ESign /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/assigned-advocate" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><AssignedAdvocate /></DashboardLayout></RoleGuard>} />
