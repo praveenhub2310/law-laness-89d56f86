@@ -35,6 +35,9 @@ const Invoices = () => {
 
   // Handle adding new invoice
   const handleAddInvoice = async (formData: any) => {
+    console.log('Form data received:', formData);
+    console.log('Current user:', user);
+    
     const invoiceData = {
       invoice_number: generateInvoiceNumber(),
       client_id: formData.client_id || user?.id,
@@ -56,7 +59,10 @@ const Invoices = () => {
       notes: formData.notes
     };
     
-    await addItem(invoiceData);
+    console.log('Invoice data to be inserted:', invoiceData);
+    
+    const result = await addItem(invoiceData);
+    console.log('Insert result:', result);
   };
 
   // Handle PDF download
