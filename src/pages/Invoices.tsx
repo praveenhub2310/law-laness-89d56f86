@@ -19,11 +19,7 @@ const Invoices = () => {
     deleteItem
   } = useSupabaseData({
     table: 'invoices',
-    select: `
-      *,
-      client:profiles!client_id(first_name, last_name, email),
-      lawyer:profiles!lawyer_id(first_name, last_name, email)
-    `,
+    select: '*',
     filters: user?.role === 'client' ? { client_id: user.id } : {},
     orderBy: { column: 'created_at', ascending: false },
     realtime: true
@@ -67,10 +63,10 @@ const Invoices = () => {
   const handleDownloadPDF = (invoice: any) => {
     const pdfData = {
       ...invoice,
-      clientName: invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'Client',
-      clientEmail: invoice.client?.email,
-      lawyerName: invoice.lawyer ? `${invoice.lawyer.first_name} ${invoice.lawyer.last_name}` : 'Lawyer',
-      lawyerEmail: invoice.lawyer?.email,
+      clientName: invoice.client_id || 'Client',
+      clientEmail: 'client@example.com',
+      lawyerName: 'Lawyer',
+      lawyerEmail: user?.email || 'lawyer@example.com',
       companyName: 'Legal Services Firm'
     };
     
@@ -85,10 +81,10 @@ const Invoices = () => {
   const handlePreviewPDF = (invoice: any) => {
     const pdfData = {
       ...invoice,
-      clientName: invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'Client',
-      clientEmail: invoice.client?.email,
-      lawyerName: invoice.lawyer ? `${invoice.lawyer.first_name} ${invoice.lawyer.last_name}` : 'Lawyer',
-      lawyerEmail: invoice.lawyer?.email,
+      clientName: invoice.client_id || 'Client',
+      clientEmail: 'client@example.com',
+      lawyerName: 'Lawyer',
+      lawyerEmail: user?.email || 'lawyer@example.com',
       companyName: 'Legal Services Firm'
     };
     
@@ -98,7 +94,7 @@ const Invoices = () => {
   // Format data for display
   const formattedData = invoices.map(invoice => ({
     ...invoice, // Keep all original properties
-    clientName: invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'N/A',
+    clientName: invoice.client_id || 'N/A',
     amount: `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
     issueDate: new Date(invoice.issued_date).toLocaleDateString(),
     dueDate: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A',
@@ -108,7 +104,7 @@ const Invoices = () => {
   const handleExportData = () => {
     const csvData = invoices.map(invoice => ({
       'Invoice Number': invoice.invoice_number,
-      'Client Name': invoice.client ? `${invoice.client.first_name} ${invoice.client.last_name}` : 'N/A',
+      'Client Name': invoice.client_id || 'N/A',
       'Amount': `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
       'Issue Date': new Date(invoice.issued_date).toLocaleDateString(),
       'Due Date': invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A',
