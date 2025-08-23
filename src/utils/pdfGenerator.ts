@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export interface InvoiceData {
   id: string;
@@ -85,7 +85,7 @@ export const generateInvoicePDF = (invoice: InvoiceData) => {
     : [['Legal Services', 1, `$${invoice.subtotal.toFixed(2)}`, `$${invoice.subtotal.toFixed(2)}`]];
   
   // Add services table
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: tableStartY,
     head: [['Description', 'Qty', 'Rate', 'Amount']],
     body: servicesData,
@@ -107,7 +107,7 @@ export const generateInvoicePDF = (invoice: InvoiceData) => {
     margin: { left: 20, right: 20 }
   });
   
-  const finalY = (doc as any).lastAutoTable.finalY || tableStartY + 50;
+  const finalY = (doc as any).lastAutoTable?.finalY || tableStartY + 50;
   
   // Totals Section
   const totalsStartY = finalY + 20;
