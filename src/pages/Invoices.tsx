@@ -38,9 +38,27 @@ const Invoices = () => {
     console.log('Form data received:', formData);
     console.log('Current user:', user);
     
+    // Validate required fields
+    if (!formData.amount || !formData.description) {
+      toast({
+        title: 'Error',
+        description: 'Amount and description are required.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Only use client_id if it's a valid UUID, otherwise use lawyer_id for both
+    let clientId = user?.id; // Default to current user
+    
+    // If client_id is provided and looks like a UUID, use it
+    if (formData.client_id && formData.client_id.length === 36 && formData.client_id.includes('-')) {
+      clientId = formData.client_id;
+    }
+    
     const invoiceData = {
       invoice_number: generateInvoiceNumber(),
-      client_id: formData.client_id || user?.id,
+      client_id: clientId,
       lawyer_id: user?.id,
       services: formData.services ? JSON.parse(formData.services) : [
         {
@@ -63,6 +81,19 @@ const Invoices = () => {
     
     const result = await addItem(invoiceData);
     console.log('Insert result:', result);
+    
+    if (result.error) {
+      toast({
+        title: 'Error',
+        description: `Failed to save invoice: ${result.error}`,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Success',
+        description: 'Invoice saved successfully.',
+      });
+    }
   };
 
   // Handle PDF download
@@ -194,7 +225,7 @@ const Invoices = () => {
   ];
 
   const fields = [
-    { key: 'client_id', label: 'Client ID', type: 'text' as const, required: true },
+    { key: 'client_id', label: 'Client ID (Optional - leave blank to use your ID)', type: 'text' as const, required: false },
     { key: 'amount', label: 'Amount ($)', type: 'number' as const, required: true },
     { key: 'issued_date', label: 'Issue Date', type: 'date' as const, required: true },
     { key: 'due_date', label: 'Due Date', type: 'date' as const },
