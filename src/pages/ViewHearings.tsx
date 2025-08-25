@@ -14,7 +14,7 @@ const ViewHearings = () => {
     table: 'hearings',
     select: `
       *,
-      case:projects(case_number, title),
+      projects!case_id(case_number, title),
       client:profiles!client_id(first_name, last_name),
       lawyer:profiles!lawyer_id(first_name, last_name)
     `,
@@ -67,7 +67,7 @@ const ViewHearings = () => {
       filterable: true
     },
     {
-      key: 'case',
+      key: 'projects',
       label: 'Case',
       sortable: true,
       filterable: true,
