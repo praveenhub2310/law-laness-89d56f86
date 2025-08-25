@@ -31,7 +31,17 @@ const Templates = () => {
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [isPopulating, setIsPopulating] = useState(false);
 
-  const categories = ['all', 'Legal Documents', 'Court Forms', 'Contract Templates', 'Marriage', 'Association', 'Miscellaneous'];
+  const categories = [
+    'all', 
+    'Draft Document Models', 
+    'Miscellaneous', 
+    'Hindu Marriage', 
+    'Separate Special Marriage', 
+    'Tamil Nadu Marriage Registration Act 2009',
+    'Kural Marriage',
+    'Association Registration',
+    'Joint Company'
+  ];
 
   useEffect(() => {
     fetchTemplates();
