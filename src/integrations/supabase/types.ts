@@ -1115,6 +1115,48 @@ export type Database = {
         }
         Relationships: []
       }
+      templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          download_count: number | null
+          file_size: number | null
+          file_url: string
+          id: string
+          is_active: boolean | null
+          preview_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          download_count?: number | null
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          preview_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          download_count?: number | null
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          preview_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_tracker: {
         Row: {
           case_id: string | null
