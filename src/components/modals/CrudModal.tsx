@@ -65,7 +65,12 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
 
   const handleDateSelect = (key: string, date: Date | undefined) => {
     if (date) {
-      setFormData({ ...formData, [key]: format(date, 'yyyy-MM-dd') });
+      // Ensure consistent date formatting for storage
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      setFormData(prev => ({ ...prev, [key]: formattedDate }));
+    } else {
+      // Handle clearing the date
+      setFormData(prev => ({ ...prev, [key]: '' }));
     }
   };
 
@@ -108,6 +113,7 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
         );
         
       case 'date':
+        const isValidDate = formData[field.key] && !isNaN(new Date(formData[field.key]).getTime());
         return (
           <Popover>
             <PopoverTrigger asChild>
@@ -121,13 +127,13 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
                 disabled={isReadonly}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData[field.key] ? format(new Date(formData[field.key]), "PPP") : <span>Pick a date</span>}
+                {isValidDate ? format(new Date(formData[field.key]), "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={formData[field.key] ? new Date(formData[field.key]) : undefined}
+                selected={isValidDate ? new Date(formData[field.key]) : undefined}
                 onSelect={(date) => handleDateSelect(field.key, date)}
                 initialFocus
                 className="p-3 pointer-events-auto"

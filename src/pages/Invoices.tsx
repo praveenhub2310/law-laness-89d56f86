@@ -6,6 +6,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadInvoicePDF, previewInvoicePDF } from '@/utils/pdfGenerator';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 const Invoices = () => {
   const { user } = useAuth();
@@ -71,8 +72,9 @@ const Invoices = () => {
       tax_amount: parseFloat(formData.tax_amount) || 0,
       discount_amount: parseFloat(formData.discount_amount) || 0,
       total_amount: (parseFloat(formData.amount) || 0) + (parseFloat(formData.tax_amount) || 0) - (parseFloat(formData.discount_amount) || 0),
-      issued_date: formData.issued_date || new Date().toISOString().split('T')[0],
-      due_date: formData.due_date,
+      issued_date: formData.issued_date || format(new Date(), 'yyyy-MM-dd'),
+      due_date: formData.due_date || null,
+      payment_date: formData.payment_date || null,
       status: formData.status || 'unpaid',
       notes: formData.notes
     };
@@ -128,15 +130,28 @@ const Invoices = () => {
     previewInvoicePDF(pdfData);
   };
 
-  // Format data for display
-  const formattedData = invoices.map(invoice => ({
-    ...invoice, // Keep all original properties
-    clientName: invoice.client_id || 'N/A',
-    amount: `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
-    issueDate: new Date(invoice.issued_date).toLocaleDateString(),
-    dueDate: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A',
-    taxAmount: `$${invoice.tax_amount?.toFixed(2) || '0.00'}`
-  }));
+  // Format data for display with proper date handling
+  const formattedData = invoices.map(invoice => {
+    const parseDate = (dateString: string | null | undefined) => {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? null : date;
+    };
+
+    const issuedDate = parseDate(invoice.issued_date);
+    const dueDate = parseDate(invoice.due_date);
+    const paymentDate = parseDate(invoice.payment_date);
+
+    return {
+      ...invoice, // Keep all original properties
+      clientName: invoice.client_id || 'N/A',
+      amount: `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
+      issueDate: issuedDate ? issuedDate.toLocaleDateString() : 'N/A',
+      dueDate: dueDate ? dueDate.toLocaleDateString() : 'N/A',
+      paymentDate: paymentDate ? paymentDate.toLocaleDateString() : 'N/A',
+      taxAmount: `$${invoice.tax_amount?.toFixed(2) || '0.00'}`
+    };
+  });
 
   const handleExportData = () => {
     const csvData = invoices.map(invoice => ({
@@ -197,6 +212,12 @@ const Invoices = () => {
       filterable: true
     },
     {
+      key: 'paymentDate',
+      label: 'Payment Date',
+      sortable: true,
+      filterable: true
+    },
+    {
       key: 'status',
       label: 'Status',
       sortable: true,
@@ -229,6 +250,7 @@ const Invoices = () => {
     { key: 'amount', label: 'Amount ($)', type: 'number' as const, required: true },
     { key: 'issued_date', label: 'Issue Date', type: 'date' as const, required: true },
     { key: 'due_date', label: 'Due Date', type: 'date' as const },
+    { key: 'payment_date', label: 'Payment Date', type: 'date' as const },
     { 
       key: 'status', 
       label: 'Status', 
