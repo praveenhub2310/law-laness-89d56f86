@@ -75,6 +75,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           // Defer profile fetching to avoid auth state conflicts
           setTimeout(async () => {
+            // Check for pending role from Google OAuth
+            const pendingRole = localStorage.getItem('pendingUserRole');
+            if (pendingRole && event === 'SIGNED_IN') {
+              console.log('Found pending role after OAuth:', pendingRole);
+              
+              // Validate the role is one of the allowed values
+              const validRoles = ['super_admin', 'company', 'advocate', 'client'];
+              const roleToUpdate = validRoles.includes(pendingRole) ? pendingRole : 'client';
+              
+              try {
+                // Update the user's profile with the selected role
+                const { error: updateError } = await supabase
+                  .from('profiles')
+                  .update({ role: roleToUpdate as 'super_admin' | 'company' | 'advocate' | 'client' })
+                  .eq('id', session.user.id);
+                
+                if (updateError) {
+                  console.error('Error updating user role:', updateError);
+                } else {
+                  console.log('Successfully updated user role to:', roleToUpdate);
+                  
+                  // Create role-specific entries if needed
+                  try {
+                    if (roleToUpdate === 'advocate') {
+                      await supabase.from('advocates').upsert({ id: session.user.id });
+                    } else if (roleToUpdate === 'company') {
+                      await supabase.from('companies').upsert({ 
+                        id: session.user.id, 
+                        company_name: session.user.user_metadata?.full_name || 'Company' 
+                      });
+                      // Update profile with company_id for company users
+                      await supabase
+                        .from('profiles')
+                        .update({ company_id: session.user.id })
+                        .eq('id', session.user.id);
+                    } else if (roleToUpdate === 'client') {
+                      await supabase.from('clients').upsert({ id: session.user.id });
+                    }
+                  } catch (roleError) {
+                    console.error('Error creating role-specific entry:', roleError);
+                  }
+                  
+                  // Clear the pending role
+                  localStorage.removeItem('pendingUserRole');
+                }
+              } catch (error) {
+                console.error('Exception updating user role:', error);
+              }
+            }
+            
             const profile = await fetchUserProfile(session.user.id);
             setUserProfile(profile);
             setLoading(false);
@@ -198,15 +248,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('AuthContext: Starting Google OAuth with userData:', userData);
       console.log('AuthContext: Redirect URL will be:', `${window.location.origin}/login`);
       
+      // Store the role in localStorage to access after OAuth redirect
+      if (userData?.role) {
+        localStorage.setItem('pendingUserRole', userData.role);
+        console.log('AuthContext: Stored pending role:', userData.role);
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/login`,
-          queryParams: userData ? {
+          queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
-            role: userData.role || 'client'
-          } : undefined
+            prompt: 'consent'
+          }
         }
       });
 
