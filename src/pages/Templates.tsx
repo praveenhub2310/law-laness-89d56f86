@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import TemplatePreviewModal from '@/components/TemplatePreviewModal';
+import UploadTemplateDialog from '@/components/UploadTemplateDialog';
 
 interface Template {
   id: string;
@@ -30,6 +31,8 @@ const Templates = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [isPopulating, setIsPopulating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   const categories = [
     'all', 
@@ -113,6 +116,70 @@ const Templates = () => {
     }
   };
 
+  const handleUploadTemplate = async (formData: {
+    title: string;
+    category: string;
+    description: string;
+    file: File;
+  }) => {
+    try {
+      setIsUploading(true);
+      toast.info('Uploading template...');
+
+      const { title, category, description, file } = formData;
+      
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Only PDF and DOCX files are allowed');
+      }
+
+      // Generate unique filename
+      const fileExtension = file.type === 'application/pdf' ? 'pdf' : 'docx';
+      const fileName = `${Date.now()}-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${fileExtension}`;
+
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('templates')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('templates')
+        .getPublicUrl(fileName);
+
+      // Insert template record
+      const { error: insertError } = await supabase
+        .from('templates')
+        .insert({
+          title,
+          category,
+          description,
+          file_url: publicUrl,
+          preview_type: fileExtension as 'pdf' | 'docx',
+          file_size: file.size,
+          is_active: true,
+          download_count: 0
+        });
+
+      if (insertError) throw insertError;
+
+      toast.success('Template uploaded successfully');
+      setShowUploadDialog(false);
+      fetchTemplates(); // Refresh templates list
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload template');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const filteredTemplates = templates.filter(template => {
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
     const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,7 +216,10 @@ const Templates = () => {
               Populate Templates
             </Button>
           )}
-          <Button className="flex items-center gap-2">
+          <Button 
+            onClick={() => setShowUploadDialog(true)}
+            className="flex items-center gap-2"
+          >
             <Plus className="h-4 w-4" />
             Upload Template
           </Button>
@@ -344,6 +414,17 @@ const Templates = () => {
         onClose={() => setPreviewTemplate(null)}
         template={previewTemplate}
       />
+
+      {/* Upload Template Dialog */}
+      {showUploadDialog && (
+        <UploadTemplateDialog
+          isOpen={showUploadDialog}
+          onClose={() => setShowUploadDialog(false)}
+          onUpload={handleUploadTemplate}
+          isUploading={isUploading}
+          categories={categories.filter(cat => cat !== 'all')}
+        />
+      )}
     </div>
   );
 };

@@ -472,6 +472,102 @@ serve(async (req) => {
     // Use scraped templates if available, otherwise use predefined ones
     const allTemplates = scrapedTemplates.length > 0 ? scrapedTemplates : predefinedTemplates;
 
+    // Create a simple dummy PDF for templates that don't have real files
+    const createDummyPDF = async (title: string): Promise<string> => {
+      const pdfContent = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(${title}) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000274 00000 n 
+0000000373 00000 n 
+trailer
+<<
+/Size 6
+/Root 1 0 R
+>>
+startxref
+456
+%%EOF`;
+
+      const fileName = `${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}.pdf`;
+      
+      try {
+        const { data, error } = await supabaseClient.storage
+          .from('templates')
+          .upload(fileName, new Blob([pdfContent], { type: 'application/pdf' }), {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (error) {
+          console.log(`Error uploading ${fileName}:`, error);
+          return '';
+        }
+
+        const { data: urlData } = supabaseClient.storage
+          .from('templates')
+          .getPublicUrl(fileName);
+
+        return urlData.publicUrl;
+      } catch (error) {
+        console.log(`Error creating dummy PDF for ${title}:`, error);
+        return '';
+      }
+    };
+
     // Helper function to parse templates from HTML (if scraping is successful)
     async function parseTemplatesFromHTML(doc: any): Promise<Template[]> {
       const templates: Template[] = [];
