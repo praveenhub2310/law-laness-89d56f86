@@ -806,10 +806,11 @@ const MeetingRecordings = () => {
               />
             </div>
 
-            <AudioRecorder 
-              onRecordingComplete={handleRecordingComplete}
-              disabled={isUploading}
-            />
+                      <AudioRecorder 
+                        onRecordingComplete={() => {}} // No automatic saving
+                        onSubmit={handleRecordingComplete} // Only save when submitted
+                        disabled={isUploading}
+                      />
           </div>
         </DialogContent>
       </Dialog>

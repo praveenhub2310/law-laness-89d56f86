@@ -7,15 +7,18 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AudioRecorderProps {
   onRecordingComplete: (audioBlob: Blob, duration: number) => void;
+  onSubmit?: (audioBlob: Blob, duration: number) => void;
   disabled?: boolean;
 }
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, disabled = false }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, onSubmit, disabled = false }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [isReadyToSubmit, setIsReadyToSubmit] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -64,6 +67,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, disa
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const url = URL.createObjectURL(audioBlob);
         setAudioURL(url);
+        setRecordedBlob(audioBlob);
+        setIsReadyToSubmit(true);
         onRecordingComplete(audioBlob, duration);
         
         // Stop all tracks to release microphone
@@ -141,6 +146,24 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, disa
     return isRecording && !isPaused ? Math.random() * 100 : 0;
   };
 
+  const handleSubmit = () => {
+    if (recordedBlob && onSubmit) {
+      onSubmit(recordedBlob, duration);
+      setIsReadyToSubmit(false);
+      setAudioURL(null);
+      setRecordedBlob(null);
+      setDuration(0);
+    }
+  };
+
+  const handleReset = () => {
+    setIsReadyToSubmit(false);
+    setAudioURL(null);
+    setRecordedBlob(null);
+    setDuration(0);
+    setIsPlaying(false);
+  };
+
   return (
     <Card className="w-full">
       <CardContent className="p-6">
@@ -193,7 +216,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, disa
 
           {/* Playback Controls */}
           {audioURL && !isRecording && (
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex items-center justify-center gap-4">
                 <Button onClick={playRecording} variant="outline">
                   {isPlaying ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
@@ -204,6 +227,18 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecordingComplete, disa
                   Duration: {formatDuration(duration)}
                 </div>
               </div>
+              
+              {/* Submit Controls */}
+              {isReadyToSubmit && onSubmit && (
+                <div className="flex items-center justify-center gap-4">
+                  <Button onClick={handleSubmit} size="lg" className="w-32">
+                    Submit & Save
+                  </Button>
+                  <Button onClick={handleReset} variant="outline" size="lg">
+                    Re-record
+                  </Button>
+                </div>
+              )}
               
               <audio
                 ref={audioRef}
