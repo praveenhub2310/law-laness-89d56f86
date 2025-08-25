@@ -73,9 +73,28 @@ export const useSupabaseData = <T extends Record<string, any>>({
     if (!user) return { error: 'User not authenticated' };
 
     try {
+      // Clean and validate data before insertion
+      const cleanedItem = { ...newItem };
+      
+      // Handle time format validation if hearing_time exists
+      if (cleanedItem.hearing_time && !/^\d{2}:\d{2}$/.test(cleanedItem.hearing_time)) {
+        throw new Error('Hearing time must be in HH:MM format');
+      }
+      
+      // Ensure required fields for hearings table
+      if (table === 'hearings') {
+        if (!cleanedItem.title?.trim()) throw new Error('Hearing title is required');
+        if (!cleanedItem.hearing_number?.trim()) throw new Error('Hearing number is required');
+        if (!cleanedItem.hearing_date) throw new Error('Hearing date is required');
+        if (!cleanedItem.court_name?.trim()) throw new Error('Court name is required');
+        if (!cleanedItem.status?.trim()) throw new Error('Status is required');
+        if (!cleanedItem.case_id?.trim()) throw new Error('Case ID is required');
+        if (!cleanedItem.client_id?.trim()) throw new Error('Client ID is required');
+      }
+
       const { data: result, error } = await supabase
         .from(table as any)
-        .insert([newItem])
+        .insert([cleanedItem])
         .select()
         .single();
 
@@ -84,12 +103,12 @@ export const useSupabaseData = <T extends Record<string, any>>({
       setData(prev => [result as unknown as T, ...prev]);
       toast({
         title: 'Success',
-        description: 'Item added successfully.',
+        description: 'Hearing saved successfully.',
       });
 
       return { data: result, error: null };
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to add item';
+      const errorMessage = err?.message || 'Failed to save hearing, please try again';
       toast({
         title: 'Error',
         description: errorMessage,
@@ -103,9 +122,36 @@ export const useSupabaseData = <T extends Record<string, any>>({
     if (!user) return { error: 'User not authenticated' };
 
     try {
+      // Clean and validate data before update
+      const cleanedUpdates = { ...updates };
+      
+      // Handle time format validation if hearing_time exists
+      if (cleanedUpdates.hearing_time && !/^\d{2}:\d{2}$/.test(cleanedUpdates.hearing_time)) {
+        throw new Error('Hearing time must be in HH:MM format');
+      }
+      
+      // Ensure required fields for hearings table
+      if (table === 'hearings') {
+        if (cleanedUpdates.title !== undefined && !cleanedUpdates.title?.trim()) {
+          throw new Error('Hearing title is required');
+        }
+        if (cleanedUpdates.hearing_number !== undefined && !cleanedUpdates.hearing_number?.trim()) {
+          throw new Error('Hearing number is required');
+        }
+        if (cleanedUpdates.hearing_date !== undefined && !cleanedUpdates.hearing_date) {
+          throw new Error('Hearing date is required');
+        }
+        if (cleanedUpdates.court_name !== undefined && !cleanedUpdates.court_name?.trim()) {
+          throw new Error('Court name is required');
+        }
+        if (cleanedUpdates.status !== undefined && !cleanedUpdates.status?.trim()) {
+          throw new Error('Status is required');
+        }
+      }
+
       const { data: result, error } = await supabase
         .from(table as any)
-        .update(updates)
+        .update(cleanedUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -118,12 +164,12 @@ export const useSupabaseData = <T extends Record<string, any>>({
 
       toast({
         title: 'Success',
-        description: 'Item updated successfully.',
+        description: 'Hearing updated successfully.',
       });
 
       return { data: result, error: null };
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to update item';
+      const errorMessage = err?.message || 'Failed to update hearing, please try again';
       toast({
         title: 'Error',
         description: errorMessage,

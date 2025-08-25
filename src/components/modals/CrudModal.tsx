@@ -49,6 +49,16 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
   }, [isOpen, data]);
 
   const handleSave = () => {
+    // Validate required fields
+    const missingFields = fields
+      .filter(field => field.required && (!formData[field.key] || formData[field.key].toString().trim() === ''))
+      .map(field => field.label);
+
+    if (missingFields.length > 0) {
+      alert(`Please fill in the following required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
     onSave(formData);
     onClose();
   };
