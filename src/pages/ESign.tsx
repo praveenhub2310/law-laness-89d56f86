@@ -52,7 +52,7 @@ const ESign = () => {
   // Create document state
   const [documentTitle, setDocumentTitle] = useState('');
   const [documentDescription, setDocumentDescription] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number; googleDriveId?: string } | null>(null);
   const [signatories, setSignatories] = useState<Signatory[]>([]);
   const [newSignatoryEmail, setNewSignatoryEmail] = useState('');
   const [newSignatoryName, setNewSignatoryName] = useState('');
@@ -115,6 +115,7 @@ const ESign = () => {
           document_number: documentNumber,
           title: documentTitle,
           original_file_url: uploadedFile.url,
+          google_drive_file_id: uploadedFile.googleDriveId,
           case_id: selectedCaseId || null,
           client_id: user?.id,
           lawyer_id: user?.id,

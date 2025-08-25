@@ -309,9 +309,11 @@ export type Database = {
           created_at: string
           document_number: string
           expires_at: string | null
+          google_drive_file_id: string | null
+          google_drive_signed_file_id: string | null
           id: string
           lawyer_id: string | null
-          original_file_url: string
+          original_file_url: string | null
           reminder_sent_at: string | null
           signature_positions: Json | null
           signatures: Json | null
@@ -327,9 +329,11 @@ export type Database = {
           created_at?: string
           document_number: string
           expires_at?: string | null
+          google_drive_file_id?: string | null
+          google_drive_signed_file_id?: string | null
           id?: string
           lawyer_id?: string | null
-          original_file_url: string
+          original_file_url?: string | null
           reminder_sent_at?: string | null
           signature_positions?: Json | null
           signatures?: Json | null
@@ -345,9 +349,11 @@ export type Database = {
           created_at?: string
           document_number?: string
           expires_at?: string | null
+          google_drive_file_id?: string | null
+          google_drive_signed_file_id?: string | null
           id?: string
           lawyer_id?: string | null
-          original_file_url?: string
+          original_file_url?: string | null
           reminder_sent_at?: string | null
           signature_positions?: Json | null
           signatures?: Json | null
