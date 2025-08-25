@@ -17,6 +17,7 @@ import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import DocumentUploader from '@/components/DocumentUploader';
 import SignaturePad, { SignaturePadRef } from '@/components/SignaturePad';
 import CaseSelector from '@/components/CaseSelector';
+import CaseNumberInput from '@/components/CaseNumberInput';
 
 interface Signatory {
   id: string;
@@ -48,6 +49,7 @@ const ESign = () => {
   const { isConnected, connect, isConnecting } = useGoogleDrive();
   const [activeTab, setActiveTab] = useState('create');
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
+  const [caseNumber, setCaseNumber] = useState<string>('');
   
   // Create document state
   const [documentTitle, setDocumentTitle] = useState('');
@@ -103,6 +105,12 @@ const ESign = () => {
       return;
     }
 
+    // Validate either existing case or new case number is provided
+    if (!selectedCaseId && !caseNumber) {
+      toast.error('Please either select an existing case or create a new case number');
+      return;
+    }
+
     setIsCreating(true);
     try {
       const documentNumber = `DOC-${Date.now()}`;
@@ -117,6 +125,7 @@ const ESign = () => {
           original_file_url: uploadedFile.url,
           google_drive_file_id: uploadedFile.googleDriveId,
           case_id: selectedCaseId || null,
+          case_number: caseNumber || null, // Store the formatted case number
           client_id: user?.id,
           lawyer_id: user?.id,
           signature_positions: signatories.map((s, index) => ({
@@ -142,6 +151,7 @@ const ESign = () => {
       setUploadedFile(null);
       setSignatories([]);
       setSelectedCaseId('');
+      setCaseNumber('');
       setActiveTab('manage');
       refetchDocuments();
     } catch (error) {
@@ -288,13 +298,24 @@ const ESign = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="case">Associated Case</Label>
+                  <Label htmlFor="case">Associated Case (Optional)</Label>
                   <CaseSelector
                     value={selectedCaseId}
                     onValueChange={setSelectedCaseId}
-                    placeholder="Select a case (optional)"
+                    placeholder="Select existing case (optional)"
+                    required={false}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <CaseNumberInput
+                  value={caseNumber}
+                  onValueChange={setCaseNumber}
+                  label="New Case Number"
+                  placeholder="Enter case details"
+                  className="w-full"
+                />
               </div>
 
               <div className="space-y-2">
