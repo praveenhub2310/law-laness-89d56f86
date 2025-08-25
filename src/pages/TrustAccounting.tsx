@@ -141,8 +141,7 @@ const TrustAccounting = () => {
   ];
 
   const fields = [
-    { key: 'client_name', label: 'Client Name', type: 'text' as const, required: true },
-    { key: 'account_number', label: 'Account Number', type: 'text' as const, required: true },
+    { key: 'case_id', label: 'Associated Case', type: 'case_select' as const, required: false },
     { key: 'balance', label: 'Initial Balance ($)', type: 'number' as const, required: true },
     { key: 'deposit_date', label: 'Deposit Date', type: 'date' as const, required: true },
     { key: 'description', label: 'Description', type: 'textarea' as const, required: true },

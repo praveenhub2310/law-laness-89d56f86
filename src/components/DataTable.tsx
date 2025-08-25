@@ -23,7 +23,7 @@ interface Column {
 interface FieldConfig {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'email' | 'tel';
+  type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'email' | 'tel' | 'case_select';
   options?: string[] | { label: string; value: any }[];
   required?: boolean;
   readonly?: boolean;

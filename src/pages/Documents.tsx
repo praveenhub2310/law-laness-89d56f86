@@ -172,9 +172,9 @@ const Documents = () => {
   ];
 
   const fields = [
+    { key: 'case_id', label: 'Associated Case', type: 'case_select' as const, required: false },
     { key: 'filename', label: 'File Name', type: 'text' as const, required: true },
     { key: 'title', label: 'Document Title', type: 'text' as const, required: true },
-    { key: 'caseNumber', label: 'Case Number', type: 'text' as const },
     { 
       key: 'category', 
       label: 'Category', 

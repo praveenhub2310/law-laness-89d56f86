@@ -150,20 +150,22 @@ const ViewHearings = () => {
   ];
 
   const fields = [
-    { key: 'title', label: 'Hearing Title', type: 'text' as const, required: true },
-    { key: 'hearing_number', label: 'Hearing Number', type: 'text' as const, required: true },
-    { key: 'case_id', label: 'Case ID', type: 'text' as const, required: true },
-    { key: 'client_id', label: 'Client ID', type: 'text' as const, required: true },
+    { key: 'case_id', label: 'Associated Case', type: 'case_select' as const, required: false },
     { key: 'hearing_date', label: 'Hearing Date', type: 'date' as const, required: true },
-    { key: 'hearing_time', label: 'Hearing Time (HH:MM)', type: 'text' as const },
+    { key: 'hearing_time', label: 'Hearing Time', type: 'text' as const, required: true },
+    { key: 'duration', label: 'Duration (HH:MM:SS)', type: 'text' as const, required: false },
+    { key: 'hearing_number', label: 'Hearing Number', type: 'text' as const, required: true },
+    { key: 'title', label: 'Title', type: 'text' as const, required: true },
+    { key: 'description', label: 'Description', type: 'textarea' as const, required: false },
     { key: 'court_name', label: 'Court Name', type: 'text' as const, required: true },
-    { key: 'court_room', label: 'Court Room', type: 'text' as const },
-    { key: 'judge_name', label: 'Judge Name', type: 'text' as const },
+    { key: 'court_room', label: 'Court Room', type: 'text' as const, required: false },
+    { key: 'judge_name', label: 'Judge Name', type: 'text' as const, required: false },
     { 
       key: 'hearing_type', 
       label: 'Hearing Type', 
       type: 'select' as const,
-      options: ['Motion Hearing', 'Trial', 'Settlement Conference', 'Preliminary Hearing', 'Final Hearing']
+      options: ['Motion Hearing', 'Trial', 'Settlement Conference', 'Final Hearing', 'Status Conference'],
+      required: false 
     },
     { 
       key: 'status', 
@@ -172,8 +174,8 @@ const ViewHearings = () => {
       options: ['scheduled', 'confirmed', 'postponed', 'completed', 'cancelled'],
       required: true 
     },
-    { key: 'description', label: 'Description', type: 'textarea' as const },
-    { key: 'notes', label: 'Notes', type: 'textarea' as const }
+    { key: 'outcome', label: 'Outcome', type: 'textarea' as const, required: false },
+    { key: 'notes', label: 'Notes', type: 'textarea' as const, required: false }
   ];
 
   // Sync with Supabase data

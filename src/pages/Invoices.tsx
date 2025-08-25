@@ -59,6 +59,7 @@ const Invoices = () => {
     
     const invoiceData = {
       invoice_number: generateInvoiceNumber(),
+      case_id: formData.case_id || null,
       client_id: clientId,
       lawyer_id: user?.id,
       services: formData.services ? JSON.parse(formData.services) : [
@@ -246,6 +247,7 @@ const Invoices = () => {
   ];
 
   const fields = [
+    { key: 'case_id', label: 'Associated Case', type: 'case_select' as const, required: false },
     { key: 'client_id', label: 'Client ID (Optional - leave blank to use your ID)', type: 'text' as const, required: false },
     { key: 'amount', label: 'Amount ($)', type: 'number' as const, required: true },
     { key: 'issued_date', label: 'Issue Date', type: 'date' as const, required: true },

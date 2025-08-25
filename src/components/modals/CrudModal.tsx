@@ -11,11 +11,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import CaseSelector from '@/components/CaseSelector';
 
 interface FieldConfig {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'email' | 'tel';
+  type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'email' | 'tel' | 'case_select';
   options?: string[] | { label: string; value: any }[];
   required?: boolean;
   readonly?: boolean;
@@ -140,6 +141,18 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
               />
             </PopoverContent>
           </Popover>
+        );
+
+      case 'case_select':
+        return (
+          <CaseSelector
+            value={formData[field.key] || ''}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, [field.key]: value }))}
+            placeholder={`Select ${field.label}`}
+            disabled={isReadonly}
+            required={field.required}
+            className={isReadonly ? 'bg-gray-100' : ''}
+          />
         );
         
       default:
