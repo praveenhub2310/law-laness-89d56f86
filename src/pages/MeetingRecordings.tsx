@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +22,6 @@ import {
   File,
   RefreshCw
 } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,19 +31,19 @@ import CaseSelector from '@/components/CaseSelector';
 interface MeetingRecording {
   id: string;
   title: string;
-  client_id?: string;
-  lawyer_id?: string;
-  case_id?: string;
+  client_id?: string | null;
+  lawyer_id?: string | null;
+  case_id?: string | null;
   meeting_date: string;
-  duration?: number;
-  file_size?: number;
-  participants: string[];
+  duration?: number | null;
+  file_size?: number | null;
+  participants: any; // Handle Json type from database
   is_confidential: boolean;
   recording_type: 'audio' | 'video';
-  file_url?: string;
-  transcript?: string;
+  file_url?: string | null;
+  transcript?: string | null;
   status: 'processing' | 'completed' | 'failed';
-  notes?: string;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -69,25 +68,132 @@ const MeetingRecordings = () => {
     notes: ''
   });
 
-  // Fetch meeting recordings with real-time updates
-  const {
-    data: recordings = [],
-    loading,
-    addItem,
-    updateItem,
-    deleteItem
-  } = useSupabaseData<MeetingRecording>({
-    table: 'meeting_recordings',
-    select: `
-      *,
-      case:projects!meeting_recordings_case_id_fkey(case_number, title),
-      client:profiles!meeting_recordings_client_id_fkey(first_name, last_name),
-      lawyer:profiles!meeting_recordings_lawyer_id_fkey(first_name, last_name)
-    `,
-    filters: user?.role === 'client' ? { client_id: user.id } : {},
-    orderBy: { column: 'meeting_date', ascending: false },
-    realtime: true
-  });
+  // Use manual state management instead of useSupabaseData for better control
+  const [recordings, setRecordings] = useState<MeetingRecording[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Set data function to be used by handleRecordingComplete
+  const setData = setRecordings;
+
+  // Fetch recordings on component mount and set up real-time subscription
+  useEffect(() => {
+    const fetchRecordings = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        console.log('Fetching meeting recordings for user:', user.id, 'role:', user.role);
+        
+        let query = supabase
+          .from('meeting_recordings')
+          .select('*')
+          .order('meeting_date', { ascending: false });
+
+        // Apply role-based filtering
+        if (user.role === 'client') {
+          query = query.eq('client_id', user.id);
+        } else if (user.role === 'advocate' || user.role === 'company') {
+          query = query.eq('lawyer_id', user.id);
+        }
+        // Super admin sees all recordings
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching recordings:', error);
+          throw error;
+        }
+
+        console.log('Fetched recordings:', data);
+        // Process participants field to ensure it's always an array
+        const processedData = (data || []).map(recording => ({
+          ...recording,
+          participants: Array.isArray(recording.participants) 
+            ? recording.participants 
+            : (recording.participants ? [recording.participants] : []),
+          recording_type: (recording.recording_type === 'video' ? 'video' : 'audio') as 'audio' | 'video',
+          status: (['processing', 'completed', 'failed'].includes(recording.status) 
+            ? recording.status 
+            : 'completed') as 'processing' | 'completed' | 'failed'
+        }));
+        setRecordings(processedData);
+      } catch (error) {
+        console.error('Failed to fetch recordings:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load recordings.',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecordings();
+
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel('meeting_recordings_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'meeting_recordings' 
+        }, 
+        (payload) => {
+          console.log('Real-time update:', payload);
+          fetchRecordings(); // Refetch data on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user, toast]);
+
+  // Dummy functions for compatibility (not used anymore)
+  const addItem = async () => {};
+  const updateItem = async () => {};
+  const deleteItem = async (id: string) => {
+    try {
+      const recording = recordings.find(r => r.id === id);
+      if (!recording) return;
+
+      // Delete file from storage if exists
+      if (recording.file_url) {
+        const filePath = recording.file_url.split('/').pop();
+        if (filePath) {
+          await supabase.storage
+            .from('meeting-recordings')
+            .remove([`${user?.id}/${filePath}`]);
+        }
+      }
+
+      // Delete record from database
+      const { error } = await supabase
+        .from('meeting_recordings')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setRecordings(prev => prev.filter(r => r.id !== id));
+
+      toast({
+        title: 'Recording Deleted',
+        description: 'Recording has been permanently deleted.'
+      });
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Delete Failed',
+        description: 'Failed to delete recording.',
+        variant: 'destructive'
+      });
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -140,11 +246,12 @@ const MeetingRecordings = () => {
         .from('meeting-recordings')
         .getPublicUrl(filePath);
 
-      // Create recording metadata
+      // Create recording metadata with proper role-based IDs
       const recordingData = {
         title: newRecording.title || file.name.replace(/\.[^/.]+$/, ''),
-        client_id: user?.id,
-        lawyer_id: user?.id,
+        // Set IDs based on user role
+        client_id: user?.role === 'client' ? user.id : null,
+        lawyer_id: user?.role === 'advocate' || user?.role === 'company' ? user.id : null,
         case_id: newRecording.case_id || null,
         meeting_date: new Date().toISOString().split('T')[0],
         duration: null, // Will be updated when processing is complete
@@ -158,7 +265,27 @@ const MeetingRecordings = () => {
         notes: newRecording.notes
       };
 
-      await addItem(recordingData);
+      // Handle file upload saving directly instead of using addItem
+      const { data: insertData, error: insertError } = await supabase
+        .from('meeting_recordings')
+        .insert([recordingData])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Update local state
+      const processedData = {
+        ...insertData,
+        participants: Array.isArray(insertData.participants) 
+          ? insertData.participants 
+          : (insertData.participants ? [insertData.participants] : []),
+        recording_type: (insertData.recording_type === 'video' ? 'video' : 'audio') as 'audio' | 'video',
+        status: (['processing', 'completed', 'failed'].includes(insertData.status) 
+          ? insertData.status 
+          : 'completed') as 'processing' | 'completed' | 'failed'
+      };
+      setRecordings(prev => [processedData as MeetingRecording, ...prev]);
 
       toast({
         title: 'Upload Successful',
@@ -209,6 +336,11 @@ const MeetingRecordings = () => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filePath = `${user?.id}/${timestamp}-${newRecording.title}.webm`;
       
+      console.log('=== MEETING RECORDING SAVE START ===');
+      console.log('User:', user);
+      console.log('File path:', filePath);
+      console.log('Audio blob size:', audioBlob.size);
+      
       // Upload recording to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('meeting-recordings')
@@ -217,18 +349,26 @@ const MeetingRecordings = () => {
           upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Storage upload successful:', uploadData);
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('meeting-recordings')
         .getPublicUrl(filePath);
 
-      // Create recording metadata
+      console.log('File URL:', urlData.publicUrl);
+
+      // Create recording metadata with proper role-based IDs
       const recordingData = {
         title: newRecording.title,
-        client_id: user?.id,
-        lawyer_id: user?.id,
+        // Set IDs based on user role
+        client_id: user?.role === 'client' ? user.id : null,
+        lawyer_id: user?.role === 'advocate' || user?.role === 'company' ? user.id : null,
         case_id: newRecording.case_id || null,
         meeting_date: new Date().toISOString().split('T')[0],
         duration: duration,
@@ -242,7 +382,24 @@ const MeetingRecordings = () => {
         notes: newRecording.notes
       };
 
-      await addItem(recordingData);
+      console.log('Recording data to insert:', recordingData);
+
+      // Insert into database
+      const { data: insertData, error: insertError } = await supabase
+        .from('meeting_recordings')
+        .insert([recordingData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('Database insert successful:', insertData);
+
+      // Update local state manually to ensure UI reflects the change
+      setData(prev => [insertData as unknown as MeetingRecording, ...prev]);
 
       toast({
         title: 'Recording Saved',
@@ -263,7 +420,7 @@ const MeetingRecordings = () => {
       console.error('Save recording error:', error);
       toast({
         title: 'Save Failed',
-        description: 'Failed to save recording. Please try again.',
+        description: `Failed to save recording: ${error.message || 'Unknown error'}`,
         variant: 'destructive'
       });
     } finally {
@@ -517,20 +674,20 @@ const MeetingRecordings = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recording.participants.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Participants
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {recording.participants.map((participant, index) => (
-                          <Badge key={index} variant="secondary">{participant}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                 <div className="space-y-4">
+                   {Array.isArray(recording.participants) && recording.participants.length > 0 && (
+                     <div>
+                       <h4 className="font-semibold mb-2 flex items-center gap-2">
+                         <Users className="h-4 w-4" />
+                         Participants
+                       </h4>
+                       <div className="flex flex-wrap gap-2">
+                         {recording.participants.map((participant: string, index: number) => (
+                           <Badge key={index} variant="secondary">{participant}</Badge>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
                   {recording.transcript && (
                     <div>
@@ -694,16 +851,16 @@ const MeetingRecordings = () => {
                 </div>
               </div>
 
-              {selectedRecording.participants.length > 0 && (
-                <div>
-                  <Label className="text-sm font-medium">Participants</Label>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {selectedRecording.participants.map((participant, index) => (
-                      <Badge key={index} variant="secondary">{participant}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+               {Array.isArray(selectedRecording.participants) && selectedRecording.participants.length > 0 && (
+                 <div>
+                   <Label className="text-sm font-medium">Participants</Label>
+                   <div className="flex flex-wrap gap-2 mt-1">
+                     {selectedRecording.participants.map((participant: string, index: number) => (
+                       <Badge key={index} variant="secondary">{participant}</Badge>
+                     ))}
+                   </div>
+                 </div>
+               )}
 
               {selectedRecording.notes && (
                 <div>
