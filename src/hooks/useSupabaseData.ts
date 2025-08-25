@@ -73,6 +73,8 @@ export const useSupabaseData = <T extends Record<string, any>>({
     if (!user) return { error: 'User not authenticated' };
 
     try {
+      console.log('Adding hearing with data:', newItem);
+      
       // Clean and validate data before insertion
       const cleanedItem = { ...newItem };
       
@@ -92,13 +94,20 @@ export const useSupabaseData = <T extends Record<string, any>>({
         if (!cleanedItem.client_id?.trim()) throw new Error('Client ID is required');
       }
 
+      console.log('Cleaned hearing data:', cleanedItem);
+
       const { data: result, error } = await supabase
         .from(table as any)
         .insert([cleanedItem])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+
+      console.log('Successfully inserted hearing:', result);
 
       setData(prev => [result as unknown as T, ...prev]);
       toast({
@@ -108,6 +117,7 @@ export const useSupabaseData = <T extends Record<string, any>>({
 
       return { data: result, error: null };
     } catch (err: any) {
+      console.error('Error adding hearing:', err);
       const errorMessage = err?.message || 'Failed to save hearing, please try again';
       toast({
         title: 'Error',

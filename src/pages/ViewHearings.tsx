@@ -10,7 +10,14 @@ import { Calendar, Clock, MapPin, Users, ExternalLink } from 'lucide-react';
 const ViewHearings = () => {
   const navigate = useNavigate();
   
-  const { data: hearingsData, loading, error } = useSupabaseData({
+  const { 
+    data: hearingsData, 
+    loading, 
+    error, 
+    addItem: addHearing, 
+    updateItem: updateHearing, 
+    deleteItem: deleteHearing 
+  } = useSupabaseData({
     table: 'hearings',
     select: `
       *,
@@ -23,10 +30,6 @@ const ViewHearings = () => {
   });
 
   const {
-    data: hearings,
-    addItem,
-    updateItem,
-    deleteItem,
     exportData
   } = useDataManager({
     initialData: (hearingsData || []).map(hearing => ({
@@ -186,15 +189,16 @@ const ViewHearings = () => {
       <DataTable
         title="View Hearings"
         columns={columns}
-        data={hearings}
+        data={hearingsData || []}
         fields={fields}
         searchPlaceholder="Search hearings by title, case, or court..."
-        onAdd={addItem}
-        onEdit={updateItem}
-        onDelete={deleteItem}
+        onAdd={addHearing}
+        onEdit={updateHearing}
+        onDelete={deleteHearing}
         onExport={exportData}
         onView={handleViewCaseDetails}
         entityName="Hearing"
+        loading={loading}
       />
     </div>
   );
