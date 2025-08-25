@@ -62,35 +62,118 @@ export type Database = {
         Row: {
           case_number: string
           court_name: string
+          court_room_number: string | null
           created_at: string
           date: string
+          hearing_type: string | null
           id: string
+          item_number: string | null
           judge_name: string
+          mapped_case_id: string | null
+          mapping_confidence: number | null
+          original_filename: string | null
+          parsed_from_file: boolean | null
           parties: string
+          raw_text: string | null
           status: Database["public"]["Enums"]["cause_status"]
+          time_slot: string | null
           updated_at: string
         }
         Insert: {
           case_number: string
           court_name: string
+          court_room_number?: string | null
           created_at?: string
           date: string
+          hearing_type?: string | null
           id?: string
+          item_number?: string | null
           judge_name: string
+          mapped_case_id?: string | null
+          mapping_confidence?: number | null
+          original_filename?: string | null
+          parsed_from_file?: boolean | null
           parties: string
+          raw_text?: string | null
           status?: Database["public"]["Enums"]["cause_status"]
+          time_slot?: string | null
           updated_at?: string
         }
         Update: {
           case_number?: string
           court_name?: string
+          court_room_number?: string | null
           created_at?: string
           date?: string
+          hearing_type?: string | null
           id?: string
+          item_number?: string | null
           judge_name?: string
+          mapped_case_id?: string | null
+          mapping_confidence?: number | null
+          original_filename?: string | null
+          parsed_from_file?: boolean | null
           parties?: string
+          raw_text?: string | null
           status?: Database["public"]["Enums"]["cause_status"]
+          time_slot?: string | null
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cause_list_mapped_case_id_fkey"
+            columns: ["mapped_case_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cause_list_uploads: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          file_size: number | null
+          file_type: string
+          file_url: string | null
+          filename: string
+          id: string
+          mapped_entries_count: number | null
+          parsed_entries_count: number | null
+          status: string
+          updated_at: string
+          upload_date: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          file_size?: number | null
+          file_type: string
+          file_url?: string | null
+          filename: string
+          id?: string
+          mapped_entries_count?: number | null
+          parsed_entries_count?: number | null
+          status?: string
+          updated_at?: string
+          upload_date?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          file_size?: number | null
+          file_type?: string
+          file_url?: string | null
+          filename?: string
+          id?: string
+          mapped_entries_count?: number | null
+          parsed_entries_count?: number | null
+          status?: string
+          updated_at?: string
+          upload_date?: string
+          uploaded_by?: string
         }
         Relationships: []
       }

@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CauseListUploader from '@/components/CauseListUploader';
 import { 
   Plus, 
   Search, 
@@ -23,7 +25,10 @@ import {
   Calendar,
   Gavel,
   Building,
-  Users
+  Users,
+  Upload,
+  MapPin,
+  Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -37,6 +42,13 @@ interface CauseListItem {
   status: 'scheduled' | 'in_progress' | 'completed' | 'adjourned';
   created_at: string;
   updated_at: string;
+  item_number?: string;
+  court_room_number?: string;
+  time_slot?: string;
+  hearing_type?: string;
+  parsed_from_file?: boolean;
+  mapping_confidence?: number;
+  mapped_case_id?: string;
 }
 
 const CauseList = () => {
@@ -146,12 +158,19 @@ const CauseList = () => {
 
     // Sort data
     filtered.sort((a, b) => {
-      let aValue: string | number = a[sortColumn];
-      let bValue: string | number = b[sortColumn];
+      let aValue: string | number | boolean = a[sortColumn];
+      let bValue: string | number | boolean = b[sortColumn];
 
-      if (sortColumn === 'date') {
+      // Handle different data types
+      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+        aValue = aValue ? 1 : 0;
+        bValue = bValue ? 1 : 0;
+      } else if (sortColumn === 'date') {
         aValue = new Date(aValue as string).getTime();
         bValue = new Date(bValue as string).getTime();
+      } else if (typeof aValue !== 'string' && typeof aValue !== 'number') {
+        aValue = String(aValue || '');
+        bValue = String(bValue || '');
       }
 
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
@@ -339,329 +358,408 @@ const CauseList = () => {
             Manage and track court hearings in real-time
           </p>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Button onClick={exportToCSV} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          
-          <Button onClick={fetchCauseList} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          
-          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Cause
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Cause</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="case_number">Case Number</Label>
-                  <Input
-                    id="case_number"
-                    value={formData.case_number}
-                    onChange={(e) => setFormData(prev => ({ ...prev, case_number: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="parties">Parties</Label>
-                  <Textarea
-                    id="parties"
-                    value={formData.parties}
-                    onChange={(e) => setFormData(prev => ({ ...prev, parties: e.target.value }))}
-                    placeholder="Petitioner vs Respondent"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="court_name">Court Name</Label>
-                  <Input
-                    id="court_name"
-                    value={formData.court_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, court_name: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="judge_name">Judge Name</Label>
-                  <Input
-                    id="judge_name"
-                    value={formData.judge_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, judge_name: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="date">Hearing Date & Time</Label>
-                  <Input
-                    id="date"
-                    type="datetime-local"
-                    value={formData.date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="scheduled">Scheduled</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="adjourned">Adjourned</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Add Cause</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search case number or parties..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {/* Tabs for different functionalities */}
+      <Tabs defaultValue="view" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="view" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            View Cause List
+          </TabsTrigger>
+          <TabsTrigger value="upload" className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Upload & Parse
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="view" className="space-y-6">
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2">
+            <Button onClick={exportToCSV} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="adjourned">Adjourned</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button onClick={fetchCauseList} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
             
-            <Select value={courtFilter} onValueChange={setCourtFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by court" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courts</SelectItem>
-                {uniqueCourts.map(court => (
-                  <SelectItem key={court} value={court}>{court}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={judgeFilter} onValueChange={setJudgeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by judge" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Judges</SelectItem>
-                {uniqueJudges.map(judge => (
-                  <SelectItem key={judge} value={judge}>{judge}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              placeholder="Filter by date"
-            />
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Cause
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add New Cause</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="case_number">Case Number</Label>
+                    <Input
+                      id="case_number"
+                      value={formData.case_number}
+                      onChange={(e) => setFormData(prev => ({ ...prev, case_number: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="parties">Parties</Label>
+                    <Textarea
+                      id="parties"
+                      value={formData.parties}
+                      onChange={(e) => setFormData(prev => ({ ...prev, parties: e.target.value }))}
+                      placeholder="Petitioner vs Respondent"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="court_name">Court Name</Label>
+                    <Input
+                      id="court_name"
+                      value={formData.court_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, court_name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="judge_name">Judge Name</Label>
+                    <Input
+                      id="judge_name"
+                      value={formData.judge_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, judge_name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="date">Hearing Date & Time</Label>
+                    <Input
+                      id="date"
+                      type="datetime-local"
+                      value={formData.date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="adjourned">Adjourned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Add Cause</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Cases</p>
-                <p className="text-2xl font-bold">{filteredAndSortedData.length}</p>
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filters & Search
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search case number or parties..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="adjourned">Adjourned</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select value={courtFilter} onValueChange={setCourtFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by court" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courts</SelectItem>
+                    {uniqueCourts.map(court => (
+                      <SelectItem key={court} value={court}>{court}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={judgeFilter} onValueChange={setJudgeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by judge" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Judges</SelectItem>
+                    {uniqueJudges.map(judge => (
+                      <SelectItem key={judge} value={judge}>{judge}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  placeholder="Filter by date"
+                />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-yellow-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">In Progress</p>
-                <p className="text-2xl font-bold">
-                  {filteredAndSortedData.filter(item => item.status === 'in_progress').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Gavel className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold">
-                  {filteredAndSortedData.filter(item => item.status === 'completed').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Building className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Adjourned</p>
-                <p className="text-2xl font-bold">
-                  {filteredAndSortedData.filter(item => item.status === 'adjourned').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort('case_number')}
-                  >
-                    Case Number {sortColumn === 'case_number' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort('parties')}
-                  >
-                    Parties {sortColumn === 'parties' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort('court_name')}
-                  >
-                    Court {sortColumn === 'court_name' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort('judge_name')}
-                  >
-                    Judge {sortColumn === 'judge_name' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort('date')}
-                  >
-                    Date & Time {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort('status')}
-                  >
-                    Status {sortColumn === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No cause list entries found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAndSortedData.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.case_number}</TableCell>
-                      <TableCell>{item.parties}</TableCell>
-                      <TableCell>{item.court_name}</TableCell>
-                      <TableCell>{item.judge_name}</TableCell>
-                      <TableCell>
-                        {format(new Date(item.date), 'MMM dd, yyyy HH:mm')}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(item.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(item)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setCurrentItem(item);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+          {/* Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Cases</p>
+                    <p className="text-2xl font-bold">{filteredAndSortedData.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">In Progress</p>
+                    <p className="text-2xl font-bold">
+                      {filteredAndSortedData.filter(item => item.status === 'in_progress').length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Gavel className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Completed</p>
+                    <p className="text-2xl font-bold">
+                      {filteredAndSortedData.filter(item => item.status === 'completed').length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Building className="h-5 w-5 text-orange-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Adjourned</p>
+                    <p className="text-2xl font-bold">
+                      {filteredAndSortedData.filter(item => item.status === 'adjourned').length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Enhanced Table with new fields */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('item_number')}
+                      >
+                        Item # {sortColumn === 'item_number' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('case_number')}
+                      >
+                        Case Number {sortColumn === 'case_number' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('parties')}
+                      >
+                        Parties {sortColumn === 'parties' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('court_name')}
+                      >
+                        Court {sortColumn === 'court_name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('court_room_number')}
+                      >
+                        Room {sortColumn === 'court_room_number' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('judge_name')}
+                      >
+                        Judge {sortColumn === 'judge_name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('date')}
+                      >
+                        Date & Time {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('status')}
+                      >
+                        Status {sortColumn === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAndSortedData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                          No cause list entries found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAndSortedData.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            {item.item_number ? (
+                              <Badge variant="outline" className="font-mono">
+                                {item.item_number}
+                              </Badge>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="font-medium font-mono text-sm">{item.case_number}</TableCell>
+                          <TableCell className="max-w-xs">
+                            <div className="truncate" title={item.parties}>
+                              {item.parties}
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.court_name}</TableCell>
+                          <TableCell>
+                            {item.court_room_number ? (
+                              <div className="flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                {item.court_room_number}
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell>{item.judge_name}</TableCell>
+                          <TableCell>
+                            <div>
+                              {format(new Date(item.date), 'MMM dd, yyyy HH:mm')}
+                              {item.time_slot && (
+                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {item.time_slot}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(item.status)}</TableCell>
+                          <TableCell>
+                            {item.parsed_from_file ? (
+                              <div className="flex items-center gap-1">
+                                <Badge className="bg-purple-100 text-purple-800 text-xs">
+                                  <Upload className="h-3 w-3 mr-1" />
+                                  Parsed
+                                </Badge>
+                                {item.mapped_case_id && (
+                                  <Badge className="bg-green-100 text-green-800 text-xs">
+                                    <MapPin className="h-3 w-3 mr-1" />
+                                    Mapped
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Manual</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(item)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setCurrentItem(item);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="upload" className="space-y-6">
+          <CauseListUploader />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
