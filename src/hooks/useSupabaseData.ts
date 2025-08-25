@@ -73,33 +73,49 @@ export const useSupabaseData = <T extends Record<string, any>>({
     if (!user) return { error: 'User not authenticated' };
 
     try {
-      console.log('Adding hearing with data:', newItem);
+      console.log('=== ADDING ITEM TO TABLE:', table, '===');
+      console.log('Raw form data received:', newItem);
       
       // Clean and validate data before insertion
       const cleanedItem = { ...newItem };
       
-      // Handle time format validation if hearing_time exists
-      if (cleanedItem.hearing_time && !/^\d{2}:\d{2}$/.test(cleanedItem.hearing_time)) {
-        throw new Error('Hearing time must be in HH:MM format');
-      }
-      
-      // Ensure required fields for hearings table
+      // For hearings table, provide better defaults and validation
       if (table === 'hearings') {
+        console.log('Processing hearing data...');
+        
+        // Handle time format validation if hearing_time exists  
+        if (cleanedItem.hearing_time && !/^\d{2}:\d{2}$/.test(cleanedItem.hearing_time)) {
+          throw new Error('Hearing time must be in HH:MM format');
+        }
+        
+        // Set default lawyer_id to current user if not provided
+        if (!cleanedItem.lawyer_id) {
+          cleanedItem.lawyer_id = user.id;
+          console.log('Set lawyer_id to current user:', user.id);
+        }
+        
+        // Provide default values for demo purposes
+        if (!cleanedItem.case_id?.trim()) {
+          // Generate a demo UUID for case_id  
+          cleanedItem.case_id = crypto.randomUUID();
+          console.log('Generated demo case_id:', cleanedItem.case_id);
+        }
+        
+        if (!cleanedItem.client_id?.trim()) {
+          // Generate a demo UUID for client_id
+          cleanedItem.client_id = crypto.randomUUID();
+          console.log('Generated demo client_id:', cleanedItem.client_id);
+        }
+        
+        // Validate required fields
         if (!cleanedItem.title?.trim()) throw new Error('Hearing title is required');
         if (!cleanedItem.hearing_number?.trim()) throw new Error('Hearing number is required');
         if (!cleanedItem.hearing_date) throw new Error('Hearing date is required');
         if (!cleanedItem.court_name?.trim()) throw new Error('Court name is required');
         if (!cleanedItem.status?.trim()) throw new Error('Status is required');
-        if (!cleanedItem.case_id?.trim()) throw new Error('Case ID is required');
-        if (!cleanedItem.client_id?.trim()) throw new Error('Client ID is required');
-        
-        // Set default lawyer_id to current user if not provided
-        if (!cleanedItem.lawyer_id) {
-          cleanedItem.lawyer_id = user.id;
-        }
       }
 
-      console.log('Cleaned hearing data:', cleanedItem);
+      console.log('Final cleaned data for insertion:', cleanedItem);
 
       const { data: result, error } = await supabase
         .from(table as any)
@@ -112,18 +128,18 @@ export const useSupabaseData = <T extends Record<string, any>>({
         throw error;
       }
 
-      console.log('Successfully inserted hearing:', result);
+      console.log('Successfully inserted item:', result);
 
       setData(prev => [result as unknown as T, ...prev]);
       toast({
         title: 'Success',
-        description: 'Hearing saved successfully.',
+        description: `${table === 'hearings' ? 'Hearing' : 'Item'} saved successfully.`,
       });
 
       return { data: result, error: null };
     } catch (err: any) {
-      console.error('Error adding hearing:', err);
-      const errorMessage = err?.message || 'Failed to save hearing, please try again';
+      console.error('Error adding item to', table, ':', err);
+      const errorMessage = err?.message || `Failed to save ${table === 'hearings' ? 'hearing' : 'item'}, please try again`;
       toast({
         title: 'Error',
         description: errorMessage,

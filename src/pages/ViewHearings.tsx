@@ -154,7 +154,6 @@ const ViewHearings = () => {
     { key: 'hearing_number', label: 'Hearing Number', type: 'text' as const, required: true },
     { key: 'case_id', label: 'Case ID', type: 'text' as const, required: true },
     { key: 'client_id', label: 'Client ID', type: 'text' as const, required: true },
-    { key: 'lawyer_id', label: 'Lawyer ID', type: 'text' as const },
     { key: 'hearing_date', label: 'Hearing Date', type: 'date' as const, required: true },
     { key: 'hearing_time', label: 'Hearing Time (HH:MM)', type: 'text' as const },
     { key: 'court_name', label: 'Court Name', type: 'text' as const, required: true },
