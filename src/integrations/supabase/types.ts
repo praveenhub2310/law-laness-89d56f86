@@ -1001,6 +1001,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_status: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_details: Json | null
+          id: string
+          started_at: string | null
+          status: string
+          sync_type: string
+          total_errors: number | null
+          total_found: number | null
+          total_inserted: number | null
+          total_skipped: number | null
+          total_updated: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_details?: Json | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          sync_type: string
+          total_errors?: number | null
+          total_found?: number | null
+          total_inserted?: number | null
+          total_skipped?: number | null
+          total_updated?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_details?: Json | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          sync_type?: string
+          total_errors?: number | null
+          total_found?: number | null
+          total_inserted?: number | null
+          total_skipped?: number | null
+          total_updated?: number | null
+        }
+        Relationships: []
+      }
       system_backups: {
         Row: {
           backup_type: string
@@ -1125,9 +1170,17 @@ export type Database = {
           file_url: string
           id: string
           is_active: boolean | null
+          language: string | null
+          mime_type: string | null
           preview_type: string
+          sha256_hash: string | null
+          size_bytes: number | null
+          source_url: string | null
+          storage_path: string | null
+          synced_at: string | null
           title: string
           updated_at: string
+          version: number | null
         }
         Insert: {
           category: string
@@ -1138,9 +1191,17 @@ export type Database = {
           file_url: string
           id?: string
           is_active?: boolean | null
+          language?: string | null
+          mime_type?: string | null
           preview_type: string
+          sha256_hash?: string | null
+          size_bytes?: number | null
+          source_url?: string | null
+          storage_path?: string | null
+          synced_at?: string | null
           title: string
           updated_at?: string
+          version?: number | null
         }
         Update: {
           category?: string
@@ -1151,9 +1212,17 @@ export type Database = {
           file_url?: string
           id?: string
           is_active?: boolean | null
+          language?: string | null
+          mime_type?: string | null
           preview_type?: string
+          sha256_hash?: string | null
+          size_bytes?: number | null
+          source_url?: string | null
+          storage_path?: string | null
+          synced_at?: string | null
           title?: string
           updated_at?: string
+          version?: number | null
         }
         Relationships: []
       }

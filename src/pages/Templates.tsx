@@ -14,25 +14,49 @@ interface Template {
   id: string;
   title: string;
   category: string;
+  language?: string;
   file_url: string;
+  source_url?: string;
+  storage_path?: string;
+  mime_type?: string;
+  size_bytes?: number;
+  sha256_hash?: string;
   preview_type: 'pdf' | 'docx';
   description?: string;
   file_size?: number;
   download_count: number;
+  synced_at?: string;
+  version?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface SyncStatus {
+  id: string;
+  sync_type: string;
+  started_at: string;
+  completed_at?: string;
+  status: string;
+  total_found: number;
+  total_inserted: number;
+  total_updated: number;
+  total_skipped: number;
+  total_errors: number;
+  error_details: any; // Changed from string[] to any to match Supabase Json type
 }
 
 const Templates = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [isPopulating, setIsPopulating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [lastSync, setLastSync] = useState<SyncStatus | null>(null);
 
   const categories = [
     'all', 
@@ -48,7 +72,26 @@ const Templates = () => {
 
   useEffect(() => {
     fetchTemplates();
+    fetchLastSync();
   }, []);
+
+  const fetchLastSync = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sync_status')
+        .select('*')
+        .eq('sync_type', 'tnreginet_templates')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        setLastSync(data);
+      }
+    } catch (error) {
+      console.error('Error fetching sync status:', error);
+    }
+  };
 
   const fetchTemplates = async () => {
     try {
@@ -72,17 +115,22 @@ const Templates = () => {
   const populateTemplates = async () => {
     try {
       setIsPopulating(true);
-      toast.info('Populating templates from online sources...');
+      toast.info('Syncing templates from TN Reginet portal...');
 
       const { data, error } = await supabase.functions.invoke('scrape-templates');
 
       if (error) throw error;
 
-      toast.success(data.message);
-      fetchTemplates(); // Refresh the templates list
+      if (data.success) {
+        toast.success(`${data.message}. Found: ${data.totalFound}, Processed: ${data.totalInserted}`);
+        fetchTemplates();
+        fetchLastSync();
+      } else {
+        toast.error(data.message || 'Failed to sync templates');
+      }
     } catch (error) {
-      console.error('Error populating templates:', error);
-      toast.error('Failed to populate templates');
+      console.error('Error syncing templates:', error);
+      toast.error('Failed to sync templates');
     } finally {
       setIsPopulating(false);
     }
@@ -182,9 +230,10 @@ const Templates = () => {
 
   const filteredTemplates = templates.filter(template => {
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+    const matchesLanguage = selectedLanguage === 'all' || template.language === selectedLanguage || (!template.language && selectedLanguage === 'en');
     const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesLanguage && matchesSearch;
   });
 
   const groupedTemplates = categories.reduce((acc, category) => {
@@ -226,6 +275,33 @@ const Templates = () => {
         </div>
       </div>
 
+      {/* Sync Status Panel */}
+      {lastSync && (
+        <Card className="mb-6">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h3 className="font-semibold">Last Sync Status</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(lastSync.started_at).toLocaleString()}
+                  </p>
+                </div>
+                <Badge variant={lastSync.status === 'completed' ? 'default' : 'secondary'}>
+                  {lastSync.status.replace('_', ' ')}
+                </Badge>
+              </div>
+              <div className="text-right text-sm">
+                <p>Found: {lastSync.total_found} | Processed: {lastSync.total_inserted}</p>
+                {lastSync.total_errors > 0 && (
+                  <p className="text-destructive">Errors: {lastSync.total_errors}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Search and Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -236,7 +312,7 @@ const Templates = () => {
             className="w-full"
           />
         </div>
-        <div className="sm:w-64">
+        <div className="sm:w-48">
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger>
               <SelectValue placeholder="Filter by category" />
@@ -247,6 +323,18 @@ const Templates = () => {
                   {category === 'all' ? 'All Categories' : category}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="sm:w-32">
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <SelectTrigger>
+              <SelectValue placeholder="Language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ta">Tamil</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -295,20 +383,34 @@ const Templates = () => {
                             <FileText className={`h-5 w-5 ${template.preview_type === 'pdf' ? 'text-red-600' : 'text-blue-600'}`} />
                             <h3 className="font-semibold text-sm">{template.title}</h3>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            {template.preview_type.toUpperCase()}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {template.language && (
+                              <Badge variant="secondary" className="text-xs">
+                                {template.language.toUpperCase()}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {template.preview_type.toUpperCase()}
+                            </Badge>
+                          </div>
                         </div>
                         {template.description && (
                           <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
                         )}
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-xs text-muted-foreground">
-                            {template.download_count} downloads
-                          </span>
-                          {template.file_size && (
+                          <div className="flex items-center gap-4">
                             <span className="text-xs text-muted-foreground">
-                              {(template.file_size / 1024).toFixed(1)} KB
+                              {template.download_count} downloads
+                            </span>
+                            {template.synced_at && (
+                              <span className="text-xs text-muted-foreground">
+                                Synced: {new Date(template.synced_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          {(template.size_bytes || template.file_size) && (
+                            <span className="text-xs text-muted-foreground">
+                              {((template.size_bytes || template.file_size || 0) / 1024).toFixed(1)} KB
                             </span>
                           )}
                         </div>
@@ -364,20 +466,34 @@ const Templates = () => {
                         <FileText className={`h-5 w-5 ${template.preview_type === 'pdf' ? 'text-red-600' : 'text-blue-600'}`} />
                         <h3 className="font-semibold text-sm">{template.title}</h3>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {template.preview_type.toUpperCase()}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        {template.language && (
+                          <Badge variant="secondary" className="text-xs">
+                            {template.language.toUpperCase()}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {template.preview_type.toUpperCase()}
+                        </Badge>
+                      </div>
                     </div>
                     {template.description && (
                       <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
                     )}
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs text-muted-foreground">
-                        {template.download_count} downloads
-                      </span>
-                      {template.file_size && (
+                      <div className="flex items-center gap-4">
                         <span className="text-xs text-muted-foreground">
-                          {(template.file_size / 1024).toFixed(1)} KB
+                          {template.download_count} downloads
+                        </span>
+                        {template.synced_at && (
+                          <span className="text-xs text-muted-foreground">
+                            Synced: {new Date(template.synced_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      {(template.size_bytes || template.file_size) && (
+                        <span className="text-xs text-muted-foreground">
+                          {((template.size_bytes || template.file_size || 0) / 1024).toFixed(1)} KB
                         </span>
                       )}
                     </div>
