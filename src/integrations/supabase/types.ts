@@ -472,6 +472,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_hearings_case_id"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_hearings_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_hearings_lawyer_id"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "hearings_case_id_fkey"
             columns: ["case_id"]
             isOneToOne: false

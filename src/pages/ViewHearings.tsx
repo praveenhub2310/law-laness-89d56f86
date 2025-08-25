@@ -1,34 +1,40 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, FileText, Users, ExternalLink, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useDataManager } from '@/hooks/useDataManager';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Calendar, Clock, MapPin, Users, ExternalLink } from 'lucide-react';
 
 const ViewHearings = () => {
   const navigate = useNavigate();
-  const { data: hearings, loading, error } = useSupabaseData({
+  
+  const { data: hearingsData, loading, error } = useSupabaseData({
     table: 'hearings',
     select: `
       *,
       case:projects(case_number, title),
-      client:profiles!client_id(first_name, last_name)
+      client:profiles!client_id(first_name, last_name),
+      lawyer:profiles!lawyer_id(first_name, last_name)
     `,
     orderBy: { column: 'hearing_date', ascending: true },
     realtime: true
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'scheduled': return 'default';
-      case 'confirmed': return 'default';
-      case 'postponed': return 'destructive';
-      case 'completed': return 'secondary';
-      default: return 'default';
-    }
-  };
+  const {
+    data: hearings,
+    addItem,
+    updateItem,
+    deleteItem,
+    exportData
+  } = useDataManager({
+    initialData: (hearingsData || []).map(hearing => ({
+      ...hearing,
+      id: hearing.id || crypto.randomUUID() // Ensure each item has an id
+    })),
+    entityName: 'Hearing'
+  });
 
   const handleAddToCalendar = (hearing: any) => {
     const startDate = new Date(`${hearing.hearing_date} ${hearing.hearing_time || '00:00'}`);
@@ -43,187 +49,153 @@ const ViewHearings = () => {
     if (hearing.case_id) {
       navigate(`/case-details/${hearing.case_id}`);
     } else {
-      toast.error('Case details not available');
+      navigate('/projects');
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
+  const columns = [
+    {
+      key: 'title',
+      label: 'Hearing Title',
+      sortable: true,
+      filterable: true
+    },
+    {
+      key: 'hearing_number',
+      label: 'Hearing No.',
+      sortable: true,
+      filterable: true
+    },
+    {
+      key: 'case',
+      label: 'Case',
+      sortable: true,
+      filterable: true,
+      render: (value: any) => value?.case_number || 'N/A'
+    },
+    {
+      key: 'client',
+      label: 'Client',
+      sortable: true,
+      filterable: true,
+      render: (value: any) => value ? `${value.first_name} ${value.last_name}` : 'N/A'
+    },
+    {
+      key: 'hearing_date',
+      label: 'Date',
+      sortable: true,
+      filterable: true,
+      render: (value: string) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'hearing_time',
+      label: 'Time',
+      sortable: true,
+      render: (value: string) => {
+        if (!value) return 'TBD';
+        const time = new Date(`2000-01-01 ${value}`);
+        return time.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+    },
+    {
+      key: 'court_name',
+      label: 'Court',
+      sortable: true,
+      filterable: true
+    },
+    {
+      key: 'judge_name',
+      label: 'Judge',
+      sortable: true,
+      filterable: true,
+      render: (value: string) => value || 'TBD'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      filterable: true,
+      filterOptions: ['scheduled', 'confirmed', 'postponed', 'completed', 'cancelled'],
+      render: (value: string) => {
+        const colors = {
+          'scheduled': 'bg-blue-100 text-blue-800',
+          'confirmed': 'bg-green-100 text-green-800',
+          'postponed': 'bg-yellow-100 text-yellow-800',
+          'completed': 'bg-gray-100 text-gray-800',
+          'cancelled': 'bg-red-100 text-red-800'
+        };
+        return (
+          <Badge className={colors[value as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+            {value}
+          </Badge>
+        );
+      }
+    },
+    {
+      key: 'hearing_type',
+      label: 'Type',
+      sortable: true,
+      filterable: true,
+      render: (value: string) => (
+        <Badge variant="outline">{value || 'General'}</Badge>
+      )
+    }
+  ];
 
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return 'Time TBD';
-    const time = new Date(`2000-01-01 ${timeStr}`);
-    return time.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  };
+  const fields = [
+    { key: 'title', label: 'Hearing Title', type: 'text' as const, required: true },
+    { key: 'hearing_number', label: 'Hearing Number', type: 'text' as const, required: true },
+    { key: 'case_id', label: 'Case ID', type: 'text' as const },
+    { key: 'client_id', label: 'Client ID', type: 'text' as const },
+    { key: 'lawyer_id', label: 'Lawyer ID', type: 'text' as const },
+    { key: 'hearing_date', label: 'Hearing Date', type: 'date' as const, required: true },
+    { key: 'hearing_time', label: 'Hearing Time', type: 'text' as const },
+    { key: 'court_name', label: 'Court Name', type: 'text' as const, required: true },
+    { key: 'court_room', label: 'Court Room', type: 'text' as const },
+    { key: 'judge_name', label: 'Judge Name', type: 'text' as const },
+    { 
+      key: 'hearing_type', 
+      label: 'Hearing Type', 
+      type: 'select' as const,
+      options: ['Motion Hearing', 'Trial', 'Settlement Conference', 'Preliminary Hearing', 'Final Hearing']
+    },
+    { 
+      key: 'status', 
+      label: 'Status', 
+      type: 'select' as const,
+      options: ['scheduled', 'confirmed', 'postponed', 'completed', 'cancelled'],
+      required: true 
+    },
+    { key: 'description', label: 'Description', type: 'textarea' as const },
+    { key: 'notes', label: 'Notes', type: 'textarea' as const }
+  ];
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">View Hearings</h1>
-          <p className="text-muted-foreground mt-2">Loading hearings...</p>
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse space-y-3">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">View Hearings</h1>
-          <p className="text-destructive mt-2">Error loading hearings: {error}</p>
-        </div>
-      </div>
-    );
-  }
+  // Sync with Supabase data
+  React.useEffect(() => {
+    if (hearingsData && Array.isArray(hearingsData)) {
+      // The data manager will be updated via the dependency change
+    }
+  }, [hearingsData]);
 
   return (
     <div className="p-6">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">View Hearings</h1>
-          <p className="text-muted-foreground mt-2">Upcoming hearings with linked case details</p>
-        </div>
-        <Button onClick={() => navigate('/hearings')} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Hearing
-        </Button>
-      </div>
-
-      {hearings.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No hearings scheduled yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Start by scheduling your first hearing to keep track of court appearances and important dates.
-            </p>
-            <Button onClick={() => navigate('/hearings')} variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule First Hearing
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6">
-          {hearings.map((hearing) => (
-            <Card key={hearing.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {hearing.title}
-                      <Badge variant={getStatusColor(hearing.status)}>{hearing.status}</Badge>
-                    </CardTitle>
-                    <CardDescription>{hearing.description || 'No description provided'}</CardDescription>
-                  </div>
-                  <Badge variant="outline">{hearing.hearing_type || 'General'}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <strong>Case:</strong> {hearing.case?.case_number || hearing.hearing_number || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <strong>Client:</strong> {hearing.client ? `${hearing.client.first_name} ${hearing.client.last_name}` : 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <strong>Date:</strong> {formatDate(hearing.hearing_date)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <strong>Time:</strong> {formatTime(hearing.hearing_time)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <strong>Venue:</strong> {hearing.court_name}
-                        {hearing.court_room && `, ${hearing.court_room}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <strong>Judge:</strong> {hearing.judge_name || 'TBD'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 mt-6">
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={() => handleViewCaseDetails(hearing)}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Case Details
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleAddToCalendar(hearing)}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Add to Calendar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => navigate(`/documents?case=${hearing.case_id}`)}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Case Documents
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <DataTable
+        title="View Hearings"
+        columns={columns}
+        data={hearings}
+        fields={fields}
+        searchPlaceholder="Search hearings by title, case, or court..."
+        onAdd={addItem}
+        onEdit={updateItem}
+        onDelete={deleteItem}
+        onExport={exportData}
+        onView={handleViewCaseDetails}
+        entityName="Hearing"
+      />
     </div>
   );
 };
