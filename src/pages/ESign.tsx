@@ -35,6 +35,7 @@ interface ESignDocument {
   signed_file_url?: string;
   signing_status: string;
   case_id?: string;
+  case_number?: string;
   client_id?: string;
   lawyer_id?: string;
   signature_positions: any[];
@@ -474,18 +475,25 @@ const ESign = () => {
               {documentsLoading ? (
                 <div className="text-center py-8">Loading documents...</div>
               ) : documents && documents.length > 0 ? (
-                <div className="space-y-4">
-                  {documents.map((document) => (
-                    <div key={document.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold">{document.title}</h3>
-                          <p className="text-sm text-muted-foreground">{document.document_number}</p>
+                  <div className="space-y-4">
+                    {documents.map((document) => (
+                      <div key={document.id} className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold">{document.title}</h3>
+                            <p className="text-sm text-muted-foreground">{document.document_number}</p>
+                            {document.case_number && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs font-mono">
+                                  {document.case_number}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                          <Badge className={getStatusColor(document.signing_status)}>
+                            {document.signing_status.replace('_', ' ').toUpperCase()}
+                          </Badge>
                         </div>
-                        <Badge className={getStatusColor(document.signing_status)}>
-                          {document.signing_status.replace('_', ' ').toUpperCase()}
-                        </Badge>
-                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>

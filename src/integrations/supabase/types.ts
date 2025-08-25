@@ -305,6 +305,7 @@ export type Database = {
       e_sign_documents: {
         Row: {
           case_id: string | null
+          case_number: string | null
           client_id: string | null
           created_at: string
           document_number: string
@@ -325,6 +326,7 @@ export type Database = {
         }
         Insert: {
           case_id?: string | null
+          case_number?: string | null
           client_id?: string | null
           created_at?: string
           document_number: string
@@ -345,6 +347,7 @@ export type Database = {
         }
         Update: {
           case_id?: string | null
+          case_number?: string | null
           client_id?: string | null
           created_at?: string
           document_number?: string
