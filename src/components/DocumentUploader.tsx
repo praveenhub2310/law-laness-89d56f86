@@ -3,8 +3,8 @@ import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, File, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 
 interface DocumentUploaderProps {
   onFileUploaded: (file: { url: string; name: string; size: number }) => void;
@@ -12,46 +12,71 @@ interface DocumentUploaderProps {
 }
 
 const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, disabled = false }) => {
+  const { isConnected, isGapiLoaded } = useGoogleDrive();
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number } | null>(null);
 
+  const uploadToGoogleDrive = async (file: File): Promise<{ id: string; name: string; webViewLink: string }> => {
+    const metadata = {
+      name: file.name,
+      parents: ['root'], // Upload to root folder, can be customized
+    };
+
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', file);
+
+    const token = localStorage.getItem('google_drive_token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: form,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
+    
+    if (!isConnected || !isGapiLoaded) {
+      toast.error('Please connect to Google Drive first');
+      return;
+    }
     
     const file = acceptedFiles[0];
     setUploading(true);
     
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `documents/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath);
-
+      const uploadedGoogleFile = await uploadToGoogleDrive(file);
+      
       const fileData = {
-        url: publicUrl,
-        name: file.name,
-        size: file.size
+        url: uploadedGoogleFile.webViewLink,
+        name: uploadedGoogleFile.name,
+        size: file.size,
+        googleDriveId: uploadedGoogleFile.id
       };
 
       setUploadedFile(fileData);
       onFileUploaded(fileData);
-      toast.success('Document uploaded successfully');
+      toast.success('Document uploaded to Google Drive successfully');
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload document');
+      toast.error('Failed to upload document to Google Drive');
     } finally {
       setUploading(false);
     }
-  }, [onFileUploaded]);
+  }, [onFileUploaded, isConnected, isGapiLoaded]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -61,7 +86,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
     maxFiles: 1,
-    disabled: disabled || uploading
+    disabled: disabled || uploading || !isConnected
   });
 
   const removeFile = () => {
@@ -125,12 +150,17 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
               <p className="text-lg font-medium">Drop the document here</p>
               <p className="text-muted-foreground">Release to upload</p>
             </div>
+          ) : !isConnected ? (
+            <div>
+              <p className="text-lg font-medium text-muted-foreground">Connect to Google Drive</p>
+              <p className="text-muted-foreground">Please connect to Google Drive to upload documents</p>
+            </div>
           ) : (
             <div>
               <p className="text-lg font-medium">Drag & drop a document here</p>
               <p className="text-muted-foreground">or click to select a file</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Supports PDF, DOC, DOCX files
+                Supports PDF, DOC, DOCX files • Uploads to Google Drive
               </p>
             </div>
           )}

@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import DocumentUploader from '@/components/DocumentUploader';
 import SignaturePad, { SignaturePadRef } from '@/components/SignaturePad';
 import CaseSelector from '@/components/CaseSelector';
@@ -44,6 +45,7 @@ interface ESignDocument {
 
 const ESign = () => {
   const { user } = useAuth();
+  const { isConnected, connect, isConnecting } = useGoogleDrive();
   const [activeTab, setActiveTab] = useState('create');
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   
@@ -224,10 +226,39 @@ const ESign = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <FileSignature className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">E-Sign Documents</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileSignature className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">E-Sign Documents</h1>
+        </div>
+        {!isConnected && (
+          <Button 
+            onClick={connect} 
+            disabled={isConnecting}
+            className="gap-2"
+          >
+            {isConnecting ? 'Connecting...' : 'Connect Google Drive'}
+          </Button>
+        )}
       </div>
+
+      {!isConnected && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                <FileSignature className="h-4 w-4 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-orange-900">Google Drive Connection Required</h3>
+                <p className="text-sm text-orange-700">
+                  Connect to Google Drive to upload and manage your e-sign documents securely.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">

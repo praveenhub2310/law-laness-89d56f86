@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { GoogleDriveProvider } from '@/contexts/GoogleDriveContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,7 +20,11 @@ interface QueryClientProps {
 const QueryClientWrapper = ({ children }: QueryClientProps) => {
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <AuthProvider>
+        <GoogleDriveProvider>
+          {children}
+        </GoogleDriveProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };
