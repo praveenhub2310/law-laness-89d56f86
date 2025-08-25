@@ -83,7 +83,7 @@ const Templates = () => {
         .eq('sync_type', 'tnreginet_templates')
         .order('started_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!error && data) {
         setLastSync(data);
@@ -350,16 +350,22 @@ const Templates = () => {
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">No Templates Found</h3>
             <p className="text-muted-foreground mb-4">
-              Get started by populating templates from online sources or uploading your own.
+              The template database is empty. You can manually upload templates using the "Upload Template" button above, or use "Populate Templates" to fetch from online sources.
             </p>
-            <Button onClick={populateTemplates} disabled={isPopulating}>
-              {isPopulating ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4 mr-2" />
-              )}
-              Populate Templates
-            </Button>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => setShowUploadDialog(true)} variant="default">
+                <Plus className="h-4 w-4 mr-2" />
+                Upload Template
+              </Button>
+              <Button onClick={populateTemplates} disabled={isPopulating} variant="outline">
+                {isPopulating ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Populate Templates
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : selectedCategory === 'all' ? (
@@ -455,7 +461,14 @@ const Templates = () => {
             {filteredTemplates.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">No templates found in this category.</p>
+                <h3 className="text-lg font-semibold mb-2">No Templates in {selectedCategory}</h3>
+                <p className="text-muted-foreground mb-4">
+                  This category is empty. Upload templates using the "Upload Template" button above.
+                </p>
+                <Button onClick={() => setShowUploadDialog(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Upload Template
+                </Button>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
