@@ -383,6 +383,12 @@ export const menuItems: MenuItem[] = [
     roles: ["client"]
   },
   {
+    title: "Hearings",
+    icon: Calendar,
+    path: "/dashboard/hearings",
+    roles: ["advocate", "company", "super_admin"]
+  },
+  {
     title: "Case Status Updates",
     icon: Activity,
     path: "/dashboard/case-status",

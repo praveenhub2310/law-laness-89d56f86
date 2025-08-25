@@ -92,6 +92,11 @@ export const useSupabaseData = <T extends Record<string, any>>({
         if (!cleanedItem.status?.trim()) throw new Error('Status is required');
         if (!cleanedItem.case_id?.trim()) throw new Error('Case ID is required');
         if (!cleanedItem.client_id?.trim()) throw new Error('Client ID is required');
+        
+        // Set default lawyer_id to current user if not provided
+        if (!cleanedItem.lawyer_id) {
+          cleanedItem.lawyer_id = user.id;
+        }
       }
 
       console.log('Cleaned hearing data:', cleanedItem);
