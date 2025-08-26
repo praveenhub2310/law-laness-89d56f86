@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
-import DocumentUploader from '@/components/DocumentUploader';
+import GoogleDriveFileBrowser from '@/components/GoogleDriveFileBrowser';
 import SignaturePad, { SignaturePadRef } from '@/components/SignaturePad';
 import CaseSelector from '@/components/CaseSelector';
 import CaseNumberInput from '@/components/CaseNumberInput';
@@ -330,7 +330,21 @@ const ESign = () => {
                 />
               </div>
 
-              <DocumentUploader onFileUploaded={setUploadedFile} />
+              <GoogleDriveFileBrowser
+                onFileSelect={(file) => setUploadedFile({
+                  url: file.webViewLink || file.webContentLink || '',
+                  name: file.name,
+                  size: parseInt(file.size || '0'),
+                  googleDriveId: file.id
+                })}
+                acceptedMimeTypes={[
+                  'application/pdf',
+                  'application/msword',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'application/vnd.google-apps.document'
+                ]}
+                title="Select Document for E-Signature"
+              />
 
               <div className="space-y-4">
                 <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle, AlertTriangle, Info, X, FileSignature } from 'lucide-react';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
-import DocumentUploader from '@/components/DocumentUploader';
+import GoogleDriveFileBrowser from '@/components/GoogleDriveFileBrowser';
 import { toast } from '@/hooks/use-toast';
 
 const DocumentAnalysis = () => {
@@ -14,8 +14,13 @@ const DocumentAnalysis = () => {
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleFileUploaded = async (file: { url: string; name: string; size: number; googleDriveId?: string }) => {
-    setUploadedFile(file);
+  const handleFileSelect = async (file: any) => {
+    setUploadedFile({
+      url: file.webViewLink || file.webContentLink || '',
+      name: file.name,
+      size: parseInt(file.size || '0'),
+      googleDriveId: file.id
+    });
     
     try {
       // For Google Drive files, we would need to fetch the content
@@ -149,9 +154,17 @@ const DocumentAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <DocumentUploader 
-                onFileUploaded={handleFileUploaded} 
-                disabled={!isConnected}
+              <GoogleDriveFileBrowser
+                onFileSelect={handleFileSelect}
+                acceptedMimeTypes={[
+                  'application/pdf',
+                  'application/msword',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'text/plain',
+                  'application/rtf',
+                  'application/vnd.google-apps.document'
+                ]}
+                title="Select Document for Analysis"
               />
             )}
             <Button onClick={analyzeDocument} disabled={isAnalyzing || !document.trim() || !isConnected}>
