@@ -42,7 +42,7 @@ interface MeetingRecording {
   recording_type: 'audio' | 'video';
   file_url?: string | null;
   transcript?: string | null;
-  status: 'processing' | 'completed' | 'failed';
+  status: 'processing' | 'ready' | 'failed';
   notes?: string | null;
   created_at: string;
   updated_at: string;
@@ -112,9 +112,9 @@ const MeetingRecordings = () => {
             ? recording.participants 
             : (recording.participants ? [recording.participants] : []),
           recording_type: (recording.recording_type === 'video' ? 'video' : 'audio') as 'audio' | 'video',
-          status: (['processing', 'completed', 'failed'].includes(recording.status) 
+          status: (['processing', 'ready', 'failed'].includes(recording.status) 
             ? recording.status 
-            : 'completed') as 'processing' | 'completed' | 'failed'
+            : 'ready') as 'processing' | 'ready' | 'failed'
         }));
         setRecordings(processedData);
       } catch (error) {
@@ -281,9 +281,9 @@ const MeetingRecordings = () => {
           ? insertData.participants 
           : (insertData.participants ? [insertData.participants] : []),
         recording_type: (insertData.recording_type === 'video' ? 'video' : 'audio') as 'audio' | 'video',
-        status: (['processing', 'completed', 'failed'].includes(insertData.status) 
+        status: (['processing', 'ready', 'failed'].includes(insertData.status) 
           ? insertData.status 
-          : 'completed') as 'processing' | 'completed' | 'failed'
+          : 'ready') as 'processing' | 'ready' | 'failed'
       };
       setRecordings(prev => [processedData as MeetingRecording, ...prev]);
 
@@ -378,7 +378,7 @@ const MeetingRecordings = () => {
         recording_type: 'audio' as const,
         file_url: urlData.publicUrl,
         transcript: null,
-        status: 'completed' as const,
+        status: 'ready' as const,
         notes: newRecording.notes
       };
 
@@ -555,7 +555,7 @@ const MeetingRecordings = () => {
   const getStatusBadge = (status: string) => {
     const colors = {
       'processing': 'bg-yellow-100 text-yellow-800',
-      'completed': 'bg-green-100 text-green-800',
+      'ready': 'bg-green-100 text-green-800',
       'failed': 'bg-red-100 text-red-800'
     };
     return (
@@ -711,7 +711,7 @@ const MeetingRecordings = () => {
                     <Button 
                       size="sm" 
                       onClick={() => handlePlayRecording(recording)}
-                      disabled={recording.status !== 'completed'}
+                      disabled={recording.status !== 'ready'}
                     >
                       <Play className="h-4 w-4 mr-2" />
                       Play
@@ -720,7 +720,7 @@ const MeetingRecordings = () => {
                       variant="outline" 
                       size="sm"
                       onClick={() => handleDownloadRecording(recording)}
-                      disabled={recording.status !== 'completed'}
+                      disabled={recording.status !== 'ready'}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download
