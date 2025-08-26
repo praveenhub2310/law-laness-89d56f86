@@ -47,44 +47,44 @@ const AssignedAdvocate = () => {
       console.log('🔍 Debug: Current user ID:', user?.id);
       console.log('🔍 Debug: Current user email:', user?.email);
       
-      // First, get the client's cases to find assigned lawyers
+      // Force clear any caches and add more debugging
       const { data: projects, error: projectsError } = await supabase
         .from('projects')
-        .select('id, case_number, title, status, lawyer_id')
-        .eq('client_id', user?.id)
-        .not('lawyer_id', 'is', null);
+        .select('id, case_number, title, status, lawyer_id, client_id, created_at')
+        .eq('client_id', user?.id);
 
-      console.log('🔍 Debug: Projects query result:', projects);
+      console.log('🔍 Debug: ALL Projects query result (including null lawyers):', projects);
       console.log('🔍 Debug: Projects query error:', projectsError);
 
       if (projectsError) {
-        console.error('Error fetching projects:', projectsError);
+        console.error('❌ Error fetching projects:', projectsError);
+        toast.error('Failed to load cases: ' + projectsError.message);
         return;
       }
 
-      if (!projects || projects.length === 0) {
-        console.log('🔍 Debug: No projects found for user');
-        // Let's also check if there are any projects at all for this user
-        const { data: allProjects } = await supabase
-          .from('projects')
-          .select('id, case_number, title, status, lawyer_id, client_id')
-          .eq('client_id', user?.id);
-        
-        console.log('🔍 Debug: All projects for user (including without lawyer):', allProjects);
+      // Filter projects with lawyers
+      const projectsWithLawyers = projects?.filter(p => p.lawyer_id) || [];
+      console.log('🔍 Debug: Projects with lawyers:', projectsWithLawyers);
+
+      if (!projectsWithLawyers || projectsWithLawyers.length === 0) {
+        console.log('🔍 Debug: No projects with lawyers found for user');
         setLoading(false);
         return;
       }
 
-      // Get unique lawyer IDs
-      const lawyerIds = [...new Set(projects.map(p => p.lawyer_id).filter(Boolean))];
+      // Get unique lawyer IDs from projects with lawyers
+      const lawyerIds = [...new Set(projectsWithLawyers.map(p => p.lawyer_id).filter(Boolean))];
+      console.log('🔍 Debug: Unique lawyer IDs:', lawyerIds);
       
       if (lawyerIds.length === 0) {
+        console.log('🔍 Debug: No lawyer IDs found');
         setLoading(false);
         return;
       }
 
       // For now, get the first lawyer (you could modify this to handle multiple lawyers)
       const primaryLawyerId = lawyerIds[0];
+      console.log('🔍 Debug: Primary lawyer ID:', primaryLawyerId);
 
       // Fetch lawyer profile information
       const { data: profileData, error: profileError } = await supabase
@@ -116,7 +116,7 @@ const AssignedAdvocate = () => {
       };
 
       setLawyer(lawyerDetails);
-      setCases(projects.filter(p => p.lawyer_id === primaryLawyerId).map(p => ({
+      setCases(projectsWithLawyers.filter(p => p.lawyer_id === primaryLawyerId).map(p => ({
         id: p.id,
         case_number: p.case_number,
         title: p.title,
