@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Upload, CheckCircle, AlertTriangle, Info, X, FileSignature } from 'lucide-react';
+import { FileText, CheckCircle, AlertTriangle, Info, X, FileSignature } from 'lucide-react';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import DocumentUploader from '@/components/DocumentUploader';
 import { toast } from '@/hooks/use-toast';
@@ -217,7 +217,7 @@ const DocumentAnalysis = () => {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                Upload a document to see analysis results
+                Select a document from Google Drive to see analysis results
               </div>
             )}
           </CardContent>
