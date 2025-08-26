@@ -142,15 +142,19 @@ ${translationContent}
   };
 
   const copyToClipboard = async (content: string) => {
+    console.log('Copy button clicked, content:', content?.slice(0, 100));
     try {
       await navigator.clipboard.writeText(content);
       toast.success('Content copied to clipboard');
+      console.log('Copy successful');
     } catch (err) {
+      console.error('Copy failed:', err);
       toast.error('Failed to copy content');
     }
   };
 
   const downloadAsWord = async (content: string, filename: string) => {
+    console.log('Download button clicked, filename:', filename, 'content length:', content?.length);
     try {
       const doc = new Document({
         sections: [
@@ -166,7 +170,10 @@ ${translationContent}
         ],
       });
 
+      console.log('Document created, generating buffer...');
       const buffer = await Packer.toBuffer(doc);
+      console.log('Buffer generated, size:', buffer.length);
+      
       const blob = new Blob([buffer], { 
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
       });
@@ -180,8 +187,10 @@ ${translationContent}
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
+      console.log('Download completed successfully');
       toast.success('Document downloaded successfully');
     } catch (err) {
+      console.error('Download failed:', err);
       toast.error('Failed to download document');
     }
   };
