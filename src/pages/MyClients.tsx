@@ -40,6 +40,7 @@ const MyClients = () => {
     table: 'profiles',
     select: `
       *,
+      clients!inner(*),
       client_projects:projects!client_id(id, title, status, case_number),
       lawyer_projects:projects!lawyer_id(id, title, status, case_number)
     `,
@@ -292,7 +293,7 @@ const MyClients = () => {
                     <div>
                       <p className="text-sm text-gray-600">Client Type</p>
                       <Badge variant="outline" className="text-xs capitalize">
-                        {client.client_type || 'Individual'}
+                        {client.clients?.client_type || 'Individual'}
                       </Badge>
                     </div>
                   </div>
