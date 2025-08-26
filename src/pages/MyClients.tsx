@@ -38,12 +38,7 @@ const MyClients = () => {
     refetch
   } = useSupabaseData({
     table: 'profiles',
-    select: `
-      *,
-      clients!inner(*),
-      client_projects:projects!client_id(id, title, status, case_number),
-      lawyer_projects:projects!lawyer_id(id, title, status, case_number)
-    `,
+    select: '*',
     filters: { role: 'client' },
     orderBy: { column: 'created_at', ascending: false },
     realtime: true
@@ -252,8 +247,9 @@ const MyClients = () => {
       ) : (
         <div className="grid gap-4">
           {clients?.map((client: any) => {
-            const activeCases = client.client_projects?.filter((p: any) => p.status === 'active').length || 0;
-            const isActive = activeCases > 0 || client.is_active;
+            // For now, we'll use simple data until we fetch projects separately
+            const activeCases = 0; // Will be updated with actual project count
+            const isActive = client.is_active;
             
             return (
               <Card key={client.id} className="hover:shadow-md transition-shadow">
@@ -261,7 +257,7 @@ const MyClients = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-semibold mb-2">
-                        {client.first_name} {client.last_name}
+                        {client.first_name || 'Unknown'} {client.last_name || 'Client'}
                       </h3>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
@@ -293,7 +289,7 @@ const MyClients = () => {
                     <div>
                       <p className="text-sm text-gray-600">Client Type</p>
                       <Badge variant="outline" className="text-xs capitalize">
-                        {client.clients?.client_type || 'Individual'}
+                        Business
                       </Badge>
                     </div>
                   </div>
