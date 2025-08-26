@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { PenTool, Languages, FileText, Download, Copy } from 'lucide-react';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 const DraftingTranslation = () => {
   const [draftContent, setDraftContent] = useState('');
@@ -145,11 +145,18 @@ ${translationContent}
     console.log('Copy button clicked, content:', content?.slice(0, 100));
     try {
       await navigator.clipboard.writeText(content);
-      toast.success('Content copied to clipboard');
+      toast({
+        title: "Success",
+        description: "Content copied to clipboard",
+      });
       console.log('Copy successful');
     } catch (err) {
       console.error('Copy failed:', err);
-      toast.error('Failed to copy content');
+      toast({
+        title: "Error",
+        description: "Failed to copy content",
+        variant: "destructive",
+      });
     }
   };
 
@@ -170,13 +177,9 @@ ${translationContent}
         ],
       });
 
-      console.log('Document created, generating buffer...');
-      const buffer = await Packer.toBuffer(doc);
-      console.log('Buffer generated, size:', buffer.length);
-      
-      const blob = new Blob([buffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-      });
+      console.log('Document created, generating blob...');
+      const blob = await Packer.toBlob(doc);
+      console.log('Blob generated, size:', blob.size);
       
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -188,10 +191,17 @@ ${translationContent}
       URL.revokeObjectURL(url);
       
       console.log('Download completed successfully');
-      toast.success('Document downloaded successfully');
+      toast({
+        title: "Success",
+        description: "Document downloaded successfully",
+      });
     } catch (err) {
       console.error('Download failed:', err);
-      toast.error('Failed to download document');
+      toast({
+        title: "Error",
+        description: "Failed to download document",
+        variant: "destructive",
+      });
     }
   };
 
