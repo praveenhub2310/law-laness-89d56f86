@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,9 +46,10 @@ interface ESignDocument {
 }
 
 const ESign = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { isConnected, connect, isConnecting } = useGoogleDrive();
-  const [activeTab, setActiveTab] = useState('create');
+  const isClient = userProfile?.role === 'client';
+  const [activeTab, setActiveTab] = useState(isClient ? 'sign' : 'create');
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   const [caseNumber, setCaseNumber] = useState<string>('');
   
@@ -69,12 +70,29 @@ const ESign = () => {
   const signaturePadRef = useRef<SignaturePadRef>(null);
   const [isSigning, setIsSigning] = useState(false);
 
-  // Fetch documents
-  const { data: documents, loading: documentsLoading, refetch: refetchDocuments } = useSupabaseData<ESignDocument>({
+  // Fetch documents - filter for clients
+  const { data: allDocuments, loading: documentsLoading, refetch: refetchDocuments } = useSupabaseData<ESignDocument>({
     table: 'e_sign_documents',
     select: '*',
     realtime: true
   });
+
+  // Filter documents based on user role
+  const documents = React.useMemo(() => {
+    if (!allDocuments) return [];
+    
+    if (isClient) {
+      // For clients, show documents where they are a signatory or client
+      return allDocuments.filter(doc => 
+        doc.client_id === user?.id ||
+        doc.signature_positions?.some((pos: any) => pos.email === user?.email) ||
+        doc.signature_positions?.some((pos: any) => pos.signatory_id === user?.id)
+      );
+    }
+    
+    // For lawyers, show all their documents
+    return allDocuments.filter(doc => doc.lawyer_id === user?.id);
+  }, [allDocuments, isClient, user?.id, user?.email]);
 
   const addSignatory = () => {
     if (!newSignatoryEmail || !newSignatoryName) {
@@ -273,13 +291,13 @@ const ESign = () => {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="create">Create Document</TabsTrigger>
-          <TabsTrigger value="sign">Sign Document</TabsTrigger>
-          <TabsTrigger value="manage">Manage Documents</TabsTrigger>
+        <TabsList className={`grid w-full ${isClient ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {!isClient && <TabsTrigger value="create">Create Document</TabsTrigger>}
+          <TabsTrigger value="sign">{isClient ? 'Sign Documents' : 'Sign Document'}</TabsTrigger>
+          <TabsTrigger value="manage">{isClient ? 'My Documents' : 'Manage Documents'}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="create" className="space-y-6">
+        {!isClient && <TabsContent value="create" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -428,53 +446,122 @@ const ESign = () => {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="sign" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSignature className="h-5 w-5" />
-                Sign Document
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="document-select">Select Document to Sign</Label>
-                <Select value={selectedDocumentId} onValueChange={setSelectedDocumentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a document" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {documents?.filter(doc => doc.signing_status !== 'completed').map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id}>
-                        {doc.title} - {doc.document_number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {isClient ? (
+            // Client-focused signing interface
+            <div className="space-y-6">
+              {documents?.filter(doc => doc.signing_status !== 'completed' && !doc.signatures?.some((sig: any) => sig.signatory_id === user?.id)).length > 0 ? (
+                documents
+                  .filter(doc => doc.signing_status !== 'completed' && !doc.signatures?.some((sig: any) => sig.signatory_id === user?.id))
+                  .map((doc) => (
+                    <Card key={doc.id} className="border-2 border-blue-200">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileSignature className="h-5 w-5 text-blue-600" />
+                          {doc.title}
+                        </CardTitle>
+                        <CardDescription>
+                          Document #{doc.document_number} • 
+                          {doc.case_number && ` Case: ${doc.case_number} • `}
+                          {doc.expires_at && ` Expires: ${new Date(doc.expires_at).toLocaleDateString()}`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <h4 className="font-medium mb-2">Document Preview</h4>
+                          <p className="text-sm text-gray-600 mb-3">
+                            Please review the document before signing. Click the link below to view the full document.
+                          </p>
+                          <Button variant="outline" size="sm" className="gap-2" asChild>
+                            <a href={doc.original_file_url} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-4 w-4" />
+                              View Document
+                            </a>
+                          </Button>
+                        </div>
 
-              {selectedDocumentId && (
-                <>
-                  <SignaturePad
-                    ref={signaturePadRef}
-                    onSave={handleSignatureCapture}
-                  />
+                        <div className="space-y-4">
+                          <h4 className="font-medium">Your Digital Signature</h4>
+                          <SignaturePad
+                            ref={signaturePadRef}
+                            onSave={handleSignatureCapture}
+                          />
+                        </div>
 
-                  <Button
-                    onClick={signDocument}
-                    disabled={isSigning || !currentSignature}
-                    className="w-full gap-2"
-                    size="lg"
-                  >
-                    <FileSignature className="h-4 w-4" />
-                    {isSigning ? 'Signing Document...' : 'Apply Signature'}
-                  </Button>
-                </>
+                        <Button
+                          onClick={() => {
+                            setSelectedDocumentId(doc.id);
+                            signDocument();
+                          }}
+                          disabled={isSigning || !currentSignature}
+                          className="w-full gap-2"
+                          size="lg"
+                        >
+                          <FileSignature className="h-4 w-4" />
+                          {isSigning ? 'Signing Document...' : 'Sign Document'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <FileSignature className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Documents to Sign</h3>
+                    <p className="text-gray-600">You have no pending documents requiring your signature at this time.</p>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          ) : (
+            // Lawyer signing interface (original)
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSignature className="h-5 w-5" />
+                  Sign Document
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="document-select">Select Document to Sign</Label>
+                  <Select value={selectedDocumentId} onValueChange={setSelectedDocumentId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a document" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documents?.filter(doc => doc.signing_status !== 'completed').map((doc) => (
+                        <SelectItem key={doc.id} value={doc.id}>
+                          {doc.title} - {doc.document_number}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedDocumentId && (
+                  <>
+                    <SignaturePad
+                      ref={signaturePadRef}
+                      onSave={handleSignatureCapture}
+                    />
+
+                    <Button
+                      onClick={signDocument}
+                      disabled={isSigning || !currentSignature}
+                      className="w-full gap-2"
+                      size="lg"
+                    >
+                      <FileSignature className="h-4 w-4" />
+                      {isSigning ? 'Signing Document...' : 'Apply Signature'}
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="manage" className="space-y-6">

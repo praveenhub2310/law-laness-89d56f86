@@ -211,9 +211,11 @@ const ClientDashboard = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             {doc.urgent && <Badge variant="destructive">Urgent</Badge>}
-                            <Button size="sm">
-                              <PenTool className="h-4 w-4 mr-2" />
-                              Sign Now
+                            <Button size="sm" asChild>
+                              <a href="/dashboard/e-sign">
+                                <PenTool className="h-4 w-4 mr-2" />
+                                Sign Now
+                              </a>
                             </Button>
                           </div>
                         </div>
