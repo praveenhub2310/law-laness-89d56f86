@@ -326,22 +326,26 @@ const ClientDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Upload Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Upload Documents</h3>
-                    <p className="text-gray-600 mb-4">Drag and drop files here, or click to browse</p>
-                    <Button>Choose Files</Button>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Upload Documents
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Upload Case Documents</h3>
+                      <p className="text-gray-600 mb-4">Upload documents related to your legal cases</p>
+                      <Button asChild>
+                        <a href="/dashboard/document-upload">
+                          Upload Documents
+                        </a>
+                      </Button> 
+                    </div>
+                  </CardContent>
+                </Card>
             </div>
           </TabsContent>
 
