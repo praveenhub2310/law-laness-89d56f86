@@ -1319,6 +1319,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_transactions_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_lawyer_id"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_processed_by"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
