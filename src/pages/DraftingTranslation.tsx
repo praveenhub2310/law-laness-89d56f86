@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { PenTool, Languages, FileText, Download, Copy } from 'lucide-react';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { toast } from 'sonner';
 
 const DraftingTranslation = () => {
   const [draftContent, setDraftContent] = useState('');
@@ -139,6 +141,51 @@ ${translationContent}
     }, 2000);
   };
 
+  const copyToClipboard = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success('Content copied to clipboard');
+    } catch (err) {
+      toast.error('Failed to copy content');
+    }
+  };
+
+  const downloadAsWord = async (content: string, filename: string) => {
+    try {
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: content.split('\n').map(
+              (line) =>
+                new Paragraph({
+                  children: [new TextRun(line || ' ')],
+                })
+            ),
+          },
+        ],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Document downloaded successfully');
+    } catch (err) {
+      toast.error('Failed to download document');
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-8">
@@ -226,11 +273,22 @@ ${translationContent}
                 />
                 {draftContent && (
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => copyToClipboard(draftContent)}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       Copy
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const filename = `${selectedDocType?.replace(/\s+/g, '_') || 'Document'}_${selectedJurisdiction?.replace(/\s+/g, '_') || 'Draft'}.docx`;
+                        downloadAsWord(draftContent, filename);
+                      }}
+                    >
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </Button>
@@ -316,11 +374,24 @@ ${translationContent}
                 />
                 {translationContent && (
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => copyToClipboard(translationContent)}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       Copy Translation
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const sourceLang = languages.find(l => l.code === sourceLanguage)?.name || 'Source';
+                        const targetLang = languages.find(l => l.code === targetLanguage)?.name || 'Target';
+                        const filename = `Translation_${sourceLang}_to_${targetLang}.docx`;
+                        downloadAsWord(translationContent, filename);
+                      }}
+                    >
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </Button>
