@@ -2,199 +2,185 @@
 import React from 'react';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
-import { useDataManager } from '@/hooks/useDataManager';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { format } from 'date-fns';
 
 const Transactions = () => {
-  const initialTransactionsData = [
-    {
-      id: "TXN-2024-001",
-      date: "2024-01-12",
-      time: "09:30 AM",
-      type: "Payment Received",
-      clientName: "Michael Johnson",
-      caseNumber: "CASE-2024-001",
-      amount: "$5,250.00",
-      paymentMethod: "Bank Transfer",
-      reference: "INV-2024-001",
-      status: "Completed",
-      processedBy: "Sarah Wilson",
-      description: "Legal consultation payment"
-    },
-    {
-      id: "TXN-2024-002",
-      date: "2024-01-11",
-      time: "02:15 PM",
-      type: "Expense",
-      clientName: "Robert Smith",
-      caseNumber: "CASE-2024-002",
-      amount: "$450.00",
-      paymentMethod: "Corporate Card",
-      reference: "EXP-2024-001",
-      status: "Completed",
-      processedBy: "John Davis",
-      description: "Court filing fees"
-    },
-    {
-      id: "TXN-2024-003",
-      date: "2024-01-10",
-      time: "11:45 AM",
-      type: "Refund",
-      clientName: "TechCorp Inc.",
-      caseNumber: "CASE-2024-003",
-      amount: "$1,200.00",
-      paymentMethod: "Check",
-      reference: "REF-2024-001",
-      status: "Pending",
-      processedBy: "Emily Brown",
-      description: "Overpayment refund"
-    },
-    {
-      id: "TXN-2024-004",
-      date: "2024-01-09",
-      time: "04:20 PM",
-      type: "Payment Received",
-      clientName: "Global Industries",
-      caseNumber: "CASE-2024-004",
-      amount: "$8,500.00",
-      paymentMethod: "Wire Transfer",
-      reference: "INV-2024-002",
-      status: "Completed",
-      processedBy: "Sarah Wilson",
-      description: "Corporate legal services"
-    }
-  ];
-
   const {
     data,
+    loading,
+    error,
     addItem,
     updateItem,
-    deleteItem,
-    exportData
-  } = useDataManager({
-    initialData: initialTransactionsData,
-    entityName: 'Transaction'
+    deleteItem
+  } = useSupabaseData({
+    table: 'transactions',
+    select: `
+      *,
+      client:client_id(first_name, last_name),
+      lawyer:lawyer_id(first_name, last_name),
+      processed_by_user:processed_by(first_name, last_name)
+    `,
+    orderBy: { column: 'created_at', ascending: false },
+    realtime: true
   });
 
   const columns = [
     {
-      key: 'id',
+      key: 'transaction_number',
       label: 'Transaction ID',
       sortable: true,
       filterable: true
     },
     {
-      key: 'date',
+      key: 'created_at',
       label: 'Date',
       sortable: true,
-      filterable: true
+      filterable: true,
+      render: (value: string) => format(new Date(value), 'MMM dd, yyyy')
     },
     {
-      key: 'time',
+      key: 'created_at',
       label: 'Time',
       sortable: true,
-      filterable: true
+      filterable: true,
+      render: (value: string) => format(new Date(value), 'hh:mm a')
     },
     {
-      key: 'type',
+      key: 'transaction_type',
       label: 'Type',
       sortable: true,
       filterable: true,
-      filterOptions: ['Payment Received', 'Expense', 'Refund', 'Transfer'],
+      filterOptions: ['payment', 'expense', 'refund', 'transfer'],
       render: (value: string) => {
         const colors = {
-          'Payment Received': 'bg-green-100 text-green-800',
-          'Expense': 'bg-red-100 text-red-800',
-          'Refund': 'bg-blue-100 text-blue-800',
-          'Transfer': 'bg-purple-100 text-purple-800'
+          'payment': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+          'expense': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+          'refund': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+          'transfer': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
         };
         return (
           <Badge className={colors[value as keyof typeof colors]}>
-            {value}
+            {value?.charAt(0).toUpperCase() + value?.slice(1)}
           </Badge>
         );
       }
     },
     {
-      key: 'clientName',
+      key: 'client',
       label: 'Client',
       sortable: true,
-      filterable: true
+      filterable: true,
+      render: (value: any) => value ? `${value.first_name} ${value.last_name}` : 'N/A'
     },
     {
       key: 'amount',
       label: 'Amount',
       sortable: true,
       filterable: true,
-      render: (value: string) => (
-        <span className="font-semibold">{value}</span>
+      render: (value: number, row: any) => (
+        <span className="font-semibold">
+          {new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: row.currency || 'USD'
+          }).format(value)}
+        </span>
       )
     },
     {
-      key: 'paymentMethod',
+      key: 'method',
       label: 'Payment Method',
       sortable: true,
       filterable: true,
-      filterOptions: ['Bank Transfer', 'Corporate Card', 'Check', 'Wire Transfer', 'Cash']
+      filterOptions: ['card', 'netbanking', 'wallet', 'upi', 'bank_transfer', 'check', 'cash']
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
       filterable: true,
-      filterOptions: ['Completed', 'Pending', 'Failed', 'Processing'],
+      filterOptions: ['pending', 'completed', 'failed', 'cancelled'],
       render: (value: string) => {
         const colors = {
-          'Completed': 'bg-green-100 text-green-800',
-          'Pending': 'bg-yellow-100 text-yellow-800',
-          'Failed': 'bg-red-100 text-red-800',
-          'Processing': 'bg-blue-100 text-blue-800'
+          'completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+          'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+          'failed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+          'cancelled': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
         };
         return (
           <Badge className={colors[value as keyof typeof colors]}>
-            {value}
+            {value?.charAt(0).toUpperCase() + value?.slice(1)}
           </Badge>
         );
       }
     },
     {
-      key: 'processedBy',
+      key: 'processed_by_user',
       label: 'Processed By',
       sortable: true,
-      filterable: true
+      filterable: true,
+      render: (value: any) => value ? `${value.first_name} ${value.last_name}` : 'System'
     }
   ];
 
   const fields = [
-    { key: 'date', label: 'Date', type: 'date' as const, required: true },
-    { key: 'time', label: 'Time', type: 'text' as const, required: true },
     { 
-      key: 'type', 
+      key: 'transaction_type', 
       label: 'Transaction Type', 
       type: 'select' as const,
-      options: ['Payment Received', 'Expense', 'Refund', 'Transfer'],
+      options: ['payment', 'expense', 'refund', 'transfer'],
       required: true 
     },
-    { key: 'clientName', label: 'Client Name', type: 'text' as const, required: true },
-    { key: 'caseNumber', label: 'Case Number', type: 'text' as const },
-    { key: 'amount', label: 'Amount', type: 'text' as const, required: true },
+    { key: 'amount', label: 'Amount', type: 'number' as const, required: true },
     { 
-      key: 'paymentMethod', 
+      key: 'currency', 
+      label: 'Currency', 
+      type: 'select' as const,
+      options: ['USD', 'INR', 'EUR', 'GBP'],
+      required: true 
+    },
+    { 
+      key: 'method', 
       label: 'Payment Method', 
       type: 'select' as const,
-      options: ['Bank Transfer', 'Corporate Card', 'Check', 'Wire Transfer', 'Cash'],
+      options: ['card', 'netbanking', 'wallet', 'upi', 'bank_transfer', 'check', 'cash'],
       required: true 
     },
-    { key: 'reference', label: 'Reference', type: 'text' as const },
     { 
       key: 'status', 
       label: 'Status', 
       type: 'select' as const,
-      options: ['Completed', 'Pending', 'Failed', 'Processing'],
+      options: ['pending', 'completed', 'failed', 'cancelled'],
       required: true 
     },
-    { key: 'processedBy', label: 'Processed By', type: 'text' as const, required: true },
+    { key: 'payment_gateway_id', label: 'Payment Gateway ID', type: 'text' as const },
     { key: 'description', label: 'Description', type: 'textarea' as const }
   ];
+
+  const exportData = () => {
+    // Export functionality can be added here
+    console.log('Exporting transaction data...');
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-center text-red-600">
+          Error loading transactions: {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -203,7 +189,7 @@ const Transactions = () => {
         columns={columns}
         data={data}
         fields={fields}
-        searchPlaceholder="Search transactions by client, amount, or reference..."
+        searchPlaceholder="Search transactions by ID, client, or amount..."
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}

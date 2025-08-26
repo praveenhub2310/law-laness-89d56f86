@@ -129,6 +129,29 @@ async function handlePaymentSuccess(supabase: any, paymentEntity: any, payload: 
     return;
   }
 
+  // Create transaction record
+  const transactionNumber = `TXN-${new Date().getFullYear()}-${Date.now()}`;
+  const { error: transactionError } = await supabase
+    .from('transactions')
+    .insert({
+      transaction_number: transactionNumber,
+      client_id: userId,
+      amount: amount,
+      currency: paymentEntity.currency?.toUpperCase() || 'INR',
+      method: paymentEntity.method || 'card',
+      status: 'completed',
+      payment_gateway_id: paymentId,
+      transaction_type: 'payment',
+      description: `Subscription payment - Plan ID: ${planId}`,
+      payment_gateway_response: paymentEntity
+    });
+
+  if (transactionError) {
+    console.error('Error creating transaction record:', transactionError);
+  } else {
+    console.log('Transaction record created successfully:', transactionNumber);
+  }
+
   // Update subscription invoice
   const { error: invoiceError } = await supabase
     .from('subscription_invoices')
@@ -198,6 +221,36 @@ async function handlePaymentFailed(supabase: any, paymentEntity: any, payload: a
   console.log('Processing failed payment:', paymentEntity);
   
   const orderId = paymentEntity.order_id;
+  const paymentId = paymentEntity.id;
+  const amount = paymentEntity.amount / 100;
+  
+  // Get order notes to find user info
+  const notes = paymentEntity.notes || {};
+  const userId = notes.user_id;
+  const planId = notes.plan_id;
+  
+  // Create failed transaction record
+  if (userId) {
+    const transactionNumber = `TXN-${new Date().getFullYear()}-${Date.now()}`;
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        transaction_number: transactionNumber,
+        client_id: userId,
+        amount: amount,
+        currency: paymentEntity.currency?.toUpperCase() || 'INR',
+        method: paymentEntity.method || 'card',
+        status: 'failed',
+        payment_gateway_id: paymentId,
+        transaction_type: 'payment',
+        description: `Failed subscription payment - Plan ID: ${planId}`,
+        payment_gateway_response: paymentEntity
+      });
+
+    if (transactionError) {
+      console.error('Error creating failed transaction record:', transactionError);
+    }
+  }
   
   // Update subscription invoice status
   const { error: invoiceError } = await supabase
