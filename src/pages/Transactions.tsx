@@ -46,13 +46,12 @@ const Transactions = () => {
       label: 'Type',
       sortable: true,
       filterable: true,
-      filterOptions: ['payment', 'expense', 'refund', 'transfer'],
+      filterOptions: ['payment', 'refund', 'adjustment'],
       render: (value: string) => {
         const colors = {
           'payment': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-          'expense': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-          'refund': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-          'transfer': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+          'adjustment': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+          'refund': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
         };
         return (
           <Badge className={colors[value as keyof typeof colors]}>
@@ -87,17 +86,17 @@ const Transactions = () => {
       label: 'Payment Method',
       sortable: true,
       filterable: true,
-      filterOptions: ['card', 'netbanking', 'wallet', 'upi', 'bank_transfer', 'check', 'cash']
+      filterOptions: ['razorpay', 'upi', 'bank_transfer', 'cash', 'check', 'card']
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
       filterable: true,
-      filterOptions: ['pending', 'completed', 'failed', 'cancelled'],
+      filterOptions: ['success', 'failed', 'pending', 'cancelled'],
       render: (value: string) => {
         const colors = {
-          'completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+          'success': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
           'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
           'failed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
           'cancelled': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
@@ -123,7 +122,7 @@ const Transactions = () => {
       key: 'transaction_type', 
       label: 'Transaction Type', 
       type: 'select' as const,
-      options: ['payment', 'expense', 'refund', 'transfer'],
+      options: ['payment', 'refund', 'adjustment'],
       required: true 
     },
     { key: 'amount', label: 'Amount', type: 'number' as const, required: true },
@@ -138,14 +137,14 @@ const Transactions = () => {
       key: 'method', 
       label: 'Payment Method', 
       type: 'select' as const,
-      options: ['card', 'netbanking', 'wallet', 'upi', 'bank_transfer', 'check', 'cash'],
+      options: ['razorpay', 'upi', 'bank_transfer', 'cash', 'check', 'card'],
       required: true 
     },
     { 
       key: 'status', 
       label: 'Status', 
       type: 'select' as const,
-      options: ['pending', 'completed', 'failed', 'cancelled'],
+      options: ['success', 'failed', 'pending', 'cancelled'],
       required: true 
     },
     { key: 'payment_gateway_id', label: 'Payment Gateway ID', type: 'text' as const },
