@@ -407,12 +407,6 @@ export const menuItems: MenuItem[] = [
     roles: ["client"]
   },
   {
-    title: "Fee Calculation",
-    icon: Calculator,
-    path: "/dashboard/client-fee-calculator",
-    roles: ["client"]
-  },
-  {
     title: "E-Sign Documents",
     icon: FileSignature,
     path: "/dashboard/e-sign",
