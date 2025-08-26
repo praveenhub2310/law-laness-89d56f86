@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -9,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
+import GoogleDriveFileBrowser from '@/components/GoogleDriveFileBrowser';
 import { 
   Upload, 
   FileText, 
@@ -20,7 +21,8 @@ import {
   MapPin,
   Clock,
   Building,
-  Gavel
+  Gavel,
+  AlertTriangle
 } from 'lucide-react';
 
 interface UploadResult {
@@ -44,12 +46,14 @@ interface CauseListUpload {
 }
 
 const CauseListUploader: React.FC = () => {
+  const { isConnected } = useGoogleDrive();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [recentUploads, setRecentUploads] = useState<CauseListUpload[]>([]);
   const [selectedEntries, setSelectedEntries] = useState<any[]>([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
 
   // Fetch recent uploads
   const fetchRecentUploads = useCallback(async () => {
@@ -71,10 +75,8 @@ const CauseListUploader: React.FC = () => {
     fetchRecentUploads();
   }, [fetchRecentUploads]);
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-    
-    const file = acceptedFiles[0];
+  const handleFileSelect = useCallback(async (file: any) => {
+    setSelectedFile(file);
     setUploading(true);
     setUploadProgress(0);
     setUploadResult(null);
@@ -85,8 +87,8 @@ const CauseListUploader: React.FC = () => {
         .from('cause_list_uploads')
         .insert({
           filename: file.name,
-          file_size: file.size,
-          file_type: file.type || 'application/octet-stream',
+          file_size: parseInt(file.size) || 0,
+          file_type: file.mimeType || 'application/octet-stream',
           uploaded_by: (await supabase.auth.getUser()).data.user?.id,
           status: 'processing'
         })
@@ -97,25 +99,36 @@ const CauseListUploader: React.FC = () => {
 
       setUploadProgress(20);
 
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('uploadId', uploadRecord.id);
+      // Download file from Google Drive
+      const response = await window.gapi.client.drive.files.get({
+        fileId: file.id,
+        alt: 'media'
+      });
 
       setUploadProgress(40);
 
+      // Convert response to blob
+      const blob = new Blob([response.body], { type: file.mimeType });
+      
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('file', blob, file.name);
+      formData.append('uploadId', uploadRecord.id);
+
+      setUploadProgress(60);
+
       // Call edge function to process file
-      const response = await supabase.functions.invoke('parse-cause-list', {
+      const processResponse = await supabase.functions.invoke('parse-cause-list', {
         body: formData,
       });
 
       setUploadProgress(80);
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to process file');
+      if (processResponse.error) {
+        throw new Error(processResponse.error.message || 'Failed to process file');
       }
 
-      const result = response.data as UploadResult;
+      const result = processResponse.data as UploadResult;
       setUploadResult(result);
       setUploadProgress(100);
 
@@ -140,17 +153,12 @@ const CauseListUploader: React.FC = () => {
     }
   }, [fetchRecentUploads]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-    },
-    maxFiles: 1,
-    disabled: uploading
-  });
+  const acceptedMimeTypes = [
+    'application/pdf',
+    'text/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ];
 
   const viewUploadDetails = async (upload: CauseListUpload) => {
     try {
@@ -206,69 +214,65 @@ const CauseListUploader: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Upload Section */}
+      {/* Google Drive File Selection */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Upload Cause List
+            Select Cause List from Google Drive
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-              ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/50'}
-              ${uploading ? 'cursor-not-allowed opacity-50' : ''}
-            `}
-          >
-            <input {...getInputProps()} />
-            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            
-            {uploading ? (
-              <div>
-                <p className="text-lg font-medium">Processing...</p>
-                <p className="text-muted-foreground mb-4">Please wait while we parse your cause list</p>
-                <Progress value={uploadProgress} className="w-full max-w-xs mx-auto" />
-                <p className="text-sm text-muted-foreground mt-2">{uploadProgress}%</p>
-              </div>
-            ) : isDragActive ? (
-              <div>
-                <p className="text-lg font-medium">Drop the file here</p>
-                <p className="text-muted-foreground">Release to upload</p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-lg font-medium">Drag & drop a cause list file here</p>
-                <p className="text-muted-foreground">or click to select a file</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Supports PDF, CSV, XLS, XLSX files
-                </p>
-              </div>
-            )}
-          </div>
-
-          {uploadResult && (
-            <div className="mt-4">
-              {uploadResult.success ? (
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Successfully processed {uploadResult.parsed_entries} entries. 
-                    {uploadResult.mapped_entries > 0 && (
-                      <> {uploadResult.mapped_entries} were automatically mapped to existing cases.</>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {uploadResult.error || 'Failed to process the file'}
-                  </AlertDescription>
-                </Alert>
+          {!isConnected ? (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Please connect to Google Drive first to select cause list files.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              {uploading && (
+                <div className="mb-4 p-4 border rounded-lg bg-muted/20">
+                  <div className="text-center">
+                    <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                    <p className="text-lg font-medium">Processing cause list...</p>
+                    <p className="text-muted-foreground mb-4">Please wait while we parse your file</p>
+                    <Progress value={uploadProgress} className="w-full max-w-xs mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">{uploadProgress}%</p>
+                  </div>
+                </div>
               )}
-            </div>
+              
+              <GoogleDriveFileBrowser
+                onFileSelect={handleFileSelect}
+                acceptedMimeTypes={acceptedMimeTypes}
+                title="Select Cause List Document"
+              />
+              
+              {uploadResult && (
+                <div className="mt-4">
+                  {uploadResult.success ? (
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Successfully processed {uploadResult.parsed_entries} entries. 
+                        {uploadResult.mapped_entries > 0 && (
+                          <> {uploadResult.mapped_entries} were automatically mapped to existing cases.</>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        {uploadResult.error || 'Failed to process the file'}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

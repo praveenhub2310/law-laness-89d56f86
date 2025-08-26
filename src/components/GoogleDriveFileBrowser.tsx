@@ -253,8 +253,8 @@ const GoogleDriveFileBrowser: React.FC<GoogleDriveFileBrowserProps> = ({
                 onClick={() => handleFileClick(file)}
                 className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
                   isFileSelectable(file)
-                    ? 'hover:bg-muted/50 cursor-pointer'
-                    : 'opacity-50 cursor-not-allowed'
+                    ? 'hover:bg-muted/50 cursor-pointer border-border hover:border-primary/50'
+                    : 'opacity-60 cursor-not-allowed border-muted'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -288,8 +288,8 @@ const GoogleDriveFileBrowser: React.FC<GoogleDriveFileBrowserProps> = ({
                 onClick={() => handleFileClick(file)}
                 className={`p-4 border rounded-lg text-center transition-colors ${
                   isFileSelectable(file)
-                    ? 'hover:bg-muted/50 cursor-pointer'
-                    : 'opacity-50 cursor-not-allowed'
+                    ? 'hover:bg-muted/50 cursor-pointer border-border hover:border-primary/50'
+                    : 'opacity-60 cursor-not-allowed border-muted'
                 }`}
               >
                 <div className="flex justify-center mb-2">
