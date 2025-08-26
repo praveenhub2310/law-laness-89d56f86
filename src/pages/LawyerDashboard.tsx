@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Briefcase, Clock, Receipt, Calendar, User, TrendingUp, FileText, DollarSign } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Briefcase, Clock, Receipt, Calendar, User, TrendingUp, FileText, DollarSign, Play, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -319,7 +321,111 @@ const LawyerDashboard = () => {
           </TabsContent>
 
           <TabsContent value="time">
-            <TimeTracker />
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Time Tracker
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="task">Current Task</Label>
+                      <Input
+                        id="task"
+                        placeholder="Enter task description..."
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button className="w-full">
+                        <Play className="h-4 w-4 mr-2" />
+                        Start Timer
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Time Entries</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-3 w-1/2" />
+                            <Skeleton className="h-3 w-1/4" />
+                          </div>
+                          <div className="text-right space-y-1">
+                            <Skeleton className="h-6 w-16" />
+                            <Skeleton className="h-5 w-20" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : dashboardData.timeEntries.length > 0 ? (
+                    <div className="space-y-3">
+                      {dashboardData.timeEntries
+                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        .map((entry) => {
+                          const project = dashboardData.projects.find(p => p.id === entry.case_id);
+                          const hours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0.0';
+                          const entryDate = new Date(entry.start_time).toLocaleDateString();
+                          
+                          return (
+                            <div 
+                              key={entry.id} 
+                              className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => navigate('/dashboard/time-logs')}
+                            >
+                              <div className="flex-1">
+                                <h4 className="font-medium text-lg">
+                                  {project?.title || 'Unknown Case'}
+                                </h4>
+                                <p className="text-sm text-gray-600 font-medium">
+                                  {entry.task_description}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {entryDate}
+                                </p>
+                                {entry.start_time && entry.end_time && (
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(entry.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(entry.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right space-y-1">
+                                <p className="font-bold text-lg">{hours}h</p>
+                                <Badge variant="default">
+                                  Billable
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No time entries yet</p>
+                      <Button 
+                        className="mt-4" 
+                        onClick={() => navigate('/dashboard/time-logs')}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Start Tracking Time
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="expenses">
