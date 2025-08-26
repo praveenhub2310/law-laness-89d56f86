@@ -15,12 +15,7 @@ const Transactions = () => {
     deleteItem
   } = useSupabaseData({
     table: 'transactions',
-    select: `
-      *,
-      client:client_id(first_name, last_name),
-      lawyer:lawyer_id(first_name, last_name),
-      processed_by_user:processed_by(first_name, last_name)
-    `,
+    select: '*',
     orderBy: { column: 'created_at', ascending: false },
     realtime: true
   });
@@ -67,11 +62,11 @@ const Transactions = () => {
       }
     },
     {
-      key: 'client',
+      key: 'client_id',
       label: 'Client',
       sortable: true,
       filterable: true,
-      render: (value: any) => value ? `${value.first_name} ${value.last_name}` : 'N/A'
+      render: (value: string) => value || 'N/A'
     },
     {
       key: 'amount',
@@ -115,11 +110,11 @@ const Transactions = () => {
       }
     },
     {
-      key: 'processed_by_user',
+      key: 'processed_by',
       label: 'Processed By',
       sortable: true,
       filterable: true,
-      render: (value: any) => value ? `${value.first_name} ${value.last_name}` : 'System'
+      render: (value: string) => value || 'System'
     }
   ];
 
