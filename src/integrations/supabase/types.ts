@@ -1466,6 +1466,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_lawyer_to_client: {
+        Args: { client_email: string; lawyer_id: string }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
