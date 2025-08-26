@@ -1277,7 +1277,7 @@ export type Database = {
           payment_gateway_response: Json | null
           processed_by: string | null
           status: string
-          transaction_number: string
+          transaction_number: string | null
           transaction_type: string
           updated_at: string
         }
@@ -1295,7 +1295,7 @@ export type Database = {
           payment_gateway_response?: Json | null
           processed_by?: string | null
           status?: string
-          transaction_number: string
+          transaction_number?: string | null
           transaction_type: string
           updated_at?: string
         }
@@ -1313,7 +1313,7 @@ export type Database = {
           payment_gateway_response?: Json | null
           processed_by?: string | null
           status?: string
-          transaction_number?: string
+          transaction_number?: string | null
           transaction_type?: string
           updated_at?: string
         }
