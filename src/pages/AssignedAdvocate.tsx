@@ -44,6 +44,9 @@ const AssignedAdvocate = () => {
     try {
       setLoading(true);
       
+      console.log('🔍 Debug: Current user ID:', user?.id);
+      console.log('🔍 Debug: Current user email:', user?.email);
+      
       // First, get the client's cases to find assigned lawyers
       const { data: projects, error: projectsError } = await supabase
         .from('projects')
@@ -51,12 +54,23 @@ const AssignedAdvocate = () => {
         .eq('client_id', user?.id)
         .not('lawyer_id', 'is', null);
 
+      console.log('🔍 Debug: Projects query result:', projects);
+      console.log('🔍 Debug: Projects query error:', projectsError);
+
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
         return;
       }
 
       if (!projects || projects.length === 0) {
+        console.log('🔍 Debug: No projects found for user');
+        // Let's also check if there are any projects at all for this user
+        const { data: allProjects } = await supabase
+          .from('projects')
+          .select('id, case_number, title, status, lawyer_id, client_id')
+          .eq('client_id', user?.id);
+        
+        console.log('🔍 Debug: All projects for user (including without lawyer):', allProjects);
         setLoading(false);
         return;
       }
