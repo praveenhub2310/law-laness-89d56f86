@@ -90,31 +90,48 @@ const AssignedAdvocate = () => {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, phone')
-        .eq('id', primaryLawyerId)
-        .single();
+        .eq('id', primaryLawyerId);
+
+      console.log('🔍 Debug: Lawyer profile query result:', profileData);
+      console.log('🔍 Debug: Lawyer profile query error:', profileError);
 
       if (profileError) {
-        console.error('Error fetching lawyer profile:', profileError);
+        console.error('❌ Error fetching lawyer profile:', profileError);
+        toast.error('Failed to load lawyer profile: ' + profileError.message);
         return;
       }
+
+      if (!profileData || profileData.length === 0) {
+        console.error('❌ No lawyer profile found for ID:', primaryLawyerId);
+        toast.error('Lawyer profile not found');
+        return;
+      }
+
+      const lawyerProfile = profileData[0]; // Get first result
 
       // Fetch advocate-specific information
       const { data: advocateData, error: advocateError } = await supabase
         .from('advocates')
         .select('bar_number, specialization, experience_years, hourly_rate, availability_status, bio')
-        .eq('id', primaryLawyerId)
-        .single();
+        .eq('id', primaryLawyerId);
+
+      console.log('🔍 Debug: Advocate data query result:', advocateData);
+      console.log('🔍 Debug: Advocate data query error:', advocateError);
 
       if (advocateError) {
-        console.error('Error fetching advocate details:', advocateError);
+        console.error('❌ Error fetching advocate details:', advocateError);
+        // Don't return here, just log the error and continue with basic profile
       }
+
+      const advocateProfile = advocateData && advocateData.length > 0 ? advocateData[0] : {};
 
       // Combine the data
       const lawyerDetails: LawyerDetails = {
-        ...profileData,
-        ...advocateData
+        ...lawyerProfile,
+        ...advocateProfile
       };
 
+      console.log('🔍 Debug: Final lawyer details:', lawyerDetails);
       setLawyer(lawyerDetails);
       setCases(projectsWithLawyers.filter(p => p.lawyer_id === primaryLawyerId).map(p => ({
         id: p.id,
