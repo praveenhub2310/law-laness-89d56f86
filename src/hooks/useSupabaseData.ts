@@ -79,6 +79,13 @@ export const useSupabaseData = <T extends Record<string, any>>({
       // Clean and validate data before insertion
       const cleanedItem = { ...newItem };
       
+      // For transactions table, automatically set processed_by to current user
+      if (table === 'transactions') {
+        console.log('Processing transaction data...');
+        cleanedItem.processed_by = user.id;
+        console.log('Set processed_by to current user:', user.id);
+      }
+      
       // For hearings table, provide better defaults and validation
       if (table === 'hearings') {
         console.log('Processing hearing data...');
