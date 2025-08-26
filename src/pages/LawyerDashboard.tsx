@@ -40,8 +40,8 @@ const LawyerDashboard = () => {
         const [projectsRes, timeEntriesRes, expensesRes, hearingsRes, documentsRes, profileRes, advocateRes] = await Promise.all([
           supabase.from('projects').select('*').eq('lawyer_id', user.id),
           supabase.from('time_tracker').select('*').eq('user_id', user.id),
-          supabase.from('expenses').select('*, projects(title, case_number)'),
-          supabase.from('hearings').select('*, projects(title, case_number)').eq('lawyer_id', user.id),
+          supabase.from('expenses').select('*'),
+          supabase.from('hearings').select('*, projects!hearings_case_id_fkey(title, case_number)').eq('lawyer_id', user.id),
           supabase.from('documents').select('*').eq('uploaded_by', user.id),
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('advocates').select('*').eq('id', user.id).single()
@@ -98,7 +98,7 @@ const LawyerDashboard = () => {
         change: '+2', 
         icon: Briefcase, 
         color: 'text-blue-600',
-        onClick: () => navigate('/my-cases')
+        onClick: () => navigate('/dashboard/my-cases')
       },
       { 
         label: 'Hours This Week', 
@@ -106,7 +106,7 @@ const LawyerDashboard = () => {
         change: '+5.2', 
         icon: Clock, 
         color: 'text-green-600',
-        onClick: () => navigate('/time-tracker')
+        onClick: () => navigate('/dashboard/time-logs')
       },
       { 
         label: 'Billable Hours', 
@@ -114,7 +114,7 @@ const LawyerDashboard = () => {
         change: '+3.8', 
         icon: TrendingUp, 
         color: 'text-purple-600',
-        onClick: () => navigate('/time-tracker')
+        onClick: () => navigate('/dashboard/time-logs')
       },
       { 
         label: 'Pending Expenses', 
@@ -122,7 +122,7 @@ const LawyerDashboard = () => {
         change: '+$85', 
         icon: Receipt, 
         color: 'text-orange-600',
-        onClick: () => navigate('/expense-tracker')
+        onClick: () => navigate('/dashboard/expense-tracker')
       }
     ];
   }, [dashboardData, navigate]);
@@ -244,7 +244,7 @@ const LawyerDashboard = () => {
                         <div 
                           key={hearing.id}
                           className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => navigate(`/hearings`)}
+                          onClick={() => navigate('/dashboard/hearings')}
                         >
                           <div>
                             <h4 className="font-medium">{hearing.title}</h4>
@@ -292,9 +292,9 @@ const LawyerDashboard = () => {
                           key={index} 
                           className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
                           onClick={() => {
-                            if (activity.type === 'document') navigate('/documents');
-                            else if (activity.type === 'time') navigate('/time-tracker');
-                            else if (activity.type === 'expense') navigate('/expense-tracker');
+                            if (activity.type === 'document') navigate('/dashboard/document-analysis');
+                            else if (activity.type === 'time') navigate('/dashboard/time-logs');
+                            else if (activity.type === 'expense') navigate('/dashboard/expense-tracker');
                           }}
                         >
                           <div className={`w-2 h-2 ${activity.color} rounded-full`}></div>
@@ -405,14 +405,14 @@ const LawyerDashboard = () => {
                       <Button 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate('/profile')}
+                        onClick={() => navigate('/dashboard/profile')}
                       >
                         Edit Profile
                       </Button>
                       <Button 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate('/profile')}
+                        onClick={() => navigate('/dashboard/profile')}
                       >
                         View Public Profile
                       </Button>
