@@ -58,6 +58,63 @@ export type Database = {
           },
         ]
       }
+      case_updates: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_visible_to_client: boolean | null
+          new_status: string | null
+          old_status: string | null
+          title: string
+          update_type: string
+          updated_at: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_visible_to_client?: boolean | null
+          new_status?: string | null
+          old_status?: string | null
+          title: string
+          update_type?: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_visible_to_client?: boolean | null
+          new_status?: string | null
+          old_status?: string | null
+          title?: string
+          update_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_updates_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_updates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cause_list: {
         Row: {
           case_number: string

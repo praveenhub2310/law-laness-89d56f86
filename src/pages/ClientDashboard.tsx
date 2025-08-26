@@ -4,21 +4,75 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Calendar, MessageSquare, DollarSign, Clock, AlertCircle, Upload, CreditCard, PenTool } from 'lucide-react';
+import { FileText, Calendar, MessageSquare, DollarSign, Clock, AlertCircle, Upload, CreditCard, PenTool, User } from 'lucide-react';
 import OnlinePayments from '@/components/OnlinePayments';
 import RoleGuard from '@/components/RoleGuard';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ClientDashboard = () => {
-  const caseHistory = [
-    { id: 1, title: 'Personal Injury Claim', status: 'Active', lastUpdate: '2024-01-12', lawyer: 'Sarah Johnson', progress: 65 },
-    { id: 2, title: 'Contract Dispute Resolution', status: 'Settled', lastUpdate: '2023-12-18', lawyer: 'Michael Brown', progress: 100 },
-    { id: 3, title: 'Estate Planning Consultation', status: 'Completed', lastUpdate: '2023-11-25', lawyer: 'Emily Chen', progress: 100 }
-  ];
+  const { user } = useAuth();
 
-  const documentsForSignature = [
-    { id: 1, title: 'Settlement Agreement', case: 'Personal Injury Claim', dueDate: '2024-01-20', urgent: true },
-    { id: 2, title: 'Confidentiality Agreement', case: 'Personal Injury Claim', dueDate: '2024-01-25', urgent: false }
-  ];
+  // Fetch client's cases
+  const { data: cases, loading: casesLoading } = useSupabaseData({
+    table: 'projects',
+    select: '*',
+    filters: user?.id ? [{ column: 'client_id', operator: 'eq', value: user.id }] : undefined,
+    realtime: true
+  });
+
+  // Fetch client's hearings
+  const { data: hearings } = useSupabaseData({
+    table: 'hearings',
+    select: '*',
+    filters: user?.id ? [{ column: 'client_id', operator: 'eq', value: user.id }] : undefined,
+    realtime: true
+  });
+
+  // Fetch client's e-sign documents
+  const { data: documentsForSignature } = useSupabaseData({
+    table: 'e_sign_documents',
+    select: '*',
+    filters: user?.id ? [{ column: 'client_id', operator: 'eq', value: user.id }] : undefined,
+    realtime: true
+  });
+
+  // Calculate statistics
+  const activeCases = cases?.filter(c => c.status === 'active')?.length || 0;
+  
+  const nextHearing = hearings?.find(h => 
+    new Date(h.hearing_date) >= new Date() && h.status === 'scheduled'
+  );
+  
+  const daysUntilHearing = nextHearing ? 
+    Math.ceil((new Date(nextHearing.hearing_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 
+    null;
+
+  const pendingSignatures = documentsForSignature?.filter(doc => 
+    doc.signing_status !== 'completed' && 
+    !doc.signatures?.some((sig: any) => sig.signatory_id === user?.id)
+  )?.length || 0;
+
+  // Mock data for cases history
+  const activeCasesList = cases?.filter(c => c.status === 'active') || [];
+  const allCases = cases || [];
+
+  if (casesLoading) {
+    return (
+      <RoleGuard allowedRoles={['client']}>
+        <div className="p-6">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
 
   return (
     <RoleGuard allowedRoles={['client']}>
@@ -37,8 +91,8 @@ const ClientDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">1</div>
-              <p className="text-sm text-gray-600">ongoing legal matter</p>
+              <div className="text-2xl font-bold text-blue-600">{activeCases}</div>
+              <p className="text-sm text-gray-600">ongoing legal matter{activeCases !== 1 ? 's' : ''}</p>
             </CardContent>
           </Card>
 
@@ -50,8 +104,12 @@ const ClientDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">6</div>
-              <p className="text-sm text-gray-600">days remaining</p>
+              <div className="text-2xl font-bold text-green-600">
+                {daysUntilHearing !== null ? daysUntilHearing : '--'}
+              </div>
+              <p className="text-sm text-gray-600">
+                {daysUntilHearing !== null ? `day${daysUntilHearing !== 1 ? 's' : ''} remaining` : 'No scheduled hearings'}
+              </p>
             </CardContent>
           </Card>
 
@@ -63,8 +121,8 @@ const ClientDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">2</div>
-              <p className="text-sm text-gray-600">documents to sign</p>
+              <div className="text-2xl font-bold text-purple-600">{pendingSignatures}</div>
+              <p className="text-sm text-gray-600">document{pendingSignatures !== 1 ? 's' : ''} to sign</p>
             </CardContent>
           </Card>
 
@@ -76,7 +134,7 @@ const ClientDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">$4,300</div>
+              <div className="text-2xl font-bold text-orange-600">--</div>
               <p className="text-sm text-gray-600">pending payments</p>
             </CardContent>
           </Card>
@@ -96,20 +154,31 @@ const ClientDashboard = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Case Progress</CardTitle>
-                  <CardDescription>Current status of your active case</CardDescription>
+                  <CardDescription>Current status of your cases</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Personal Injury Claim</h4>
-                      <Badge>Active</Badge>
+                  {activeCasesList.length > 0 ? (
+                    <div className="space-y-4">
+                      {activeCasesList.slice(0, 2).map((case_: any, index: number) => (
+                        <div key={case_.id} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium">{case_.title}</h4>
+                            <Badge>{case_.status}</Badge>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+                          </div>
+                          <p className="text-sm text-gray-600">In progress - Case #{case_.case_number}</p>
+                          <p className="text-xs text-gray-500">Last updated: {new Date(case_.updated_at).toLocaleDateString()}</p>
+                        </div>
+                      ))}
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: '65%' }}></div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600">No active cases</p>
                     </div>
-                    <p className="text-sm text-gray-600">Discovery phase in progress - 65% complete</p>
-                    <p className="text-xs text-gray-500">Last updated: January 12, 2024</p>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -120,26 +189,37 @@ const ClientDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 border rounded-lg border-red-200 bg-red-50">
-                      <div className="flex items-center space-x-2">
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                        <div>
-                          <p className="text-sm font-medium">Settlement Agreement</p>
-                          <p className="text-xs text-gray-600">Signature required by Jan 20</p>
+                    {pendingSignatures > 0 && (
+                      <div className="flex items-center justify-between p-3 border rounded-lg border-red-200 bg-red-50">
+                        <div className="flex items-center space-x-2">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <div>
+                            <p className="text-sm font-medium">Pending E-Signatures</p>
+                            <p className="text-xs text-gray-600">{pendingSignatures} document{pendingSignatures !== 1 ? 's' : ''} awaiting signature</p>
+                          </div>
                         </div>
+                        <Badge variant="destructive">Urgent</Badge>
                       </div>
-                      <Badge variant="destructive">Urgent</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <p className="text-sm font-medium">Invoice Payment</p>
-                          <p className="text-xs text-gray-600">$2,500 due Jan 20</p>
+                    )}
+                    
+                    {nextHearing && (
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium">Upcoming Hearing</p>
+                            <p className="text-xs text-gray-600">{new Date(nextHearing.hearing_date).toLocaleDateString()}</p>
+                          </div>
                         </div>
+                        <Badge>Scheduled</Badge>
                       </div>
-                      <Badge>Pending</Badge>
-                    </div>
+                    )}
+
+                    {!pendingSignatures && !nextHearing && (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-sm">No urgent action items at this time</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -153,39 +233,49 @@ const ClientDashboard = () => {
                 <CardDescription>Your legal matters and their current status</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {caseHistory.map((case_) => (
-                    <div key={case_.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{case_.title}</h4>
-                          <p className="text-sm text-gray-600">Attorney: {case_.lawyer}</p>
-                          <p className="text-xs text-gray-500">Last update: {case_.lastUpdate}</p>
-                        </div>
-                        <Badge variant={case_.status === 'Active' ? 'default' : case_.status === 'Settled' ? 'secondary' : 'outline'}>
-                          {case_.status}
-                        </Badge>
-                      </div>
-                      
-                      {case_.status === 'Active' && (
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-600">Progress</span>
-                            <span className="text-sm font-medium">{case_.progress}%</span>
+                {allCases.length > 0 ? (
+                  <div className="space-y-4">
+                    {allCases.map((case_: any) => (
+                      <div key={case_.id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{case_.title}</h4>
+                            <p className="text-sm text-gray-600">Case: {case_.case_number}</p>
+                            <p className="text-xs text-gray-500">Last update: {new Date(case_.updated_at).toLocaleDateString()}</p>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${case_.progress}%` }}></div>
-                          </div>
+                          <Badge variant={case_.status === 'active' ? 'default' : case_.status === 'closed' ? 'secondary' : 'outline'}>
+                            {case_.status}
+                          </Badge>
                         </div>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">View Details</Button>
-                        <Button size="sm" variant="outline">Contact Lawyer</Button>
+                        
+                        {case_.status === 'active' && (
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-gray-600">Progress</span>
+                              <span className="text-sm font-medium">25%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '25%' }}></div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" asChild>
+                            <a href="/dashboard/case-status">View Details</a>
+                          </Button>
+                          <Button size="sm" variant="outline">Contact Lawyer</Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Cases Yet</h3>
+                    <p className="text-gray-600">You don't have any legal cases at this time.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -201,26 +291,37 @@ const ClientDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {documentsForSignature.map((doc) => (
-                      <div key={doc.id} className={`border rounded-lg p-4 ${doc.urgent ? 'border-red-200 bg-red-50' : ''}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium">{doc.title}</h4>
-                            <p className="text-sm text-gray-600">{doc.case}</p>
-                            <p className="text-xs text-gray-500">Due: {doc.dueDate}</p>
+                    {documentsForSignature && documentsForSignature.length > 0 ? (
+                      documentsForSignature
+                        .filter((doc: any) => doc.signing_status !== 'completed' && !doc.signatures?.some((sig: any) => sig.signatory_id === user?.id))
+                        .map((doc: any) => (
+                          <div key={doc.id} className="border rounded-lg p-4 border-red-200 bg-red-50">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-medium">{doc.title}</h4>
+                                <p className="text-sm text-gray-600">Document #{doc.document_number}</p>
+                                <p className="text-xs text-gray-500">
+                                  {doc.expires_at ? `Expires: ${new Date(doc.expires_at).toLocaleDateString()}` : ''}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="destructive">Urgent</Badge>
+                                <Button size="sm" asChild>
+                                  <a href="/dashboard/e-sign">
+                                    <PenTool className="h-4 w-4 mr-2" />
+                                    Sign Now
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {doc.urgent && <Badge variant="destructive">Urgent</Badge>}
-                            <Button size="sm" asChild>
-                              <a href="/dashboard/e-sign">
-                                <PenTool className="h-4 w-4 mr-2" />
-                                Sign Now
-                              </a>
-                            </Button>
-                          </div>
-                        </div>
+                        ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <PenTool className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-600">No documents requiring signature</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -254,30 +355,30 @@ const ClientDashboard = () => {
                 <CardTitle>Your Assigned Lawyer</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-start space-x-4">
-                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-lg">SJ</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold">Sarah Johnson</h3>
-                    <p className="text-gray-600">Senior Associate</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline">Personal Injury</Badge>
-                      <Badge variant="outline">8 years experience</Badge>
+                  <div className="flex items-start space-x-4">
+                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+                      <User className="text-white text-lg h-6 w-6" />
                     </div>
-                    <p className="text-sm text-gray-600 mt-3">
-                      Sarah specializes in personal injury cases and has successfully handled over 200 similar cases. 
-                      She is licensed to practice in New York and New Jersey.
-                    </p>
-                    <div className="flex gap-2 mt-4">
-                      <Button size="sm">
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Send Message
-                      </Button>
-                      <Button size="sm" variant="outline">Schedule Meeting</Button>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold">Your Assigned Lawyer</h3>
+                      <p className="text-gray-600">Legal Representative</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline">Legal Counsel</Badge>
+                        <Badge variant="outline">Professional</Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-3">
+                        Your legal representative will be assigned based on your case type and requirements. 
+                        Contact information will be provided once assignment is complete.
+                      </p>
+                      <div className="flex gap-2 mt-4">
+                        <Button size="sm">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Send Message
+                        </Button>
+                        <Button size="sm" variant="outline">Schedule Meeting</Button>
+                      </div>
                     </div>
                   </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
