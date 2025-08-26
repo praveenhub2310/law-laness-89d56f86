@@ -11,7 +11,7 @@ import { Briefcase, Clock, Receipt, Calendar, User, TrendingUp, FileText, Dollar
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import { formatDistanceToNow, isToday, startOfWeek, endOfWeek, format } from 'date-fns';
 import TimeTracker from '@/components/TimeTracker';
 import ExpenseLogger from '@/components/ExpenseLogger';
 import CourtCalendar from '@/components/CourtCalendar';
@@ -429,7 +429,87 @@ const LawyerDashboard = () => {
           </TabsContent>
 
           <TabsContent value="expenses">
-            <ExpenseLogger />
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Recent Expenses
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <Skeleton className="h-4 w-48 mb-2" />
+                            <Skeleton className="h-3 w-32" />
+                          </div>
+                          <div className="text-right">
+                            <Skeleton className="h-6 w-16 mb-1" />
+                            <Skeleton className="h-4 w-12" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : dashboardData.expenses && dashboardData.expenses.length > 0 ? (
+                    <div className="space-y-4">
+                      {dashboardData.expenses
+                        .sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime())
+                        .slice(0, 5)
+                        .map((expense) => {
+                          const project = dashboardData.projects?.find(p => p.id === expense.case_id);
+                          return (
+                            <div 
+                              key={expense.id} 
+                              className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => navigate('/dashboard/expenses')}
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium">{expense.expense_title}</p>
+                                <p className="text-sm text-gray-600">
+                                  {project ? project.title : 'General Expense'} • {format(new Date(expense.expense_date), 'MMM dd, yyyy')}
+                                </p>
+                                {expense.description && (
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    {expense.description.length > 50 
+                                      ? `${expense.description.substring(0, 50)}...` 
+                                      : expense.description
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right space-y-1">
+                                <p className="font-bold text-lg">
+                                  {expense.currency === 'USD' ? '$' : '₹'}{Number(expense.amount).toFixed(2)}
+                                </p>
+                                <Badge 
+                                  variant={expense.status === 'approved' ? 'default' : expense.status === 'pending' ? 'secondary' : 'destructive'}
+                                >
+                                  {expense.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No expenses recorded yet</p>
+                      <Button 
+                        className="mt-4" 
+                        onClick={() => navigate('/dashboard/expenses')}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Expense
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="calendar">
