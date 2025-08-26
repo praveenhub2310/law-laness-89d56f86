@@ -464,7 +464,7 @@ const LawyerDashboard = () => {
                             <div 
                               key={expense.id} 
                               className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                              onClick={() => navigate('/dashboard/expenses')}
+                              onClick={() => navigate('/dashboard/expense-tracker')}
                             >
                               <div className="flex-1">
                                 <p className="font-medium">{expense.expense_title}</p>
@@ -500,7 +500,7 @@ const LawyerDashboard = () => {
                       <p>No expenses recorded yet</p>
                       <Button 
                         className="mt-4" 
-                        onClick={() => navigate('/dashboard/expenses')}
+                        onClick={() => navigate('/dashboard/expense-tracker')}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Expense
