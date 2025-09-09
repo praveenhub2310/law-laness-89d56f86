@@ -124,15 +124,6 @@ const LoginForm = () => {
         </Button>
       </div>
 
-      <div className="text-center">
-        <p className="text-sm text-gray-600">
-          Want to try a demo?{' '}
-          <Link to="/demo" className="text-blue-600 hover:text-blue-800 font-medium">
-            Access Demo Accounts
-          </Link>
-        </p>
-      </div>
-
     </div>
   );
 };
