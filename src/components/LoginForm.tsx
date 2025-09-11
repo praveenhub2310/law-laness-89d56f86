@@ -34,18 +34,8 @@ const LoginForm = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        console.error('Google sign-in error:', error);
-      }
-    } catch (error) {
-      console.error('Google sign-in failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGoogleSignIn = () => {
+    navigate('/role-selection');
   };
 
 
