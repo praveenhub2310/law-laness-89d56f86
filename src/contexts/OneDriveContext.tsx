@@ -106,7 +106,7 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       // Microsoft OAuth configuration 
       const clientId = config.clientId;
-      const redirectUri = `${window.location.origin}/dashboard/cloud-storage`;
+      const redirectUri = 'https://app.akralegal.com/dashboard/cloud-storage';
       const scopes = 'openid profile User.Read Files.ReadWrite offline_access';
       
       // Build OAuth URL
@@ -170,7 +170,7 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             },
             body: JSON.stringify({ 
               code,
-              redirectUri: `${window.location.origin}/dashboard/cloud-storage`
+              redirectUri: 'https://app.akralegal.com/dashboard/cloud-storage'
             })
           });
           
