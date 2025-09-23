@@ -591,7 +591,10 @@ const CloudStorage = () => {
                   Connect your OneDrive account to sync files with the case management system.
                 </p>
                 <Button 
-                  onClick={connectOneDrive}
+                  onClick={() => {
+                    console.log('🖱️ OneDrive connect button clicked');
+                    connectOneDrive();
+                  }}
                   disabled={oneDriveConnecting || !isMsalLoaded}
                   className="w-full"
                 >

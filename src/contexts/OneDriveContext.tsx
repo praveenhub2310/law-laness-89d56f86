@@ -38,6 +38,9 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isMsalLoaded, setIsMsalLoaded] = useState(false);
   const [isConfigured] = useState(!!MICROSOFT_CLIENT_ID);
 
+  console.log('🚀 OneDriveProvider mounted');
+  console.log('🔧 MICROSOFT_CLIENT_ID configured:', !!MICROSOFT_CLIENT_ID);
+
   // Initialize Microsoft MSAL on provider mount
   useEffect(() => {
     console.log('🚀 OneDriveProvider initializing...');
@@ -64,7 +67,11 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       // Load Microsoft Authentication Library script
       if (!window.msal) {
+        console.log('📦 Loading MSAL script...');
         await loadMsalScript();
+        console.log('✅ MSAL script loaded successfully');
+      } else {
+        console.log('✅ MSAL already available');
       }
       
       console.log('✅ Microsoft Auth initialization completed!');
@@ -166,12 +173,19 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const connect = async (): Promise<void> => {
+    console.log('🔗 OneDrive connect called');
+    console.log('🔍 isMsalLoaded:', isMsalLoaded);
+    console.log('🔍 window.msal available:', !!window.msal);
+    console.log('🔍 MICROSOFT_CLIENT_ID:', MICROSOFT_CLIENT_ID);
+    
     if (!isMsalLoaded || !window.msal) {
+      console.error('❌ Microsoft Auth not ready');
       toast.error('Microsoft Auth not ready. Please refresh the page.');
       return;
     }
 
     setIsConnecting(true);
+    console.log('🔄 Starting OneDrive connection...');
     
     try {
       const msalConfig = {
@@ -186,23 +200,36 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       };
 
+      console.log('📋 MSAL Config:', msalConfig);
+
       const msalInstance = new window.msal.PublicClientApplication(msalConfig);
+      console.log('🔧 MSAL instance created');
+      
       await msalInstance.initialize();
+      console.log('✅ MSAL instance initialized');
 
       const loginRequest = {
         scopes: SCOPES.split(' '),
         prompt: 'consent'
       };
 
+      console.log('🔑 Login request:', loginRequest);
+      console.log('🚀 Opening login popup...');
+
       const response = await msalInstance.loginPopup(loginRequest);
+      console.log('📨 Login response received:', response);
       
       if (response.accessToken) {
+        console.log('✅ Access token received');
+        
         // Get user profile
         const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
           headers: { 'Authorization': `Bearer ${response.accessToken}` }
         });
         
         const userData = await userResponse.json();
+        console.log('👤 User data:', userData);
+        
         const profile: UserProfile = {
           email: userData.mail || userData.userPrincipalName,
           name: userData.displayName,
@@ -224,14 +251,16 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toast.success(`Connected to OneDrive as ${profile.name}!`);
         
       } else {
+        console.error('❌ No access token received');
         toast.error('Failed to get access token');
       }
       
     } catch (error: any) {
-      console.error('Connection failed:', error);
+      console.error('💥 Connection failed:', error);
       toast.error(`Connection failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsConnecting(false);
+      console.log('🔄 Connection process finished');
     }
   };
 
