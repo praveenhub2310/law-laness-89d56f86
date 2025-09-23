@@ -1,321 +1,269 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Folder, 
-  File, 
-  Home,
-  ChevronRight,
-  RefreshCw,
-  Upload,
-  List,
-  Grid3X3,
-  FolderOpen
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { File, Folder, Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { useOneDrive } from '@/contexts/OneDriveContext';
 
-// Interfaces
 interface OneDriveFile {
   id: string;
   name: string;
-  mimeType?: string;
-  lastModifiedDateTime: string;
   size?: number;
-  webUrl?: string;
-  folder?: { childCount: number };
-  file?: { mimeType: string };
-  parentReference?: { path: string };
-}
-
-interface BreadcrumbItem {
-  id: string;
-  name: string;
+  webUrl: string;
+  downloadUrl?: string;
+  folder?: {
+    childCount: number;
+  };
+  file?: {
+    mimeType: string;
+  };
+  createdDateTime: string;
+  lastModifiedDateTime: string;
 }
 
 interface OneDriveFileBrowserProps {
-  onFileSelect: (file: OneDriveFile) => void;
-  acceptedMimeTypes?: string[];
-  title?: string;
-  allowFolderSelection?: boolean;
+  isConnected: boolean;
+  userProfile: any;
 }
 
-const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({
-  onFileSelect,
-  acceptedMimeTypes = [],
-  title = "OneDrive Files",
-  allowFolderSelection = false
-}) => {
-  const { isConnected, isMsalLoaded } = useOneDrive();
+const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ isConnected, userProfile }) => {
   const [files, setFiles] = useState<OneDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentFolder, setCurrentFolder] = useState('root');
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Files (Root)' }]);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [currentFolderId, setCurrentFolderId] = useState<string>('root');
+  const [folderPath, setFolderPath] = useState<string[]>(['OneDrive']);
 
-  useEffect(() => {
-    if (isConnected && isMsalLoaded) {
-      fetchOneDriveFiles('root');
-    }
-  }, [isConnected, isMsalLoaded]);
+  const fetchFiles = async (folderId: string = 'root') => {
+    if (!isConnected) return;
 
-  const fetchOneDriveFiles = async (folderId: string = 'root') => {
-    if (!isMsalLoaded || !isConnected) {
-      return;
-    }
-    
     setLoading(true);
-    
     try {
-      const token = localStorage.getItem('onedrive_token');
-      if (!token) {
-        toast.error('Authentication required');
-        return;
+      const accessToken = localStorage.getItem('onedrive_access_token');
+      
+      if (!accessToken) {
+        throw new Error('No access token available');
       }
 
       const endpoint = folderId === 'root' 
         ? 'https://graph.microsoft.com/v1.0/me/drive/root/children'
         : `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}/children`;
-      
-      const response = await fetch(`${endpoint}?$orderby=folder,name`, {
+
+      const response = await fetch(endpoint, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Authorization': `Bearer ${accessToken}`,
+        },
       });
-      
+
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        throw new Error(`Failed to fetch files: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      const files = data.value || [];
-      setFiles(files);
+      setFiles(data.value || []);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching files:', error);
-      
-      if (error?.status === 401 || error?.message?.includes('unauthorized')) {
-        localStorage.removeItem('onedrive_profile');
-        localStorage.removeItem('onedrive_token');
-        localStorage.removeItem('onedrive_token_expiry');
-        toast.error('Authentication expired. Please reconnect.');
-      } else {
-        toast.error('Failed to fetch files');
-      }
+      toast.error('Failed to load OneDrive files');
     } finally {
       setLoading(false);
     }
   };
 
-  const navigateToFolder = async (folder: OneDriveFile) => {
-    setCurrentFolder(folder.id);
-    setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }]);
-    await fetchOneDriveFiles(folder.id);
+  const openFolder = (folder: OneDriveFile) => {
+    setCurrentFolderId(folder.id);
+    setFolderPath([...folderPath, folder.name]);
+    fetchFiles(folder.id);
   };
 
-  const navigateToBreadcrumb = async (breadcrumb: BreadcrumbItem, index: number) => {
-    setCurrentFolder(breadcrumb.id);
-    setBreadcrumbs(prev => prev.slice(0, index + 1));
-    await fetchOneDriveFiles(breadcrumb.id);
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'N/A';
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getFileIcon = (file: OneDriveFile) => {
-    if (file.folder) {
-      return <Folder className="h-5 w-5 text-blue-500" />;
-    }
-    return <File className="h-5 w-5 text-gray-500" />;
-  };
-
-  const handleFileClick = (file: OneDriveFile) => {
-    if (file.folder) {
-      navigateToFolder(file);
-    } else {
-      // Check if file type is accepted
-      const mimeType = file.file?.mimeType || '';
-      if (acceptedMimeTypes.length > 0 && !acceptedMimeTypes.includes(mimeType)) {
-        toast.error('This file type is not supported');
-        return;
+  const navigateUp = () => {
+    if (folderPath.length > 1) {
+      const newPath = folderPath.slice(0, -1);
+      setFolderPath(newPath);
+      
+      if (newPath.length === 1) {
+        setCurrentFolderId('root');
+        fetchFiles('root');
+      } else {
+        // Navigate to parent folder (would need to track folder IDs for proper navigation)
+        fetchFiles('root');
       }
-      onFileSelect(file);
-      toast.success(`Selected: ${file.name}`);
     }
   };
 
-  const isFileSelectable = (file: OneDriveFile) => {
-    if (file.folder) {
-      return allowFolderSelection;
+  const downloadFile = async (file: OneDriveFile) => {
+    try {
+      const accessToken = localStorage.getItem('onedrive_access_token');
+      
+      if (!accessToken) {
+        throw new Error('No access token available');
+      }
+
+      const response = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${file.id}/content`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${file.name}`);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error(`Failed to download ${file.name}`);
     }
-    const mimeType = file.file?.mimeType || '';
-    return acceptedMimeTypes.length === 0 || acceptedMimeTypes.includes(mimeType);
   };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return 'Unknown';
+    
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    if (bytes === 0) return '0 Bytes';
+    
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  useEffect(() => {
+    if (isConnected) {
+      fetchFiles();
+    }
+  }, [isConnected]);
 
   if (!isConnected) {
-    return null;
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">Connect to OneDrive to browse your files</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
+          <CardTitle>OneDrive Files</CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{files.length} items</Badge>
-            <div className="flex items-center gap-1 border rounded-md p-1">
-              <Button
-                onClick={() => setViewMode('list')}
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-7 w-7 p-0"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={() => setViewMode('grid')}
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-7 w-7 p-0"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-            </div>
             <Button
-              onClick={() => fetchOneDriveFiles(currentFolder)}
               variant="outline"
               size="sm"
+              onClick={() => fetchFiles(currentFolderId)}
               disabled={loading}
-              className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
             </Button>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Upload to OneDrive button */}
-        <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg bg-muted/20">
-          <div className="text-center">
-            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload to OneDrive
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">Upload files to the selected folder</p>
-          </div>
-        </div>
-
+        
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground overflow-x-auto">
-          {breadcrumbs.map((breadcrumb, index) => (
-            <React.Fragment key={breadcrumb.id}>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {folderPath.map((folder, index) => (
+            <React.Fragment key={index}>
+              {index > 0 && <span>/</span>}
               <button
-                onClick={() => navigateToBreadcrumb(breadcrumb, index)}
-                className={`flex items-center gap-1 hover:text-foreground transition-colors whitespace-nowrap ${
-                  index === breadcrumbs.length - 1 ? 'text-foreground font-medium' : ''
-                }`}
+                onClick={() => index === 0 ? fetchFiles('root') : navigateUp()}
+                className="hover:text-foreground"
+                disabled={loading}
               >
-                {index === 0 && <Home className="h-4 w-4" />}
-                {breadcrumb.name}
+                {folder}
               </button>
-              {index < breadcrumbs.length - 1 && (
-                <ChevronRight className="h-4 w-4 flex-shrink-0" />
-              )}
             </React.Fragment>
           ))}
         </div>
-
-        {/* Files Grid/List */}
-        {loading ? (
-          <div className="text-center py-8">
-            <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">Loading files...</p>
-          </div>
-        ) : files.length === 0 ? (
-          <div className="text-center py-8">
-            <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">No files found in this folder</p>
-          </div>
-        ) : viewMode === 'list' ? (
-          <div className="space-y-2">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                onClick={() => handleFileClick(file)}
-                className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-                  isFileSelectable(file)
-                    ? 'hover:bg-muted/50 cursor-pointer border-border hover:border-primary/50'
-                    : 'opacity-60 cursor-not-allowed border-muted'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {getFileIcon(file)}
-                  <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {file.folder ? 'Folder' : formatFileSize(file.size)} • {formatDate(file.lastModifiedDateTime)}
-                    </p>
-                  </div>
-                </div>
-                {file.folder ? (
-                  <Button variant="ghost" size="sm">
-                    Open
-                  </Button>
-                ) : (
-                  isFileSelectable(file) && (
-                    <Button variant="ghost" size="sm">
-                      Select
-                    </Button>
-                  )
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                onClick={() => handleFileClick(file)}
-                className={`p-4 border rounded-lg text-center transition-colors ${
-                  isFileSelectable(file)
-                    ? 'hover:bg-muted/50 cursor-pointer border-border hover:border-primary/50'
-                    : 'opacity-60 cursor-not-allowed border-muted'
-                }`}
-              >
-                <div className="flex justify-center mb-2">
-                  {getFileIcon(file)}
-                </div>
-                <p className="font-medium text-sm truncate" title={file.name}>
-                  {file.name}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {file.folder ? 'Folder' : formatFileSize(file.size)}
-                </p>
-              </div>
-            ))}
-          </div>
+        
+        {userProfile && (
+          <p className="text-sm text-muted-foreground">
+            Connected as: {userProfile.name} ({userProfile.email})
+          </p>
         )}
+      </CardHeader>
+      
+      <CardContent>
+        <ScrollArea className="h-96">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Loading files...</span>
+            </div>
+          ) : files.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No files found in this folder</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Back button for subfolders */}
+              {folderPath.length > 1 && (
+                <div
+                  className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-accent"
+                  onClick={navigateUp}
+                >
+                  <Folder className="h-5 w-5 text-blue-500" />
+                  <span>.. (Back)</span>
+                </div>
+              )}
+              
+              {/* Files and folders */}
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {file.folder ? (
+                      <Folder 
+                        className="h-5 w-5 text-blue-500 cursor-pointer" 
+                        onClick={() => openFolder(file)}
+                      />
+                    ) : (
+                      <File className="h-5 w-5 text-gray-500" />
+                    )}
+                    
+                    <div className="flex-1 min-w-0">
+                      <p 
+                        className={`font-medium truncate ${file.folder ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                        onClick={() => file.folder && openFolder(file)}
+                      >
+                        {file.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {file.folder ? 
+                          `${file.folder.childCount} items` : 
+                          `${formatFileSize(file.size)} • Modified ${formatDate(file.lastModifiedDateTime)}`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {!file.folder && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadFile(file)}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </CardContent>
     </Card>
   );

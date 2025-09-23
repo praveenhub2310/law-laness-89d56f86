@@ -85,8 +85,8 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       console.log('🚀 Starting Microsoft Graph OAuth...');
       
-      // Microsoft OAuth configuration
-      const clientId = 'your-client-id'; // You'll need to set this
+      // Microsoft OAuth configuration - Get client ID from environment
+      const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'not-configured';
       const redirectUri = `${window.location.origin}/dashboard/cloud-storage`;
       const scopes = 'openid profile User.Read Files.ReadWrite offline_access';
       
@@ -99,31 +99,10 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       authUrl.searchParams.set('response_mode', 'query');
       authUrl.searchParams.set('state', 'onedrive_auth');
       
-      console.log('🌐 Redirecting to:', authUrl.toString());
+      console.log('🌐 OAuth URL:', authUrl.toString());
       
-      // Open popup or redirect
-      const popup = window.open(
-        authUrl.toString(),
-        'onedrive_auth',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
-      
-      if (!popup) {
-        throw new Error('Popup blocked. Please allow popups and try again.');
-      }
-      
-      // Listen for popup completion
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          setIsConnecting(false);
-          
-          // Check if connection was successful
-          setTimeout(() => {
-            checkExistingConnection();
-          }, 1000);
-        }
-      }, 1000);
+      // Direct redirect (like Google Drive)
+      window.location.href = authUrl.toString();
       
     } catch (error: any) {
       console.error('💥 Connection failed:', error);
@@ -157,18 +136,27 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const state = urlParams.get('state');
       
       if (code && state === 'onedrive_auth') {
-        console.log('🔄 Processing OAuth callback...');
+        console.log('🔄 Processing OAuth callback with code:', code.substring(0, 20) + '...');
+        setIsConnecting(true);
         
         try {
-          // Exchange code for tokens
-          const tokenResponse = await fetch('/api/onedrive/token', {
+          // Exchange code for tokens using our edge function
+          const tokenResponse = await fetch('https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/onedrive-oauth', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code })
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliYXF1bmx3enpvb25ic25hamJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MjUxMzAsImV4cCI6MjA2NTIwMTEzMH0.zavTfXDwRA9an7BAuW4RrMU3LHuJDIF2u57V2onEPIE`
+            },
+            body: JSON.stringify({ 
+              code,
+              redirectUri: `${window.location.origin}/dashboard/cloud-storage`
+            })
           });
           
           if (tokenResponse.ok) {
             const tokens = await tokenResponse.json();
+            console.log('✅ Received tokens from server');
+            
             localStorage.setItem('onedrive_access_token', tokens.access_token);
             if (tokens.refresh_token) {
               localStorage.setItem('onedrive_refresh_token', tokens.refresh_token);
@@ -179,10 +167,15 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             
             // Clean up URL
             window.history.replaceState({}, document.title, window.location.pathname);
+          } else {
+            const error = await tokenResponse.json();
+            throw new Error(error.error || 'Token exchange failed');
           }
         } catch (error) {
           console.error('❌ Token exchange failed:', error);
-          toast.error('Failed to connect to OneDrive');
+          toast.error(`Failed to connect to OneDrive: ${error.message}`);
+        } finally {
+          setIsConnecting(false);
         }
       }
     };

@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import { useOneDrive } from '@/contexts/OneDriveContext';
+import OneDriveFileBrowser from '@/components/OneDriveFileBrowser';
 import OneDriveSetup from '@/components/OneDriveSetup';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -1030,137 +1031,10 @@ const CloudStorage = () => {
       )}
 
       {oneDriveConnected && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>OneDrive Files</CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{oneDriveFiles.length} items</Badge>
-                <div className="flex items-center gap-1 border rounded-md p-1">
-                  <Button
-                    onClick={() => setOneDriveViewMode('list')}
-                    variant={oneDriveViewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={() => setOneDriveViewMode('grid')}
-                    variant={oneDriveViewMode === 'grid' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button
-                  onClick={() => fetchOneDriveFiles(oneDriveCurrentFolder)}
-                  variant="outline"
-                  size="sm"
-                  disabled={oneDriveLoading}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${oneDriveLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground overflow-x-auto">
-              {oneDriveBreadcrumbs.map((breadcrumb, index) => (
-                <React.Fragment key={breadcrumb.id}>
-                  <button
-                    onClick={() => {
-                      setOneDriveCurrentFolder(breadcrumb.id);
-                      setOneDriveBreadcrumbs(prev => prev.slice(0, index + 1));
-                      fetchOneDriveFiles(breadcrumb.id);
-                    }}
-                    className={`flex items-center gap-1 hover:text-foreground transition-colors whitespace-nowrap ${
-                      index === oneDriveBreadcrumbs.length - 1 ? 'text-foreground font-medium' : ''
-                    }`}
-                  >
-                    {index === 0 && <Home className="h-4 w-4" />}
-                    {breadcrumb.name}
-                  </button>
-                  {index < oneDriveBreadcrumbs.length - 1 && (
-                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {/* Files Display */}
-            {oneDriveLoading ? (
-              <div className="text-center py-8">
-                <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">Loading OneDrive files...</p>
-              </div>
-            ) : oneDriveFiles.length === 0 ? (
-              <div className="text-center py-8">
-                <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No files found in this folder</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {oneDriveFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                    onClick={() => {
-                      if (file.folder) {
-                        setOneDriveCurrentFolder(file.id);
-                        setOneDriveBreadcrumbs(prev => [...prev, { id: file.id, name: file.name }]);
-                        fetchOneDriveFiles(file.id);
-                      } else {
-                        addToOneDriveRecentFiles(file);
-                        if (file.webUrl) {
-                          window.open(file.webUrl, '_blank');
-                        }
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      {file.folder ? (
-                        <Folder className="h-5 w-5 text-blue-500" />
-                      ) : (
-                        <File className="h-5 w-5 text-gray-500" />
-                      )}
-                      <div>
-                        <p className="font-medium">{file.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {file.folder ? 'Folder' : formatFileSize(file.size?.toString())} • {formatDate(file.lastModifiedDateTime)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {!file.folder && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToOneDriveRecentFiles(file);
-                            if (file.webUrl) {
-                              window.open(file.webUrl, '_blank');
-                            }
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm">
-                        {file.folder ? 'Open' : 'View'}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <OneDriveFileBrowser 
+          isConnected={oneDriveConnected} 
+          userProfile={oneDriveProfile} 
+        />
       )}
         </CardContent>
       </Card>
