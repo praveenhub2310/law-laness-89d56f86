@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { toast } from 'sonner';
 
 // Microsoft Graph API configuration
-const MICROSOFT_CLIENT_ID = import.meta.env.VITE_MICROSOFT_CLIENT_ID || '';
+const MICROSOFT_CLIENT_ID = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'b8e7c3f4-d9a2-4f5e-8c1b-9a3d6e2f4c8d';
 const MICROSOFT_REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : '';
 const SCOPES = 'https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read';
 
@@ -166,11 +166,6 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const connect = async (): Promise<void> => {
-    if (!isConfigured) {
-      toast.error('OneDrive integration is not configured. Please set up your Microsoft Client ID.');
-      return;
-    }
-
     if (!isMsalLoaded || !window.msal) {
       toast.error('Microsoft Auth not ready. Please refresh the page.');
       return;

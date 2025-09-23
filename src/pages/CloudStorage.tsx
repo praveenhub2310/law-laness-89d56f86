@@ -585,9 +585,7 @@ const CloudStorage = () => {
             <CardTitle>OneDrive Integration</CardTitle>
           </CardHeader>
           <CardContent>
-            {!oneDriveConfigured ? (
-              <OneDriveSetup />
-            ) : !oneDriveConnected ? (
+            {!oneDriveConnected ? (
               <>
                 <p className="text-muted-foreground mb-4">
                   Connect your OneDrive account to sync files with the case management system.
