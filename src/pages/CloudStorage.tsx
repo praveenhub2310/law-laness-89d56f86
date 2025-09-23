@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
+import { useOneDrive } from '@/contexts/OneDriveContext';
 
 // Interfaces
 interface GoogleDriveFile {
@@ -38,13 +39,27 @@ interface GoogleDriveFile {
   parents?: string[];
 }
 
+interface OneDriveFile {
+  id: string;
+  name: string;
+  lastModifiedDateTime: string;
+  size?: number;
+  webUrl?: string;
+  folder?: { childCount: number };
+  file?: { mimeType: string };
+  parentReference?: { path: string };
+}
+
 interface BreadcrumbItem {
   id: string;
   name: string;
 }
 
 const CloudStorage = () => {
-  const { isConnected, userProfile, isConnecting, isGapiLoaded, connect, disconnect } = useGoogleDrive();
+  const { isConnected: googleConnected, userProfile: googleProfile, isConnecting: googleConnecting, isGapiLoaded, connect: connectGoogle, disconnect: disconnectGoogle } = useGoogleDrive();
+  const { isConnected: oneDriveConnected, userProfile: oneDriveProfile, isConnecting: oneDriveConnecting, isMsalLoaded, connect: connectOneDrive, disconnect: disconnectOneDrive } = useOneDrive();
+  
+  // Google Drive state
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
   const [folders, setFolders] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,20 +72,33 @@ const CloudStorage = () => {
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
+  // OneDrive state
+  const [oneDriveFiles, setOneDriveFiles] = useState<OneDriveFile[]>([]);
+  const [oneDriveLoading, setOneDriveLoading] = useState(false);
+  const [oneDriveCurrentFolder, setOneDriveCurrentFolder] = useState('root');
+  const [oneDriveBreadcrumbs, setOneDriveBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'My Files' }]);
+  const [oneDriveRecentFiles, setOneDriveRecentFiles] = useState<OneDriveFile[]>([]);
+  const [oneDriveViewMode, setOneDriveViewMode] = useState<'list' | 'grid'>('list');
+
   // Component mounting - load recent files and fetch drive files if connected
   useEffect(() => {
     console.log('🚀 CloudStorage component mounted successfully!');
     loadRecentFiles();
+    loadOneDriveRecentFiles();
     
     // If already connected, fetch files and folders
-    if (isConnected && isGapiLoaded) {
+    if (googleConnected && isGapiLoaded) {
       fetchDriveFiles('root');
       fetchAllFolders();
     }
-  }, [isConnected, isGapiLoaded]);
+    
+    if (oneDriveConnected && isMsalLoaded) {
+      fetchOneDriveFiles('root');
+    }
+  }, [googleConnected, isGapiLoaded, oneDriveConnected, isMsalLoaded]);
 
   const fetchAllFolders = async () => {
-    if (!isGapiLoaded || !isConnected) return;
+    if (!isGapiLoaded || !googleConnected) return;
     
     try {
       const response = await window.gapi.client.drive.files.list({
@@ -84,6 +112,84 @@ const CloudStorage = () => {
       setFolders(folders);
     } catch (error) {
       console.error('Error fetching folders:', error);
+    }
+  };
+
+  const loadOneDriveRecentFiles = () => {
+    const saved = localStorage.getItem('oneDriveRecentFiles');
+    if (saved) {
+      try {
+        setOneDriveRecentFiles(JSON.parse(saved));
+      } catch (error) {
+        console.error('Error loading OneDrive recent files:', error);
+      }
+    }
+  };
+
+  const addToOneDriveRecentFiles = (file: OneDriveFile) => {
+    setOneDriveRecentFiles(prev => {
+      // Remove if already exists to avoid duplicates
+      const filtered = prev.filter(f => f.id !== file.id);
+      // Add to beginning and limit to 10 files
+      const updated = [file, ...filtered].slice(0, 10);
+      // Save to localStorage
+      localStorage.setItem('oneDriveRecentFiles', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearOneDriveRecentFiles = () => {
+    setOneDriveRecentFiles([]);
+    localStorage.removeItem('oneDriveRecentFiles');
+    toast.success('OneDrive recent files cleared');
+  };
+
+  const fetchOneDriveFiles = async (folderId: string = 'root') => {
+    if (!isMsalLoaded || !oneDriveConnected) {
+      return;
+    }
+    
+    setOneDriveLoading(true);
+    
+    try {
+      const token = localStorage.getItem('onedrive_token');
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      const endpoint = folderId === 'root' 
+        ? 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+        : `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}/children`;
+      
+      const response = await fetch(`${endpoint}?$orderby=folder,name`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const files = data.value || [];
+      setOneDriveFiles(files);
+      
+    } catch (error: any) {
+      console.error('Error fetching OneDrive files:', error);
+      
+      if (error?.status === 401 || error?.message?.includes('unauthorized')) {
+        localStorage.removeItem('onedrive_profile');
+        localStorage.removeItem('onedrive_token');
+        localStorage.removeItem('onedrive_token_expiry');
+        toast.error('OneDrive authentication expired. Please reconnect.');
+      } else {
+        toast.error('Failed to fetch OneDrive files');
+      }
+    } finally {
+      setOneDriveLoading(false);
     }
   };
 
@@ -121,9 +227,9 @@ const CloudStorage = () => {
   const fetchDriveFiles = async (folderId: string = 'root') => {
     console.log(`📁 fetchDriveFiles called with folder: ${folderId}`);
     console.log('🔍 isGapiLoaded:', isGapiLoaded);
-    console.log('🔍 isConnected:', isConnected);
+    console.log('🔍 googleConnected:', googleConnected);
     
-    if (!isGapiLoaded || !isConnected) {
+    if (!isGapiLoaded || !googleConnected) {
       console.log('⚠️ Cannot fetch files - API not loaded or not connected');
       return;
     }
@@ -305,7 +411,7 @@ const CloudStorage = () => {
   };
 
   const uploadFiles = async () => {
-    if (!selectedFiles || !isConnected) {
+    if (!selectedFiles || !googleConnected) {
       toast.error('Please select files and ensure you are connected to Google Drive');
       return;
     }
@@ -417,17 +523,17 @@ const CloudStorage = () => {
             <CardTitle>Google Drive Integration</CardTitle>
           </CardHeader>
           <CardContent>
-            {!isConnected ? (
+            {!googleConnected ? (
               <>
                 <p className="text-muted-foreground mb-4">
                   Connect your Google Drive account to access documents directly.
                 </p>
                 <Button 
-                  onClick={connect}
-                  disabled={isConnecting || !isGapiLoaded}
+                  onClick={connectGoogle}
+                  disabled={googleConnecting || !isGapiLoaded}
                   className="w-full"
                 >
-                  {isConnecting ? (
+                  {googleConnecting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Connecting...
@@ -444,7 +550,7 @@ const CloudStorage = () => {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={userProfile?.picture} alt={userProfile?.name} />
+                      <AvatarImage src={googleProfile?.picture} alt={googleProfile?.name} />
                       <AvatarFallback>
                         <User className="h-5 w-5" />
                       </AvatarFallback>
@@ -454,11 +560,11 @@ const CloudStorage = () => {
                         Connected to Google Drive
                       </h3>
                       <p className="text-sm text-green-600">
-                        {userProfile?.name} ({userProfile?.email})
+                        {googleProfile?.name} ({googleProfile?.email})
                       </p>
                     </div>
                     <Button 
-                      onClick={disconnect}
+                      onClick={disconnectGoogle}
                       variant="outline"
                       size="sm"
                       className="flex items-center gap-2"
@@ -478,15 +584,64 @@ const CloudStorage = () => {
             <CardTitle>OneDrive Integration</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">Sync your OneDrive files with the case management system.</p>
-            <Button disabled className="w-full">
-              Connect OneDrive
-            </Button>
+            {!oneDriveConnected ? (
+              <>
+                <p className="text-muted-foreground mb-4">
+                  Connect your OneDrive account to sync files with the case management system.
+                </p>
+                <Button 
+                  onClick={connectOneDrive}
+                  disabled={oneDriveConnecting || !isMsalLoaded}
+                  className="w-full"
+                >
+                  {oneDriveConnecting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : !isMsalLoaded ? (
+                    'Initializing...'
+                  ) : (
+                    'Connect OneDrive'
+                  )}
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={oneDriveProfile?.picture} alt={oneDriveProfile?.name} />
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-blue-800">
+                        Connected to OneDrive
+                      </h3>
+                      <p className="text-sm text-blue-600">
+                        {oneDriveProfile?.name} ({oneDriveProfile?.email})
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={disconnectOneDrive}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {isConnected && (
+      {googleConnected && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -866,7 +1021,141 @@ const CloudStorage = () => {
                 </div>
               ))}
             </div>
-          )}
+      )}
+
+      {oneDriveConnected && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>OneDrive Files</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{oneDriveFiles.length} items</Badge>
+                <div className="flex items-center gap-1 border rounded-md p-1">
+                  <Button
+                    onClick={() => setOneDriveViewMode('list')}
+                    variant={oneDriveViewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={() => setOneDriveViewMode('grid')}
+                    variant={oneDriveViewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  onClick={() => fetchOneDriveFiles(oneDriveCurrentFolder)}
+                  variant="outline"
+                  size="sm"
+                  disabled={oneDriveLoading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${oneDriveLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground overflow-x-auto">
+              {oneDriveBreadcrumbs.map((breadcrumb, index) => (
+                <React.Fragment key={breadcrumb.id}>
+                  <button
+                    onClick={() => {
+                      setOneDriveCurrentFolder(breadcrumb.id);
+                      setOneDriveBreadcrumbs(prev => prev.slice(0, index + 1));
+                      fetchOneDriveFiles(breadcrumb.id);
+                    }}
+                    className={`flex items-center gap-1 hover:text-foreground transition-colors whitespace-nowrap ${
+                      index === oneDriveBreadcrumbs.length - 1 ? 'text-foreground font-medium' : ''
+                    }`}
+                  >
+                    {index === 0 && <Home className="h-4 w-4" />}
+                    {breadcrumb.name}
+                  </button>
+                  {index < oneDriveBreadcrumbs.length - 1 && (
+                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* Files Display */}
+            {oneDriveLoading ? (
+              <div className="text-center py-8">
+                <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Loading OneDrive files...</p>
+              </div>
+            ) : oneDriveFiles.length === 0 ? (
+              <div className="text-center py-8">
+                <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No files found in this folder</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {oneDriveFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                    onClick={() => {
+                      if (file.folder) {
+                        setOneDriveCurrentFolder(file.id);
+                        setOneDriveBreadcrumbs(prev => [...prev, { id: file.id, name: file.name }]);
+                        fetchOneDriveFiles(file.id);
+                      } else {
+                        addToOneDriveRecentFiles(file);
+                        if (file.webUrl) {
+                          window.open(file.webUrl, '_blank');
+                        }
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {file.folder ? (
+                        <Folder className="h-5 w-5 text-blue-500" />
+                      ) : (
+                        <File className="h-5 w-5 text-gray-500" />
+                      )}
+                      <div>
+                        <p className="font-medium">{file.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {file.folder ? 'Folder' : formatFileSize(file.size?.toString())} • {formatDate(file.lastModifiedDateTime)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!file.folder && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToOneDriveRecentFiles(file);
+                            if (file.webUrl) {
+                              window.open(file.webUrl, '_blank');
+                            }
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm">
+                        {file.folder ? 'Open' : 'View'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
         </CardContent>
       </Card>
     </div>

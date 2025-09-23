@@ -2,24 +2,28 @@ import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, File, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
+import { useOneDrive } from '@/contexts/OneDriveContext';
 
 interface DocumentUploaderProps {
-  onFileUploaded: (file: { url: string; name: string; size: number }) => void;
+  onFileUploaded: (file: { url: string; name: string; size: number; provider: 'google' | 'onedrive' }) => void;
   disabled?: boolean;
 }
 
 const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, disabled = false }) => {
-  const { isConnected, isGapiLoaded } = useGoogleDrive();
+  const { isConnected: googleConnected, isGapiLoaded } = useGoogleDrive();
+  const { isConnected: oneDriveConnected, isMsalLoaded } = useOneDrive();
   const [uploading, setUploading] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number; provider: 'google' | 'onedrive' } | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<'google' | 'onedrive'>('google');
 
   const uploadToGoogleDrive = async (file: File): Promise<{ id: string; name: string; webViewLink: string }> => {
     const metadata = {
       name: file.name,
-      parents: ['root'], // Upload to root folder, can be customized
+      parents: ['root'],
     };
 
     const form = new FormData();
@@ -46,11 +50,37 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
     return response.json();
   };
 
+  const uploadToOneDrive = async (file: File): Promise<{ id: string; name: string; webUrl: string }> => {
+    const token = localStorage.getItem('onedrive_token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // Upload file to OneDrive root folder
+    const response = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${file.name}:/content`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': file.type,
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
     
-    if (!isConnected || !isGapiLoaded) {
-      toast.error('Please connect to Google Drive first');
+    const isProviderConnected = selectedProvider === 'google' ? googleConnected : oneDriveConnected;
+    const isProviderLoaded = selectedProvider === 'google' ? isGapiLoaded : isMsalLoaded;
+    
+    if (!isProviderConnected || !isProviderLoaded) {
+      toast.error(`Please connect to ${selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'} first`);
       return;
     }
     
@@ -58,25 +88,37 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
     setUploading(true);
     
     try {
-      const uploadedGoogleFile = await uploadToGoogleDrive(file);
+      let fileData: { url: string; name: string; size: number; provider: 'google' | 'onedrive' };
       
-      const fileData = {
-        url: uploadedGoogleFile.webViewLink,
-        name: uploadedGoogleFile.name,
-        size: file.size,
-        googleDriveId: uploadedGoogleFile.id
-      };
+      if (selectedProvider === 'google') {
+        const uploadedGoogleFile = await uploadToGoogleDrive(file);
+        fileData = {
+          url: uploadedGoogleFile.webViewLink,
+          name: uploadedGoogleFile.name,
+          size: file.size,
+          provider: 'google'
+        };
+        toast.success('Document uploaded to Google Drive successfully');
+      } else {
+        const uploadedOneDriveFile = await uploadToOneDrive(file);
+        fileData = {
+          url: uploadedOneDriveFile.webUrl,
+          name: uploadedOneDriveFile.name,
+          size: file.size,
+          provider: 'onedrive'
+        };
+        toast.success('Document uploaded to OneDrive successfully');
+      }
 
       setUploadedFile(fileData);
       onFileUploaded(fileData);
-      toast.success('Document uploaded to Google Drive successfully');
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload document to Google Drive');
+      toast.error(`Failed to upload document to ${selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'}`);
     } finally {
       setUploading(false);
     }
-  }, [onFileUploaded, isConnected, isGapiLoaded]);
+  }, [onFileUploaded, googleConnected, oneDriveConnected, isGapiLoaded, isMsalLoaded, selectedProvider]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -86,12 +128,15 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
     maxFiles: 1,
-    disabled: disabled || uploading || !isConnected
+    disabled: disabled || uploading || (!googleConnected && !oneDriveConnected)
   });
 
   const removeFile = () => {
     setUploadedFile(null);
   };
+
+  const isAnyProviderConnected = googleConnected || oneDriveConnected;
+  const currentProviderConnected = selectedProvider === 'google' ? googleConnected : oneDriveConnected;
 
   if (uploadedFile) {
     return (
@@ -106,7 +151,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
               <div>
                 <p className="font-medium">{uploadedFile.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                  {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Uploaded to {uploadedFile.provider === 'google' ? 'Google Drive' : 'OneDrive'}
                 </p>
               </div>
             </div>
@@ -129,12 +174,32 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
       <CardHeader>
         <CardTitle>Upload Document</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Provider Selection */}
+        {isAnyProviderConnected && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Upload to:</label>
+            <Select value={selectedProvider} onValueChange={(value: 'google' | 'onedrive') => setSelectedProvider(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {googleConnected && (
+                  <SelectItem value="google">Google Drive</SelectItem>
+                )}
+                {oneDriveConnected && (
+                  <SelectItem value="onedrive">OneDrive</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
             ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/50'}
-            ${disabled || uploading ? 'cursor-not-allowed opacity-50' : ''}
+            ${disabled || uploading || !currentProviderConnected ? 'cursor-not-allowed opacity-50' : ''}
           `}
         >
           <input {...getInputProps()} />
@@ -143,24 +208,29 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
           {uploading ? (
             <div>
               <p className="text-lg font-medium">Uploading...</p>
-              <p className="text-muted-foreground">Please wait while your document is being uploaded</p>
+              <p className="text-muted-foreground">Please wait while your document is being uploaded to {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'}</p>
             </div>
           ) : isDragActive ? (
             <div>
               <p className="text-lg font-medium">Drop the document here</p>
               <p className="text-muted-foreground">Release to upload</p>
             </div>
-          ) : !isConnected ? (
+          ) : !isAnyProviderConnected ? (
             <div>
-              <p className="text-lg font-medium text-muted-foreground">Connect to Google Drive</p>
-              <p className="text-muted-foreground">Please connect to Google Drive to upload documents</p>
+              <p className="text-lg font-medium text-muted-foreground">Connect to Cloud Storage</p>
+              <p className="text-muted-foreground">Please connect to Google Drive or OneDrive to upload documents</p>
+            </div>
+          ) : !currentProviderConnected ? (
+            <div>
+              <p className="text-lg font-medium text-muted-foreground">Connect to {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'}</p>
+              <p className="text-muted-foreground">Please connect to {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'} to upload documents</p>
             </div>
           ) : (
             <div>
               <p className="text-lg font-medium">Drag & drop a document here</p>
               <p className="text-muted-foreground">or click to select a file</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Supports PDF, DOC, DOCX files • Uploads to Google Drive
+                Supports PDF, DOC, DOCX files • Uploads to {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'}
               </p>
             </div>
           )}

@@ -3,6 +3,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GoogleDriveProvider } from '@/contexts/GoogleDriveContext';
+import { OneDriveProvider } from '@/contexts/OneDriveContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,7 +23,9 @@ const QueryClientWrapper = ({ children }: QueryClientProps) => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GoogleDriveProvider>
-          {children}
+          <OneDriveProvider>
+            {children}
+          </OneDriveProvider>
         </GoogleDriveProvider>
       </AuthProvider>
     </QueryClientProvider>
