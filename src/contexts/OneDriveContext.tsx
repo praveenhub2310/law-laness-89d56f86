@@ -75,6 +75,8 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const connect = async (): Promise<void> => {
     console.log('🔗 OneDrive connect called (Supabase Azure auth)');
+    console.log('🌍 Current URL:', window.location.origin);
+    console.log('🔗 Current href:', window.location.href);
     
     setIsConnecting(true);
     
@@ -89,6 +91,9 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       });
 
+      console.log('📦 OAuth response data:', data);
+      console.log('❗ OAuth response error:', error);
+
       if (error) {
         console.error('❌ Azure OAuth error:', error);
         toast.error(`Connection failed: ${error.message}`);
@@ -96,10 +101,16 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       console.log('✅ Azure OAuth initiated successfully');
-      // The actual connection will be handled by the auth state change
+      console.log('🔄 Waiting for auth state change...');
       
     } catch (error: any) {
       console.error('💥 Connection failed:', error);
+      console.log('📋 Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        stack: error.stack
+      });
       toast.error(`Connection failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsConnecting(false);
@@ -124,15 +135,28 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state changed:', event);
+      console.log('📋 Session details:', {
+        user: session?.user?.email,
+        provider: session?.user?.app_metadata?.provider,
+        provider_token: !!session?.provider_token,
+        access_token: !!session?.access_token,
+        expires_at: session?.expires_at
+      });
       
       if (event === 'SIGNED_IN' && session?.provider_token) {
         console.log('✅ User signed in with provider token');
+        console.log('🔑 Provider token available:', session.provider_token.substring(0, 20) + '...');
         await checkExistingConnection();
         toast.success('Successfully connected to OneDrive!');
       } else if (event === 'SIGNED_OUT') {
         console.log('👋 User signed out');
         setIsConnected(false);
         setUserProfile(null);
+      } else if (event === 'SIGNED_IN') {
+        console.log('⚠️ User signed in but no provider token found');
+        console.log('📝 This might indicate Azure OAuth didn\'t complete properly');
+      } else {
+        console.log('🔄 Other auth event:', event);
       }
     });
 
