@@ -27,7 +27,9 @@ const OneDriveContext = createContext<OneDriveContextType | null>(null);
 
 declare global {
   interface Window {
-    msal: any;
+    msal: {
+      PublicClientApplication: any;
+    };
   }
 }
 
@@ -66,7 +68,7 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.log('🔧 Starting Microsoft Auth initialization...');
       
       // Load Microsoft Authentication Library script
-      if (!window.msal) {
+      if (!window.msal || !window.msal.PublicClientApplication) {
         console.log('📦 Loading MSAL script...');
         await loadMsalScript();
         console.log('✅ MSAL script loaded successfully');
@@ -74,12 +76,19 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.log('✅ MSAL already available');
       }
       
-      console.log('✅ Microsoft Auth initialization completed!');
-      setIsMsalLoaded(true);
+      // Double check that MSAL is actually available
+      if (window.msal && window.msal.PublicClientApplication) {
+        console.log('✅ Microsoft Auth initialization completed!');
+        setIsMsalLoaded(true);
+      } else {
+        throw new Error('MSAL PublicClientApplication not available');
+      }
       
     } catch (error) {
       console.error('❌ Microsoft Auth initialization failed:', error);
-      setIsMsalLoaded(true); // Set to true anyway so user can try to connect
+      // Don't set isMsalLoaded to true if initialization failed
+      setIsMsalLoaded(false);
+      toast.error('Failed to initialize Microsoft authentication. Please refresh the page.');
     }
   };
 
@@ -91,17 +100,25 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       script.defer = true;
       
       script.onload = () => {
+        console.log('📦 MSAL script loaded, checking availability...');
         setTimeout(() => {
           if (window.msal) {
+            console.log('✅ window.msal is available:', !!window.msal.PublicClientApplication);
             resolve();
           } else {
-            reject(new Error('MSAL not available'));
+            console.error('❌ window.msal not available after script load');
+            reject(new Error('MSAL not available after script load'));
           }
-        }, 100);
+        }, 500); // Increased timeout to ensure script execution
       };
       
-      script.onerror = () => reject(new Error('Failed to load MSAL script'));
+      script.onerror = (error) => {
+        console.error('❌ Failed to load MSAL script:', error);
+        reject(new Error('Failed to load MSAL script'));
+      };
+      
       document.head.appendChild(script);
+      console.log('📦 MSAL script tag added to document head');
     });
   };
 
@@ -176,12 +193,23 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     console.log('🔗 OneDrive connect called');
     console.log('🔍 isMsalLoaded:', isMsalLoaded);
     console.log('🔍 window.msal available:', !!window.msal);
+    console.log('🔍 window.msal.PublicClientApplication available:', !!(window.msal && window.msal.PublicClientApplication));
     console.log('🔍 MICROSOFT_CLIENT_ID:', MICROSOFT_CLIENT_ID);
     
-    if (!isMsalLoaded || !window.msal) {
-      console.error('❌ Microsoft Auth not ready');
-      toast.error('Microsoft Auth not ready. Please refresh the page.');
-      return;
+    if (!isMsalLoaded || !window.msal || !window.msal.PublicClientApplication) {
+      console.error('❌ Microsoft Auth not ready - attempting to reinitialize...');
+      
+      // Try to reinitialize MSAL
+      try {
+        await initializeMicrosoftAuth();
+        if (!window.msal || !window.msal.PublicClientApplication) {
+          throw new Error('MSAL still not available after reinitialization');
+        }
+      } catch (error) {
+        console.error('❌ Failed to reinitialize MSAL:', error);
+        toast.error('Microsoft Auth not ready. Please refresh the page and try again.');
+        return;
+      }
     }
 
     setIsConnecting(true);
