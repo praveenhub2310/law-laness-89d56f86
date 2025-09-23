@@ -75,42 +75,58 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const connect = async (): Promise<void> => {
     console.log('🔗 OneDrive connect called (Supabase Azure auth)');
-    console.log('🌍 Current URL:', window.location.origin);
-    console.log('🔗 Current href:', window.location.href);
     
     setIsConnecting(true);
     
     try {
-      console.log('🚀 Starting Supabase Azure OAuth...');
+      // Check current session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('📋 Current session provider:', session?.user?.app_metadata?.provider);
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'azure',
-        options: {
-          scopes: 'openid profile email https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read',
-          redirectTo: window.location.origin + '/dashboard/cloud-storage'
+      if (session?.user?.app_metadata?.provider === 'email') {
+        console.log('🔄 User signed in with email, signing out first...');
+        toast.info('Redirecting to Microsoft login...');
+        
+        // Sign out first to allow Azure OAuth
+        await supabase.auth.signOut();
+        
+        // Small delay to ensure signout completes
+        setTimeout(async () => {
+          console.log('🚀 Starting Supabase Azure OAuth...');
+          
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'azure',
+            options: {
+              scopes: 'openid profile email https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read',
+              redirectTo: window.location.origin + '/dashboard/cloud-storage'
+            }
+          });
+
+          if (error) {
+            console.error('❌ Azure OAuth error:', error);
+            toast.error(`Connection failed: ${error.message}`);
+          }
+        }, 100);
+        
+      } else {
+        console.log('🚀 Starting Supabase Azure OAuth...');
+        
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'azure',
+          options: {
+            scopes: 'openid profile email https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read',
+            redirectTo: window.location.origin + '/dashboard/cloud-storage'
+          }
+        });
+
+        if (error) {
+          console.error('❌ Azure OAuth error:', error);
+          toast.error(`Connection failed: ${error.message}`);
         }
-      });
-
-      console.log('📦 OAuth response data:', data);
-      console.log('❗ OAuth response error:', error);
-
-      if (error) {
-        console.error('❌ Azure OAuth error:', error);
-        toast.error(`Connection failed: ${error.message}`);
-        return;
       }
-
-      console.log('✅ Azure OAuth initiated successfully');
-      console.log('🔄 Waiting for auth state change...');
       
     } catch (error: any) {
       console.error('💥 Connection failed:', error);
-      console.log('📋 Error details:', {
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        stack: error.stack
-      });
       toast.error(`Connection failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsConnecting(false);
