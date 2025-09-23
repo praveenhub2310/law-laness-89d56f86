@@ -7,6 +7,7 @@ import { Upload, File, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import { useOneDrive } from '@/contexts/OneDriveContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DocumentUploaderProps {
   onFileUploaded: (file: { url: string; name: string; size: number; provider: 'google' | 'onedrive' }) => void;
@@ -51,7 +52,10 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
   };
 
   const uploadToOneDrive = async (file: File): Promise<{ id: string; name: string; webUrl: string }> => {
-    const token = localStorage.getItem('onedrive_token');
+    // Get token from Supabase session
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.provider_token;
+    
     if (!token) {
       throw new Error('No authentication token found');
     }

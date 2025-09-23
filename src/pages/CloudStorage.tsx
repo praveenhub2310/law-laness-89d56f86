@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import { useOneDrive } from '@/contexts/OneDriveContext';
 import OneDriveSetup from '@/components/OneDriveSetup';
+import { supabase } from '@/integrations/supabase/client';
 
 // Interfaces
 interface GoogleDriveFile {
@@ -153,7 +154,10 @@ const CloudStorage = () => {
     setOneDriveLoading(true);
     
     try {
-      const token = localStorage.getItem('onedrive_token');
+      // Get token from Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.provider_token;
+      
       if (!token) {
         toast.error('Authentication required');
         return;
@@ -182,10 +186,8 @@ const CloudStorage = () => {
       console.error('Error fetching OneDrive files:', error);
       
       if (error?.status === 401 || error?.message?.includes('unauthorized')) {
-        localStorage.removeItem('onedrive_profile');
-        localStorage.removeItem('onedrive_token');
-        localStorage.removeItem('onedrive_token_expiry');
         toast.error('OneDrive authentication expired. Please reconnect.');
+        disconnectOneDrive();
       } else {
         toast.error('Failed to fetch OneDrive files');
       }

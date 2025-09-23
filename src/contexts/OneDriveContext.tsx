@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-
-// Microsoft Graph API configuration
-const MICROSOFT_CLIENT_ID = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'b8e7c3f4-d9a2-4f5e-8c1b-9a3d6e2f4c8d';
-const MICROSOFT_REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : '';
-const SCOPES = 'https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   email: string;
@@ -25,270 +21,88 @@ interface OneDriveContextType {
 
 const OneDriveContext = createContext<OneDriveContextType | null>(null);
 
-declare global {
-  interface Window {
-    msal: {
-      PublicClientApplication: any;
-    };
-  }
-}
-
 export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isMsalLoaded, setIsMsalLoaded] = useState(false);
-  const [isConfigured] = useState(!!MICROSOFT_CLIENT_ID);
+  const [isMsalLoaded, setIsMsalLoaded] = useState(true); // Always true with Supabase auth
+  const [isConfigured, setIsConfigured] = useState(true); // Always true with Supabase auth
 
-  console.log('🚀 OneDriveProvider mounted');
-  console.log('🔧 MICROSOFT_CLIENT_ID configured:', !!MICROSOFT_CLIENT_ID);
+  console.log('🚀 OneDriveProvider mounted with Supabase auth');
 
-  // Initialize Microsoft MSAL on provider mount
+  // Check existing connection on mount
   useEffect(() => {
-    console.log('🚀 OneDriveProvider initializing...');
-    initializeMicrosoftAuth();
+    checkExistingConnection();
   }, []);
 
-  // Check existing connection after MSAL is loaded
-  useEffect(() => {
-    if (isMsalLoaded) {
-      checkExistingConnection();
-      
-      // Set up periodic connection validation
-      const interval = setInterval(() => {
-        validateConnection();
-      }, 2 * 60 * 1000); // Check every 2 minutes
-      
-      return () => clearInterval(interval);
-    }
-  }, [isMsalLoaded]);
-
-  const initializeMicrosoftAuth = async () => {
-    try {
-      console.log('🔧 Starting Microsoft Auth initialization...');
-      
-      // Load Microsoft Authentication Library script
-      if (!window.msal || !window.msal.PublicClientApplication) {
-        console.log('📦 Loading MSAL script...');
-        await loadMsalScript();
-        console.log('✅ MSAL script loaded successfully');
-      } else {
-        console.log('✅ MSAL already available');
-      }
-      
-      // Double check that MSAL is actually available
-      if (window.msal && window.msal.PublicClientApplication) {
-        console.log('✅ Microsoft Auth initialization completed!');
-        setIsMsalLoaded(true);
-      } else {
-        throw new Error('MSAL PublicClientApplication not available');
-      }
-      
-    } catch (error) {
-      console.error('❌ Microsoft Auth initialization failed:', error);
-      // Don't set isMsalLoaded to true if initialization failed
-      setIsMsalLoaded(false);
-      toast.error('Failed to initialize Microsoft authentication. Please refresh the page.');
-    }
-  };
-
-  const loadMsalScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        console.log('📦 MSAL script loaded, checking availability...');
-        setTimeout(() => {
-          if (window.msal) {
-            console.log('✅ window.msal is available:', !!window.msal.PublicClientApplication);
-            resolve();
-          } else {
-            console.error('❌ window.msal not available after script load');
-            reject(new Error('MSAL not available after script load'));
-          }
-        }, 500); // Increased timeout to ensure script execution
-      };
-      
-      script.onerror = (error) => {
-        console.error('❌ Failed to load MSAL script:', error);
-        reject(new Error('Failed to load MSAL script'));
-      };
-      
-      document.head.appendChild(script);
-      console.log('📦 MSAL script tag added to document head');
-    });
-  };
-
   const checkExistingConnection = async (): Promise<boolean> => {
-    const savedProfile = localStorage.getItem('onedrive_profile');
-    const savedToken = localStorage.getItem('onedrive_token');
-    const savedExpiry = localStorage.getItem('onedrive_token_expiry');
-    
-    if (savedProfile && savedToken) {
-      try {
-        console.log('🔍 Checking existing OneDrive connection...');
+    try {
+      console.log('🔍 Checking existing OneDrive connection...');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.provider_token && session?.user) {
+        console.log('✅ Found existing session with provider token');
         
-        // Check if token is expired
-        if (savedExpiry && new Date().getTime() > (parseInt(savedExpiry) - 5 * 60 * 1000)) {
-          console.log('⏰ Token expired, clearing connection...');
-          await clearConnection();
-          return false;
-        }
-        
-        // Validate token with Microsoft Graph
-        const response = await fetch('https://graph.microsoft.com/v1.0/me', {
-          headers: { 'Authorization': `Bearer ${savedToken}` }
+        // Get user profile from Microsoft Graph
+        const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+          headers: { 'Authorization': `Bearer ${session.provider_token}` }
         });
         
-        if (response.ok) {
-          const profile = JSON.parse(savedProfile);
-          console.log('✅ Restored OneDrive connection for:', profile.name);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          const profile: UserProfile = {
+            email: userData.mail || userData.userPrincipalName || session.user.email,
+            name: userData.displayName || session.user.user_metadata?.full_name || 'User',
+            picture: session.user.user_metadata?.avatar_url
+          };
           
           setUserProfile(profile);
           setIsConnected(true);
           
+          console.log('✅ Restored OneDrive connection for:', profile.name);
           return true;
-        } else {
-          console.log('❌ Stored token is invalid, clearing connection...');
-          await clearConnection();
-          return false;
         }
-      } catch (error) {
-        console.error('Error checking existing connection:', error);
-        await clearConnection();
-        return false;
       }
-    }
-    return false;
-  };
-
-  const validateConnection = async () => {
-    if (!isConnected) return;
-    
-    const token = localStorage.getItem('onedrive_token');
-    if (!token) {
-      await clearConnection();
-      return;
-    }
-    
-    try {
-      const response = await fetch('https://graph.microsoft.com/v1.0/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
       
-      if (!response.ok) {
-        console.log('🔐 Connection validation failed, disconnecting...');
-        await clearConnection();
-        toast.error('OneDrive session expired. Please reconnect.');
-      }
+      console.log('❌ No valid OneDrive session found');
+      return false;
     } catch (error) {
-      console.error('Connection validation error:', error);
+      console.error('Error checking existing connection:', error);
+      return false;
     }
   };
 
   const connect = async (): Promise<void> => {
-    console.log('🔗 OneDrive connect called');
-    console.log('🔍 isMsalLoaded:', isMsalLoaded);
-    console.log('🔍 window.msal available:', !!window.msal);
-    console.log('🔍 window.msal.PublicClientApplication available:', !!(window.msal && window.msal.PublicClientApplication));
-    console.log('🔍 MICROSOFT_CLIENT_ID:', MICROSOFT_CLIENT_ID);
+    console.log('🔗 OneDrive connect called (Supabase Azure auth)');
     
-    if (!isMsalLoaded || !window.msal || !window.msal.PublicClientApplication) {
-      console.error('❌ Microsoft Auth not ready - attempting to reinitialize...');
-      
-      // Try to reinitialize MSAL
-      try {
-        await initializeMicrosoftAuth();
-        if (!window.msal || !window.msal.PublicClientApplication) {
-          throw new Error('MSAL still not available after reinitialization');
-        }
-      } catch (error) {
-        console.error('❌ Failed to reinitialize MSAL:', error);
-        toast.error('Microsoft Auth not ready. Please refresh the page and try again.');
-        return;
-      }
-    }
-
     setIsConnecting(true);
-    console.log('🔄 Starting OneDrive connection...');
     
     try {
-      const msalConfig = {
-        auth: {
-          clientId: MICROSOFT_CLIENT_ID,
-          authority: 'https://login.microsoftonline.com/common',
-          redirectUri: MICROSOFT_REDIRECT_URI
-        },
-        cache: {
-          cacheLocation: 'localStorage',
-          storeAuthStateInCookie: false
+      console.log('🚀 Starting Supabase Azure OAuth...');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'openid profile email https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read',
+          redirectTo: window.location.origin + '/dashboard/cloud-storage'
         }
-      };
+      });
 
-      console.log('📋 MSAL Config:', msalConfig);
-
-      const msalInstance = new window.msal.PublicClientApplication(msalConfig);
-      console.log('🔧 MSAL instance created');
-      
-      await msalInstance.initialize();
-      console.log('✅ MSAL instance initialized');
-
-      const loginRequest = {
-        scopes: SCOPES.split(' '),
-        prompt: 'consent'
-      };
-
-      console.log('🔑 Login request:', loginRequest);
-      console.log('🚀 Opening login popup...');
-
-      const response = await msalInstance.loginPopup(loginRequest);
-      console.log('📨 Login response received:', response);
-      
-      if (response.accessToken) {
-        console.log('✅ Access token received');
-        
-        // Get user profile
-        const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-          headers: { 'Authorization': `Bearer ${response.accessToken}` }
-        });
-        
-        const userData = await userResponse.json();
-        console.log('👤 User data:', userData);
-        
-        const profile: UserProfile = {
-          email: userData.mail || userData.userPrincipalName,
-          name: userData.displayName,
-          picture: undefined // Will need to fetch photo separately if needed
-        };
-        
-        // Store connection data
-        localStorage.setItem('onedrive_profile', JSON.stringify(profile));
-        localStorage.setItem('onedrive_token', response.accessToken);
-        
-        // Store expiry with 45-minute safety buffer
-        const expiryTime = new Date().getTime() + (45 * 60 * 1000);
-        localStorage.setItem('onedrive_token_expiry', expiryTime.toString());
-        
-        setUserProfile(profile);
-        setIsConnected(true);
-        
-        console.log('✅ OneDrive connected successfully!');
-        toast.success(`Connected to OneDrive as ${profile.name}!`);
-        
-      } else {
-        console.error('❌ No access token received');
-        toast.error('Failed to get access token');
+      if (error) {
+        console.error('❌ Azure OAuth error:', error);
+        toast.error(`Connection failed: ${error.message}`);
+        return;
       }
+
+      console.log('✅ Azure OAuth initiated successfully');
+      // The actual connection will be handled by the auth state change
       
     } catch (error: any) {
       console.error('💥 Connection failed:', error);
       toast.error(`Connection failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsConnecting(false);
-      console.log('🔄 Connection process finished');
     }
   };
 
@@ -296,34 +110,34 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     console.log('🔌 Disconnecting from OneDrive...');
     
     try {
-      // Clear MSAL cache if available
-      if (window.msal) {
-        const msalConfig = {
-          auth: {
-            clientId: MICROSOFT_CLIENT_ID,
-            authority: 'https://login.microsoftonline.com/common',
-            redirectUri: MICROSOFT_REDIRECT_URI
-          }
-        };
-        const msalInstance = new window.msal.PublicClientApplication(msalConfig);
-        await msalInstance.initialize();
-        await msalInstance.clearCache();
-      }
+      await supabase.auth.signOut();
+      setIsConnected(false);
+      setUserProfile(null);
+      toast.success('Disconnected from OneDrive');
     } catch (error) {
       console.error('Error during logout:', error);
+      toast.error('Error disconnecting from OneDrive');
     }
-    
-    await clearConnection();
-    toast.success('Disconnected from OneDrive');
   };
 
-  const clearConnection = async () => {
-    setIsConnected(false);
-    setUserProfile(null);
-    localStorage.removeItem('onedrive_profile');
-    localStorage.removeItem('onedrive_token');
-    localStorage.removeItem('onedrive_token_expiry');
-  };
+  // Listen for auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN' && session?.provider_token) {
+        console.log('✅ User signed in with provider token');
+        await checkExistingConnection();
+        toast.success('Successfully connected to OneDrive!');
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
+        setIsConnected(false);
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const checkConnection = useCallback(checkExistingConnection, []);
 
