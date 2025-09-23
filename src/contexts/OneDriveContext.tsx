@@ -85,8 +85,27 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       console.log('🚀 Starting Microsoft Graph OAuth...');
       
-      // Microsoft OAuth configuration - Get client ID from environment
-      const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'not-configured';
+      // Get client ID from Supabase secrets via edge function
+      console.log('📡 Fetching Microsoft client configuration...');
+      
+      const configResponse = await fetch('https://ibaqunlwzzoonbsnajbk.supabase.co/functions/v1/onedrive-oauth', {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliYXF1bmx3enpvb25ic25hamJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MjUxMzAsImV4cCI6MjA2NTIwMTEzMH0.zavTfXDwRA9an7BAuW4RrMU3LHuJDIF2u57V2onEPIE`
+        }
+      });
+      
+      if (!configResponse.ok) {
+        const errorText = await configResponse.text();
+        throw new Error(`Failed to get OAuth config: ${errorText}`);
+      }
+      
+      const config = await configResponse.json();
+      console.log('✅ Got OAuth config');
+      
+      // Microsoft OAuth configuration 
+      const clientId = config.clientId;
       const redirectUri = `${window.location.origin}/dashboard/cloud-storage`;
       const scopes = 'openid profile User.Read Files.ReadWrite offline_access';
       
@@ -100,6 +119,8 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       authUrl.searchParams.set('state', 'onedrive_auth');
       
       console.log('🌐 OAuth URL:', authUrl.toString());
+      console.log('🔑 Client ID:', clientId);
+      console.log('🔄 Redirect URI:', redirectUri);
       
       // Direct redirect (like Google Drive)
       window.location.href = authUrl.toString();
