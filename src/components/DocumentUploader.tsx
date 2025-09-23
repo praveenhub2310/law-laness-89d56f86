@@ -52,12 +52,11 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
   };
 
   const uploadToOneDrive = async (file: File): Promise<{ id: string; name: string; webUrl: string }> => {
-    // Get token from Supabase session
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.provider_token;
+    // Get token from localStorage
+    const token = localStorage.getItem('onedrive_access_token');
     
     if (!token) {
-      throw new Error('No authentication token found');
+      throw new Error('No OneDrive authentication token found');
     }
 
     // Upload file to OneDrive root folder

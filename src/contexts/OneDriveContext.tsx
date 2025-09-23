@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   email: string;
@@ -25,10 +24,10 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isConnected, setIsConnected] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isMsalLoaded, setIsMsalLoaded] = useState(true); // Always true with Supabase auth
-  const [isConfigured, setIsConfigured] = useState(true); // Always true with Supabase auth
+  const [isMsalLoaded, setIsMsalLoaded] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(true);
 
-  console.log('🚀 OneDriveProvider mounted with Supabase auth');
+  console.log('🚀 OneDriveProvider mounted with Microsoft Graph OAuth');
 
   // Check existing connection on mount
   useEffect(() => {
@@ -39,22 +38,22 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       console.log('🔍 Checking existing OneDrive connection...');
       
-      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = localStorage.getItem('onedrive_access_token');
       
-      if (session?.provider_token && session?.user) {
-        console.log('✅ Found existing session with provider token');
+      if (accessToken) {
+        console.log('✅ Found existing OneDrive access token');
         
-        // Get user profile from Microsoft Graph
+        // Test the token by getting user profile
         const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-          headers: { 'Authorization': `Bearer ${session.provider_token}` }
+          headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         
         if (userResponse.ok) {
           const userData = await userResponse.json();
           const profile: UserProfile = {
-            email: userData.mail || userData.userPrincipalName || session.user.email,
-            name: userData.displayName || session.user.user_metadata?.full_name || 'User',
-            picture: session.user.user_metadata?.avatar_url
+            email: userData.mail || userData.userPrincipalName,
+            name: userData.displayName || 'User',
+            picture: userData.photo?.['@odata.mediaContentType'] ? `data:${userData.photo['@odata.mediaContentType']};base64,${userData.photo}` : undefined
           };
           
           setUserProfile(profile);
@@ -62,10 +61,15 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           
           console.log('✅ Restored OneDrive connection for:', profile.name);
           return true;
+        } else {
+          // Token expired or invalid, remove it
+          localStorage.removeItem('onedrive_access_token');
+          localStorage.removeItem('onedrive_refresh_token');
+          console.log('❌ OneDrive token expired or invalid');
         }
       }
       
-      console.log('❌ No valid OneDrive session found');
+      console.log('❌ No valid OneDrive token found');
       return false;
     } catch (error) {
       console.error('Error checking existing connection:', error);
@@ -74,61 +78,56 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const connect = async (): Promise<void> => {
-    console.log('🔗 OneDrive connect called (Supabase Azure auth)');
+    console.log('🔗 OneDrive connect called (Microsoft Graph OAuth)');
     
     setIsConnecting(true);
     
     try {
-      // Check current session
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('📋 Current session provider:', session?.user?.app_metadata?.provider);
+      console.log('🚀 Starting Microsoft Graph OAuth...');
       
-      if (session?.user?.app_metadata?.provider === 'email') {
-        console.log('🔄 User signed in with email, signing out first...');
-        toast.info('Redirecting to Microsoft login...');
-        
-        // Sign out first to allow Azure OAuth
-        await supabase.auth.signOut();
-        
-        // Small delay to ensure signout completes
-        setTimeout(async () => {
-          console.log('🚀 Starting Supabase Azure OAuth...');
-          
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'azure',
-            options: {
-              scopes: 'openid profile email https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read',
-              redirectTo: window.location.origin + '/dashboard/cloud-storage'
-            }
-          });
-
-          if (error) {
-            console.error('❌ Azure OAuth error:', error);
-            toast.error(`Connection failed: ${error.message}`);
-          }
-        }, 100);
-        
-      } else {
-        console.log('🚀 Starting Supabase Azure OAuth...');
-        
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'azure',
-          options: {
-            scopes: 'openid profile email https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read',
-            redirectTo: window.location.origin + '/dashboard/cloud-storage'
-          }
-        });
-
-        if (error) {
-          console.error('❌ Azure OAuth error:', error);
-          toast.error(`Connection failed: ${error.message}`);
-        }
+      // Microsoft OAuth configuration
+      const clientId = 'your-client-id'; // You'll need to set this
+      const redirectUri = `${window.location.origin}/dashboard/cloud-storage`;
+      const scopes = 'openid profile User.Read Files.ReadWrite offline_access';
+      
+      // Build OAuth URL
+      const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+      authUrl.searchParams.set('client_id', clientId);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('scope', scopes);
+      authUrl.searchParams.set('response_mode', 'query');
+      authUrl.searchParams.set('state', 'onedrive_auth');
+      
+      console.log('🌐 Redirecting to:', authUrl.toString());
+      
+      // Open popup or redirect
+      const popup = window.open(
+        authUrl.toString(),
+        'onedrive_auth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+      
+      if (!popup) {
+        throw new Error('Popup blocked. Please allow popups and try again.');
       }
+      
+      // Listen for popup completion
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          setIsConnecting(false);
+          
+          // Check if connection was successful
+          setTimeout(() => {
+            checkExistingConnection();
+          }, 1000);
+        }
+      }, 1000);
       
     } catch (error: any) {
       console.error('💥 Connection failed:', error);
       toast.error(`Connection failed: ${error.message || 'Unknown error'}`);
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -137,7 +136,10 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     console.log('🔌 Disconnecting from OneDrive...');
     
     try {
-      await supabase.auth.signOut();
+      // Remove tokens from localStorage
+      localStorage.removeItem('onedrive_access_token');
+      localStorage.removeItem('onedrive_refresh_token');
+      
       setIsConnected(false);
       setUserProfile(null);
       toast.success('Disconnected from OneDrive');
@@ -147,36 +149,45 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Listen for auth state changes
+  // Handle OAuth callback from URL
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event);
-      console.log('📋 Session details:', {
-        user: session?.user?.email,
-        provider: session?.user?.app_metadata?.provider,
-        provider_token: !!session?.provider_token,
-        access_token: !!session?.access_token,
-        expires_at: session?.expires_at
-      });
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
       
-      if (event === 'SIGNED_IN' && session?.provider_token) {
-        console.log('✅ User signed in with provider token');
-        console.log('🔑 Provider token available:', session.provider_token.substring(0, 20) + '...');
-        await checkExistingConnection();
-        toast.success('Successfully connected to OneDrive!');
-      } else if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out');
-        setIsConnected(false);
-        setUserProfile(null);
-      } else if (event === 'SIGNED_IN') {
-        console.log('⚠️ User signed in but no provider token found');
-        console.log('📝 This might indicate Azure OAuth didn\'t complete properly');
-      } else {
-        console.log('🔄 Other auth event:', event);
+      if (code && state === 'onedrive_auth') {
+        console.log('🔄 Processing OAuth callback...');
+        
+        try {
+          // Exchange code for tokens
+          const tokenResponse = await fetch('/api/onedrive/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+          });
+          
+          if (tokenResponse.ok) {
+            const tokens = await tokenResponse.json();
+            localStorage.setItem('onedrive_access_token', tokens.access_token);
+            if (tokens.refresh_token) {
+              localStorage.setItem('onedrive_refresh_token', tokens.refresh_token);
+            }
+            
+            await checkExistingConnection();
+            toast.success('Successfully connected to OneDrive!');
+            
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } catch (error) {
+          console.error('❌ Token exchange failed:', error);
+          toast.error('Failed to connect to OneDrive');
+        }
       }
-    });
-
-    return () => subscription.unsubscribe();
+    };
+    
+    handleOAuthCallback();
   }, []);
 
   const checkConnection = useCallback(checkExistingConnection, []);
