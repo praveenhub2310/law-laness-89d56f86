@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
 import { useOneDrive } from '@/contexts/OneDriveContext';
+import OneDriveSetup from '@/components/OneDriveSetup';
 
 // Interfaces
 interface GoogleDriveFile {
@@ -57,7 +58,7 @@ interface BreadcrumbItem {
 
 const CloudStorage = () => {
   const { isConnected: googleConnected, userProfile: googleProfile, isConnecting: googleConnecting, isGapiLoaded, connect: connectGoogle, disconnect: disconnectGoogle } = useGoogleDrive();
-  const { isConnected: oneDriveConnected, userProfile: oneDriveProfile, isConnecting: oneDriveConnecting, isMsalLoaded, connect: connectOneDrive, disconnect: disconnectOneDrive } = useOneDrive();
+  const { isConnected: oneDriveConnected, userProfile: oneDriveProfile, isConnecting: oneDriveConnecting, isMsalLoaded, isConfigured: oneDriveConfigured, connect: connectOneDrive, disconnect: disconnectOneDrive } = useOneDrive();
   
   // Google Drive state
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
@@ -584,7 +585,9 @@ const CloudStorage = () => {
             <CardTitle>OneDrive Integration</CardTitle>
           </CardHeader>
           <CardContent>
-            {!oneDriveConnected ? (
+            {!oneDriveConfigured ? (
+              <OneDriveSetup />
+            ) : !oneDriveConnected ? (
               <>
                 <p className="text-muted-foreground mb-4">
                   Connect your OneDrive account to sync files with the case management system.

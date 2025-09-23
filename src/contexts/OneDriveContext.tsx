@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { toast } from 'sonner';
 
 // Microsoft Graph API configuration
-const MICROSOFT_CLIENT_ID = 'your_microsoft_client_id_here';
+const MICROSOFT_CLIENT_ID = import.meta.env.VITE_MICROSOFT_CLIENT_ID || '';
 const MICROSOFT_REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : '';
 const SCOPES = 'https://graph.microsoft.com/Files.ReadWrite https://graph.microsoft.com/User.Read';
 
@@ -17,6 +17,7 @@ interface OneDriveContextType {
   userProfile: UserProfile | null;
   isConnecting: boolean;
   isMsalLoaded: boolean;
+  isConfigured: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   checkConnection: () => Promise<boolean>;
@@ -35,6 +36,7 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMsalLoaded, setIsMsalLoaded] = useState(false);
+  const [isConfigured] = useState(!!MICROSOFT_CLIENT_ID);
 
   // Initialize Microsoft MSAL on provider mount
   useEffect(() => {
@@ -164,6 +166,11 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const connect = async (): Promise<void> => {
+    if (!isConfigured) {
+      toast.error('OneDrive integration is not configured. Please set up your Microsoft Client ID.');
+      return;
+    }
+
     if (!isMsalLoaded || !window.msal) {
       toast.error('Microsoft Auth not ready. Please refresh the page.');
       return;
@@ -273,6 +280,7 @@ export const OneDriveProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     userProfile,
     isConnecting,
     isMsalLoaded,
+    isConfigured,
     connect,
     disconnect,
     checkConnection,

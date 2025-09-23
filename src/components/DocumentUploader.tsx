@@ -15,7 +15,7 @@ interface DocumentUploaderProps {
 
 const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, disabled = false }) => {
   const { isConnected: googleConnected, isGapiLoaded } = useGoogleDrive();
-  const { isConnected: oneDriveConnected, isMsalLoaded } = useOneDrive();
+  const { isConnected: oneDriveConnected, isMsalLoaded, isConfigured: oneDriveConfigured } = useOneDrive();
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number; provider: 'google' | 'onedrive' } | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<'google' | 'onedrive'>('google');
@@ -187,7 +187,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
                 {googleConnected && (
                   <SelectItem value="google">Google Drive</SelectItem>
                 )}
-                {oneDriveConnected && (
+                {oneDriveConnected && oneDriveConfigured && (
                   <SelectItem value="onedrive">OneDrive</SelectItem>
                 )}
               </SelectContent>
@@ -219,6 +219,11 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onFileUploaded, dis
             <div>
               <p className="text-lg font-medium text-muted-foreground">Connect to Cloud Storage</p>
               <p className="text-muted-foreground">Please connect to Google Drive or OneDrive to upload documents</p>
+            </div>
+          ) : selectedProvider === 'onedrive' && !oneDriveConfigured ? (
+            <div>
+              <p className="text-lg font-medium text-muted-foreground">OneDrive Not Configured</p>
+              <p className="text-muted-foreground">Please configure OneDrive integration in Cloud Storage settings</p>
             </div>
           ) : !currentProviderConnected ? (
             <div>
