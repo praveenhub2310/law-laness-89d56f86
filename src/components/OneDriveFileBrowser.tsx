@@ -24,9 +24,18 @@ interface OneDriveFile {
 interface OneDriveFileBrowserProps {
   isConnected: boolean;
   userProfile: any;
+  onFileSelect?: (file: OneDriveFile) => void;
+  acceptedMimeTypes?: string[];
+  title?: string;
 }
 
-const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ isConnected, userProfile }) => {
+const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ 
+  isConnected, 
+  userProfile,
+  onFileSelect,
+  acceptedMimeTypes = [],
+  title = "OneDrive Files"
+}) => {
   const [files, setFiles] = useState<OneDriveFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState<string>('root');
@@ -138,6 +147,40 @@ const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ isConnected, 
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleFileClick = (file: OneDriveFile) => {
+    if (file.folder) {
+      openFolder(file);
+    } else {
+      // Check if file type is accepted
+      if (acceptedMimeTypes.length > 0 && file.file && !acceptedMimeTypes.includes(file.file.mimeType)) {
+        toast.error('This file type is not supported');
+        return;
+      }
+      
+      if (onFileSelect) {
+        // Convert OneDrive file format to match GoogleDrive format for consistency
+        const convertedFile = {
+          ...file,
+          size: file.size?.toString() || '0',
+          webViewLink: file.webUrl,
+          webContentLink: file['@microsoft.graph.downloadUrl'],
+          mimeType: file.file?.mimeType || 'application/octet-stream'
+        };
+        onFileSelect(convertedFile as any);
+        toast.success(`Selected: ${file.name}`);
+      } else {
+        downloadFile(file);
+      }
+    }
+  };
+
+  const isFileSelectable = (file: OneDriveFile) => {
+    if (file.folder) {
+      return false; // Don't allow folder selection for now
+    }
+    return acceptedMimeTypes.length === 0 || (file.file && acceptedMimeTypes.includes(file.file.mimeType));
+  };
+
   useEffect(() => {
     if (isConnected) {
       fetchFiles();
@@ -158,7 +201,7 @@ const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ isConnected, 
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>OneDrive Files</CardTitle>
+          <CardTitle>{title}</CardTitle>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -222,23 +265,22 @@ const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ isConnected, 
               {files.map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent"
+                  onClick={() => handleFileClick(file)}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                    file.folder || isFileSelectable(file)
+                      ? 'hover:bg-accent cursor-pointer border-border hover:border-primary/20'
+                      : 'opacity-60 cursor-not-allowed border-muted'
+                  }`}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {file.folder ? (
-                      <Folder 
-                        className="h-5 w-5 text-blue-500 cursor-pointer" 
-                        onClick={() => openFolder(file)}
-                      />
+                      <Folder className="h-5 w-5 text-blue-500" />
                     ) : (
                       <File className="h-5 w-5 text-gray-500" />
                     )}
                     
                     <div className="flex-1 min-w-0">
-                      <p 
-                        className={`font-medium truncate ${file.folder ? 'cursor-pointer hover:text-blue-600' : ''}`}
-                        onClick={() => file.folder && openFolder(file)}
-                      >
+                      <p className="font-medium truncate">
                         {file.name}
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -250,23 +292,29 @@ const OneDriveFileBrowser: React.FC<OneDriveFileBrowserProps> = ({ isConnected, 
                     </div>
                   </div>
                   
-                  {!file.folder && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadFile(file)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-};
+                  <div className="flex items-center gap-2">
+                    {file.folder ? (
+                      <Button variant="ghost" size="sm">
+                        Open
+                      </Button>
+                    ) : onFileSelect && isFileSelectable(file) ? (
+                      <Button variant="ghost" size="sm">
+                        Select
+                      </Button>
+                     ) : (
+                       <Button variant="ghost" size="sm">
+                         Download
+                       </Button>
+                     )}
+                   </div>
+                 </div>
+               ))}
+             </div>
+           )}
+         </ScrollArea>
+       </CardContent>
+     </Card>
+   );
+ };
 
 export default OneDriveFileBrowser;

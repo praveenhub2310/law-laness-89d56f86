@@ -2,29 +2,37 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle, AlertTriangle, Info, X, FileSignature } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText, CheckCircle, AlertTriangle, Info, X, FileSignature, Upload, FolderOpen } from 'lucide-react';
 import { useGoogleDrive } from '@/contexts/GoogleDriveContext';
+import { useOneDrive } from '@/contexts/OneDriveContext';
 import GoogleDriveFileBrowser from '@/components/GoogleDriveFileBrowser';
+import OneDriveFileBrowser from '@/components/OneDriveFileBrowser';
+import DocumentUploader from '@/components/DocumentUploader';
 import { toast } from '@/hooks/use-toast';
 
 const DocumentAnalysis = () => {
-  const { isConnected, connect, isConnecting } = useGoogleDrive();
+  const { isConnected: googleConnected, connect: connectGoogle, isConnecting: googleConnecting } = useGoogleDrive();
+  const { isConnected: oneDriveConnected, connect: connectOneDrive, isConnecting: oneDriveConnecting, userProfile: oneDriveProfile } = useOneDrive();
   const [document, setDocument] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number; googleDriveId?: string } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string; size: number; provider?: string; id?: string } | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedCloudProvider, setSelectedCloudProvider] = useState<'google' | 'onedrive'>('google');
+  const [activeTab, setActiveTab] = useState<'upload' | 'browse'>('browse');
 
   const handleFileSelect = async (file: any) => {
     setUploadedFile({
-      url: file.webViewLink || file.webContentLink || '',
+      url: file.webViewLink || file.webContentLink || file.webUrl || '',
       name: file.name,
       size: parseInt(file.size || '0'),
-      googleDriveId: file.id
+      provider: selectedCloudProvider,
+      id: file.id
     });
     
     try {
-      // For Google Drive files, we would need to fetch the content
-      // For now, simulate reading the document content
+      // For cloud files, simulate reading the document content
       const mockContent = `This is a sample legal document content from ${file.name}. 
       
       AGREEMENT
@@ -48,6 +56,42 @@ const DocumentAnalysis = () => {
       console.error('Error reading file:', error);
       toast({
         title: "Error reading file",
+        description: "Please try uploading a different document format",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileUpload = async (file: { url: string; name: string; size: number; provider: 'google' | 'onedrive' }) => {
+    setUploadedFile({
+      ...file,
+    });
+    
+    try {
+      // Simulate reading uploaded document content
+      const mockContent = `This is a sample legal document content from uploaded file ${file.name}. 
+      
+      AGREEMENT
+      
+      This agreement is made between the party of the first part and the second party. The terms and conditions outlined herein shall govern the relationship between the parties.
+      
+      WHEREAS, the first party agrees to provide services...
+      WHEREAS, the second party agrees to compensate...
+      
+      Therefore, both parties agree to the following terms:
+      1. Service delivery shall commence within 30 days
+      2. Payment terms are net 30 days
+      3. This agreement shall remain in effect for one year`;
+      
+      setDocument(mockContent);
+      toast({
+        title: "Document uploaded successfully",
+        description: `${file.name} has been uploaded and loaded for analysis`,
+      });
+    } catch (error) {
+      console.error('Error processing uploaded file:', error);
+      toast({
+        title: "Error processing file",
         description: "Please try uploading a different document format",
         variant: "destructive",
       });
@@ -92,19 +136,33 @@ const DocumentAnalysis = () => {
           <h1 className="text-3xl font-bold">AI Document Analysis</h1>
           <p className="text-muted-foreground mt-2">Grammar and terminology analysis for legal documents</p>
         </div>
-        {!isConnected && (
-          <Button 
-            onClick={connect} 
-            disabled={isConnecting}
-            className="gap-2"
-          >
-            <FileSignature className="h-4 w-4" />
-            {isConnecting ? 'Connecting...' : 'Connect Google Drive'}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!googleConnected && (
+            <Button 
+              onClick={connectGoogle} 
+              disabled={googleConnecting}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileSignature className="h-4 w-4" />
+              {googleConnecting ? 'Connecting...' : 'Connect Google Drive'}
+            </Button>
+          )}
+          {!oneDriveConnected && (
+            <Button 
+              onClick={connectOneDrive} 
+              disabled={oneDriveConnecting}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileSignature className="h-4 w-4" />
+              {oneDriveConnecting ? 'Connecting...' : 'Connect OneDrive'}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {!isConnected && (
+      {!googleConnected && !oneDriveConnected && (
         <Card className="border-orange-200 bg-orange-50 mb-6">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -112,9 +170,9 @@ const DocumentAnalysis = () => {
                 <FileSignature className="h-4 w-4 text-orange-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-orange-900">Google Drive Connection Required</h3>
+                <h3 className="font-semibold text-orange-900">Cloud Storage Connection Required</h3>
                 <p className="text-sm text-orange-700">
-                  Connect to Google Drive to access and analyze your legal documents securely.
+                  Connect to Google Drive or OneDrive to upload and analyze your legal documents securely.
                 </p>
               </div>
             </div>
@@ -127,9 +185,9 @@ const DocumentAnalysis = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Document Selection
+              Document Selection & Upload
             </CardTitle>
-            <CardDescription>Select a document from Google Drive for AI analysis</CardDescription>
+            <CardDescription>Upload a new document or select from your cloud storage for AI analysis</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {uploadedFile ? (
@@ -140,7 +198,7 @@ const DocumentAnalysis = () => {
                     <div>
                       <p className="text-sm font-medium">{uploadedFile.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(uploadedFile.size / 1024).toFixed(1)} KB
+                        {(uploadedFile.size / 1024).toFixed(1)} KB • {uploadedFile.provider === 'google' ? 'Google Drive' : uploadedFile.provider === 'onedrive' ? 'OneDrive' : 'Cloud Storage'}
                       </p>
                     </div>
                   </div>
@@ -154,20 +212,86 @@ const DocumentAnalysis = () => {
                 </div>
               </div>
             ) : (
-              <GoogleDriveFileBrowser
-                onFileSelect={handleFileSelect}
-                acceptedMimeTypes={[
-                  'application/pdf',
-                  'application/msword',
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                  'text/plain',
-                  'application/rtf',
-                  'application/vnd.google-apps.document'
-                ]}
-                title="Select Document for Analysis"
-              />
+              <div className="space-y-4">
+                {(googleConnected || oneDriveConnected) && (
+                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'upload' | 'browse')}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="browse" className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4" />
+                        Browse Files
+                      </TabsTrigger>
+                      <TabsTrigger value="upload" className="flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Upload New
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="browse" className="space-y-4">
+                      {(googleConnected && oneDriveConnected) && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Select Cloud Provider:</label>
+                          <Select value={selectedCloudProvider} onValueChange={(value: 'google' | 'onedrive') => setSelectedCloudProvider(value)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="google">Google Drive</SelectItem>
+                              <SelectItem value="onedrive">OneDrive</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      
+                      {selectedCloudProvider === 'google' && googleConnected ? (
+                        <GoogleDriveFileBrowser
+                          onFileSelect={handleFileSelect}
+                          acceptedMimeTypes={[
+                            'application/pdf',
+                            'application/msword',
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'text/plain',
+                            'application/rtf',
+                            'application/vnd.google-apps.document'
+                          ]}
+                          title="Select Document for Analysis"
+                        />
+                      ) : selectedCloudProvider === 'onedrive' && oneDriveConnected ? (
+                        <OneDriveFileBrowser
+                          isConnected={oneDriveConnected}
+                          userProfile={oneDriveProfile}
+                          onFileSelect={handleFileSelect}
+                          acceptedMimeTypes={[
+                            'application/pdf',
+                            'application/msword',
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'text/plain',
+                            'application/rtf'
+                          ]}
+                          title="Select Document for Analysis"
+                        />
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <FileText className="h-8 w-8 mx-auto mb-2" />
+                          <p>Connect to {selectedCloudProvider === 'google' ? 'Google Drive' : 'OneDrive'} to browse files</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="upload">
+                      <DocumentUploader onFileUploaded={handleFileUpload} />
+                    </TabsContent>
+                  </Tabs>
+                )}
+                
+                {!googleConnected && !oneDriveConnected && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-8 w-8 mx-auto mb-2" />
+                    <p>Connect to Google Drive or OneDrive to upload and browse documents</p>
+                  </div>
+                )}
+              </div>
             )}
-            <Button onClick={analyzeDocument} disabled={isAnalyzing || !document.trim() || !isConnected}>
+            <Button onClick={analyzeDocument} disabled={isAnalyzing || !document.trim() || (!googleConnected && !oneDriveConnected)}>
               {isAnalyzing ? 'Analyzing...' : 'Analyze Document'}
             </Button>
           </CardContent>
