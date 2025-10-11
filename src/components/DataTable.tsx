@@ -290,25 +290,25 @@ const DataTable = ({
     <>
       <Card className={className}>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-xl font-semibold">{title}</CardTitle>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               {renderFilterPopover()}
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export
+              <Button variant="outline" size="sm" onClick={handleExport} className="flex-1 sm:flex-none">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
               {onAdd && (
-                <Button onClick={handleAdd} size="sm" className="legal-gradient">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New
+                <Button onClick={handleAdd} size="sm" className="legal-gradient flex-1 sm:flex-none">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add New</span>
                 </Button>
               )}
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1 sm:max-w-sm">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <Input
                 placeholder={searchPlaceholder}
@@ -317,132 +317,213 @@ const DataTable = ({
                 className="pl-8"
               />
             </div>
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="self-start sm:self-center">
               {processedData.length} results
             </Badge>
           </div>
         </CardHeader>
         
         <CardContent>
-          <div className="rounded-md border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  {columns.map((column) => (
-                    <th 
-                      key={column.key}
-                      className={`px-4 py-3 text-left text-sm font-medium text-gray-900 ${
-                        column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
-                      } ${column.className || ''}`}
-                      onClick={() => column.sortable && handleSort(column.key)}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>{column.label}</span>
-                        {column.sortable && sortKey === column.key && (
-                          <span className="text-blue-600">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedData.map((item, index) => (
-                  <tr key={item.id || index} className="hover:bg-gray-50 transition-colors">
+          {/* Desktop Table View */}
+          <div className="hidden md:block rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
                     {columns.map((column) => (
-                      <td key={column.key} className={`px-4 py-3 text-sm text-gray-900 ${column.className || ''}`}>
-                        {column.render ? column.render(item[column.key], item) : item[column.key]}
-                      </td>
+                      <th 
+                        key={column.key}
+                        className={`px-4 py-3 text-left text-sm font-medium text-gray-900 whitespace-nowrap ${
+                          column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                        } ${column.className || ''}`}
+                        onClick={() => column.sortable && handleSort(column.key)}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>{column.label}</span>
+                          {column.sortable && sortKey === column.key && (
+                            <span className="text-blue-600">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
                     ))}
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        {showAiToolsAction && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleAiToolsClick(item)}
-                            title="AI Tools"
-                            className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                          >
-                            <Zap className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {showPreviewAction && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handlePreview(item)}
-                            title="Preview & Download"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleView(item)}
-                          title="View details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {onEdit && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEdit(item)}
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onDelete && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteClick(item)}
-                            className="text-red-600 hover:text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-900 whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedData.map((item, index) => (
+                    <tr key={item.id || index} className="hover:bg-gray-50 transition-colors">
+                      {columns.map((column) => (
+                        <td key={column.key} className={`px-4 py-3 text-sm text-gray-900 ${column.className || ''}`}>
+                          {column.render ? column.render(item[column.key], item) : item[column.key]}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          {showAiToolsAction && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleAiToolsClick(item)}
+                              title="AI Tools"
+                              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                            >
+                              <Zap className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {showPreviewAction && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handlePreview(item)}
+                              title="Preview & Download"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleView(item)}
+                            title="View details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {onEdit && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEdit(item)}
+                              title="Edit"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {onDelete && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteClick(item)}
+                              className="text-red-600 hover:text-red-700"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {paginatedData.map((item, index) => (
+              <Card key={item.id || index} className="overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    {columns.map((column) => (
+                      <div key={column.key} className="flex justify-between items-start gap-2">
+                        <span className="text-sm font-medium text-gray-500 min-w-[100px]">{column.label}:</span>
+                        <span className="text-sm text-gray-900 text-right flex-1">
+                          {column.render ? column.render(item[column.key], item) : item[column.key]}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      {showAiToolsAction && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleAiToolsClick(item)}
+                          className="flex-1 text-purple-600 hover:text-purple-700"
+                        >
+                          <Zap className="h-4 w-4 mr-1" />
+                          AI Tools
+                        </Button>
+                      )}
+                      {showPreviewAction && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handlePreview(item)}
+                          className="flex-1"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleView(item)}
+                        className="flex-1"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      {onEdit && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                          className="flex-1"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDeleteClick(item)}
+                          className="flex-1 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
           
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-gray-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+              <p className="text-sm text-gray-700 text-center sm:text-left">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
                 {Math.min(currentPage * itemsPerPage, processedData.length)} of{' '}
                 {processedData.length} results
               </p>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
+                  className="px-3"
                 >
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
+                  <span className="sm:hidden">Prev</span>
                 </Button>
-                <span className="text-sm text-gray-700">
-                  Page {currentPage} of {totalPages}
+                <span className="text-sm text-gray-700 whitespace-nowrap px-2">
+                  {currentPage} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
+                  className="px-3"
                 >
                   Next
                 </Button>

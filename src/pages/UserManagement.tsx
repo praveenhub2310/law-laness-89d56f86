@@ -290,10 +290,10 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Users className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">User Management</h1>
+    <div className="p-4 sm:p-6">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+        <h1 className="text-2xl sm:text-3xl font-bold">User Management</h1>
       </div>
       
       <DataTable
