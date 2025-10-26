@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { 
   Scale, Briefcase, Users, Shield, FileText, Calendar, 
   Clock, DollarSign, MessageSquare, BarChart, 
@@ -8,10 +11,16 @@ import {
   Gavel, FolderOpen, UserCheck, Building2
 } from 'lucide-react';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import dashboardScreenshot from '@/assets/dashboard-screenshot.png';
+import documentsScreenshot from '@/assets/documents-screenshot.png';
+import calendarScreenshot from '@/assets/calendar-screenshot.png';
 
 const Landing = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const { toast } = useToast();
 
   const features = [
     {
@@ -91,6 +100,49 @@ const Landing = () => {
     "Real-time collaboration",
     "Mobile-responsive design"
   ];
+
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      company: formData.get('company'),
+      phone: formData.get('phone'),
+      message: formData.get('message')
+    };
+
+    try {
+      // Replace 'YOUR_SENDERFORM_ID' with your actual Senderform form ID
+      const response = await fetch('https://senderform.com/api/v1/forms/YOUR_SENDERFORM_ID', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: "Thank you for your interest. We'll contact you soon.",
+        });
+        (e.target as HTMLFormElement).reset();
+      } else {
+        throw new Error('Form submission failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -188,6 +240,113 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Screenshots Section */}
+      <section className="bg-muted/30 py-12 sm:py-16 lg:py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">See AkraLegal in Action</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Experience the intuitive interface designed for legal professionals
+            </p>
+          </div>
+
+          <div className="space-y-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div className="order-2 lg:order-1">
+                <h3 className="text-2xl font-bold mb-4">Comprehensive Dashboard</h3>
+                <p className="text-muted-foreground mb-4">
+                  Get a complete overview of your cases, upcoming hearings, and team performance. 
+                  Track key metrics and make data-driven decisions with our powerful analytics dashboard.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Real-time case status tracking</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Performance analytics and insights</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Team productivity monitoring</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <img 
+                  src={dashboardScreenshot} 
+                  alt="AkraLegal Dashboard Interface" 
+                  className="rounded-lg shadow-2xl w-full"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <img 
+                  src={documentsScreenshot} 
+                  alt="Document Management System" 
+                  className="rounded-lg shadow-2xl w-full"
+                />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold mb-4">Smart Document Management</h3>
+                <p className="text-muted-foreground mb-4">
+                  Organize, search, and collaborate on legal documents with AI-powered features. 
+                  Never lose track of important files again.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>AI document analysis and insights</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Secure cloud storage integration</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Version control and collaboration</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div className="order-2 lg:order-1">
+                <h3 className="text-2xl font-bold mb-4">Intelligent Calendar & Scheduling</h3>
+                <p className="text-muted-foreground mb-4">
+                  Never miss a deadline or court date with our intelligent calendar system. 
+                  Get automated reminders and sync across all your devices.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Court date tracking and reminders</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Team scheduling and availability</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Automated deadline calculations</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <img 
+                  src={calendarScreenshot} 
+                  alt="Calendar and Scheduling System" 
+                  className="rounded-lg shadow-2xl w-full"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* User Roles Section */}
       <section className="bg-muted/50 py-12 sm:py-16 lg:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -231,6 +390,87 @@ const Landing = () => {
                 <p className="text-lg">{benefit}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Lead Capture Form Section */}
+      <section className="bg-muted/50 py-12 sm:py-16 lg:py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Request a Demo</h2>
+              <p className="text-lg text-muted-foreground">
+                See how AkraLegal can transform your legal practice. Fill out the form and our team will contact you shortly.
+              </p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input 
+                        id="name" 
+                        name="name" 
+                        required 
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address *</Label>
+                      <Input 
+                        id="email" 
+                        name="email" 
+                        type="email" 
+                        required 
+                        placeholder="john@lawfirm.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Law Firm/Company</Label>
+                      <Input 
+                        id="company" 
+                        name="company" 
+                        placeholder="Your Law Firm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input 
+                        id="phone" 
+                        name="phone" 
+                        type="tel" 
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Message</Label>
+                    <Textarea 
+                      id="message" 
+                      name="message" 
+                      placeholder="Tell us about your practice and what you're looking for..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={formLoading}
+                  >
+                    {formLoading ? "Submitting..." : "Request Demo"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
