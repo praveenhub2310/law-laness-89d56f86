@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import QueryClient from './QueryClient';
-import Index from './pages/Index';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Demo from './pages/Demo';
 import RoleSelection from './pages/RoleSelection';
@@ -89,7 +89,7 @@ function App() {
     <QueryClient>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/role-selection" element={<RoleSelection />} />
