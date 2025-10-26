@@ -243,104 +243,116 @@ const Landing = () => {
       {/* Screenshots Section */}
       <section className="bg-muted/30 py-12 sm:py-16 lg:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">See AkraLegal in Action</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Experience the intuitive interface designed for legal professionals
             </p>
           </div>
 
-          <div className="space-y-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              <div className="order-2 lg:order-1">
-                <h3 className="text-2xl font-bold mb-4">Comprehensive Dashboard</h3>
-                <p className="text-muted-foreground mb-4">
+          <div className="space-y-24">
+            {/* Dashboard Screenshot */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6 order-2 lg:order-1">
+                <h3 className="text-3xl font-bold">Comprehensive Dashboard</h3>
+                <p className="text-lg text-muted-foreground">
                   Get a complete overview of your cases, upcoming hearings, and team performance. 
                   Track key metrics and make data-driven decisions with our powerful analytics dashboard.
                 </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Real-time case status tracking</span>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Real-time case status tracking</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Performance analytics and insights</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Performance analytics and insights</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Team productivity monitoring</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Team productivity monitoring</span>
                   </li>
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src={dashboardScreenshot} 
-                  alt="AkraLegal Dashboard Interface" 
-                  className="rounded-lg shadow-2xl w-full"
-                />
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-primary/10 rounded-2xl blur-2xl" />
+                  <img 
+                    src={dashboardScreenshot} 
+                    alt="AkraLegal Dashboard Interface showcasing case management and analytics" 
+                    className="relative rounded-xl shadow-2xl w-full border border-border/50"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              <div>
-                <img 
-                  src={documentsScreenshot} 
-                  alt="Document Management System" 
-                  className="rounded-lg shadow-2xl w-full"
-                />
+            {/* Documents Screenshot */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="order-1">
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-primary/10 rounded-2xl blur-2xl" />
+                  <img 
+                    src={documentsScreenshot} 
+                    alt="Document Management System with AI-powered features" 
+                    className="relative rounded-xl shadow-2xl w-full border border-border/50"
+                  />
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-4">Smart Document Management</h3>
-                <p className="text-muted-foreground mb-4">
+              <div className="space-y-6 order-2">
+                <h3 className="text-3xl font-bold">Smart Document Management</h3>
+                <p className="text-lg text-muted-foreground">
                   Organize, search, and collaborate on legal documents with AI-powered features. 
                   Never lose track of important files again.
                 </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>AI document analysis and insights</span>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">AI document analysis and insights</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Secure cloud storage integration</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Secure cloud storage integration</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Version control and collaboration</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Version control and collaboration</span>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              <div className="order-2 lg:order-1">
-                <h3 className="text-2xl font-bold mb-4">Intelligent Calendar & Scheduling</h3>
-                <p className="text-muted-foreground mb-4">
+            {/* Calendar Screenshot */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6 order-2 lg:order-1">
+                <h3 className="text-3xl font-bold">Intelligent Calendar & Scheduling</h3>
+                <p className="text-lg text-muted-foreground">
                   Never miss a deadline or court date with our intelligent calendar system. 
                   Get automated reminders and sync across all your devices.
                 </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Court date tracking and reminders</span>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Court date tracking and reminders</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Team scheduling and availability</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Team scheduling and availability</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>Automated deadline calculations</span>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-base">Automated deadline calculations</span>
                   </li>
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src={calendarScreenshot} 
-                  alt="Calendar and Scheduling System" 
-                  className="rounded-lg shadow-2xl w-full"
-                />
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-primary/10 rounded-2xl blur-2xl" />
+                  <img 
+                    src={calendarScreenshot} 
+                    alt="Calendar and Scheduling System with automated reminders" 
+                    className="relative rounded-xl shadow-2xl w-full border border-border/50"
+                  />
+                </div>
               </div>
             </div>
           </div>
