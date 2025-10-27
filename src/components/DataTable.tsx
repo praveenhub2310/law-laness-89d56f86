@@ -290,36 +290,38 @@ const DataTable = ({
     <>
       <Card className={className}>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-xl font-semibold">{title}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              {renderFilterPopover()}
-              <Button variant="outline" size="sm" onClick={handleExport} className="flex-1 sm:flex-none">
-                <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-              {onAdd && (
-                <Button onClick={handleAdd} size="sm" className="legal-gradient flex-1 sm:flex-none">
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Add New</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <CardTitle className="text-lg sm:text-xl font-semibold">{title}</CardTitle>
+              <div className="flex items-center gap-2">
+                {renderFilterPopover()}
+                <Button variant="outline" size="sm" onClick={handleExport} className="flex-1 sm:flex-none min-w-[80px]">
+                  <Download className="h-4 w-4 sm:mr-2" />
+                  <span className="text-xs sm:text-sm">Export</span>
                 </Button>
-              )}
+                {onAdd && (
+                  <Button onClick={handleAdd} size="sm" className="legal-gradient flex-1 sm:flex-none min-w-[80px]">
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="text-xs sm:text-sm">Add</span>
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="relative flex-1 sm:max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 h-9"
+                />
+              </div>
+              <Badge variant="secondary" className="self-start sm:self-center text-xs">
+                {processedData.length} results
+              </Badge>
             </div>
-            <Badge variant="secondary" className="self-start sm:self-center">
-              {processedData.length} results
-            </Badge>
           </div>
         </CardHeader>
         
@@ -423,29 +425,31 @@ const DataTable = ({
           </div>
 
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-3">
             {paginatedData.map((item, index) => (
-              <Card key={item.id || index} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
+              <Card key={item.id || index} className="overflow-hidden shadow-sm">
+                <CardContent className="p-3">
+                  <div className="space-y-2.5">
                     {columns.map((column) => (
-                      <div key={column.key} className="flex justify-between items-start gap-2">
-                        <span className="text-sm font-medium text-gray-500 min-w-[100px]">{column.label}:</span>
-                        <span className="text-sm text-gray-900 text-right flex-1">
-                          {column.render ? column.render(item[column.key], item) : item[column.key]}
+                      <div key={column.key} className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {column.label}
+                        </span>
+                        <span className="text-sm text-foreground break-words sm:text-right sm:flex-1">
+                          {column.render ? column.render(item[column.key], item) : (item[column.key] || 'N/A')}
                         </span>
                       </div>
                     ))}
-                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                    <div className="grid grid-cols-2 gap-2 pt-3 mt-2 border-t">
                       {showAiToolsAction && (
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => handleAiToolsClick(item)}
-                          className="flex-1 text-purple-600 hover:text-purple-700"
+                          className="text-purple-600 hover:text-purple-700 h-9"
                         >
-                          <Zap className="h-4 w-4 mr-1" />
-                          AI Tools
+                          <Zap className="h-3.5 w-3.5 mr-1" />
+                          <span className="text-xs">AI Tools</span>
                         </Button>
                       )}
                       {showPreviewAction && (
@@ -453,41 +457,41 @@ const DataTable = ({
                           variant="outline" 
                           size="sm"
                           onClick={() => handlePreview(item)}
-                          className="flex-1"
+                          className="h-9"
                         >
-                          <FileText className="h-4 w-4 mr-1" />
-                          Preview
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          <span className="text-xs">Preview</span>
                         </Button>
                       )}
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => handleView(item)}
-                        className="flex-1"
+                        className="h-9"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">View</span>
                       </Button>
                       {onEdit && (
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => handleEdit(item)}
-                          className="flex-1"
+                          className="h-9"
                         >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          <span className="text-xs">Edit</span>
                         </Button>
                       )}
                       {onDelete && (
-                        <Button 
+                        <Button
                           variant="outline" 
                           size="sm"
                           onClick={() => handleDeleteClick(item)}
-                          className="flex-1 text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 h-9 col-span-2"
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          <span className="text-xs">Delete</span>
                         </Button>
                       )}
                     </div>

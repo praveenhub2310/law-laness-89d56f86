@@ -177,13 +177,13 @@ const Transactions = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-4 md:p-6">
       <DataTable
         title="Financial Transactions"
         columns={columns}
         data={data}
         fields={fields}
-        searchPlaceholder="Search transactions by ID, client, or amount..."
+        searchPlaceholder="Search transactions..."
         onAdd={addItem}
         onEdit={updateItem}
         onDelete={deleteItem}
