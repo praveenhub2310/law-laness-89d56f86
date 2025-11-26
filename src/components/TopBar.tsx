@@ -43,27 +43,27 @@ const TopBar = () => {
   };
 
   return (
-    <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      <div className="flex items-center space-x-4">
+    <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-6">
+      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
         {showBackButton && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(-1)}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
+            <span className="hidden sm:inline">Back</span>
           </Button>
         )}
         
         {showTopBarTitle && (
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
               {location.pathname === '/dashboard' ? 'Dashboard' : 
                location.pathname.split('/').pop()?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-gray-500 hidden md:block">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -75,30 +75,30 @@ const TopBar = () => {
         )}
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-500 text-white text-xs">
+      <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+        <Button variant="ghost" size="sm" className="relative flex-shrink-0">
+          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center bg-red-500 text-white text-[10px] sm:text-xs">
             3
           </Badge>
         </Button>
         
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" className="hidden sm:flex flex-shrink-0">
           <Calendar className="h-5 w-5" />
         </Button>
         
-        <div className="flex items-center space-x-2 pl-4 border-l border-gray-200">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+        <div className="flex items-center space-x-2 pl-2 sm:pl-4 border-l border-gray-200">
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
             <User className="h-4 w-4 text-white" />
           </div>
-          <div className="text-sm">
-            <p className="font-medium text-gray-900">{getDisplayName()}</p>
-            <p className="text-gray-500">{getRoleDisplayName(userProfile?.role || 'client')}</p>
+          <div className="text-sm hidden sm:block min-w-0 max-w-[150px] md:max-w-none">
+            <p className="font-medium text-gray-900 truncate">{getDisplayName()}</p>
+            <p className="text-gray-500 text-xs truncate">{getRoleDisplayName(userProfile?.role || 'client')}</p>
           </div>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="ml-2">
+              <Button variant="ghost" size="sm" className="ml-0 sm:ml-2 flex-shrink-0">
                 <Settings className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
