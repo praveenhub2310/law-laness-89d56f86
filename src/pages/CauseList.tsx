@@ -349,52 +349,73 @@ const CauseList = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Court Cause List</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Manage and track court hearings in real-time
-          </p>
+    <div className="w-full min-h-screen overflow-x-hidden">
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 max-w-full">
+        {/* Header */}
+        <div className="w-full min-w-0">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+              Court Cause List
+            </h1>
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground break-words">
+              Manage and track court hearings in real-time
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Tabs for different functionalities */}
-      <Tabs defaultValue="view" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="view" className="flex items-center gap-2 text-xs sm:text-sm">
-            <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">View Cause List</span>
-            <span className="sm:hidden">View</span>
-          </TabsTrigger>
-          <TabsTrigger value="upload" className="flex items-center gap-2 text-xs sm:text-sm">
-            <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Upload & Parse</span>
-            <span className="sm:hidden">Upload</span>
-          </TabsTrigger>
-        </TabsList>
+        {/* Tabs for different functionalities */}
+        <Tabs defaultValue="view" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 h-auto">
+            <TabsTrigger 
+              value="view" 
+              className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2"
+            >
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="truncate">View List</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="upload" 
+              className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2"
+            >
+              <Upload className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="truncate">Upload</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="view" className="space-y-4 sm:space-y-6">
-          {/* Actions */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button onClick={exportToCSV} variant="outline" size="sm" className="flex-1 sm:flex-none">
-              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="text-xs sm:text-sm">Export</span>
-            </Button>
-            
-            <Button onClick={fetchCauseList} variant="outline" size="sm" className="flex-1 sm:flex-none">
-              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="text-xs sm:text-sm">Refresh</span>
-            </Button>
-            
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm} size="sm" className="flex-1 sm:flex-none">
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="text-xs sm:text-sm">Add Cause</span>
-                </Button>
-              </DialogTrigger>
+          <TabsContent value="view" className="space-y-4 sm:space-y-6 w-full">
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-end gap-2 w-full">
+              <Button 
+                onClick={exportToCSV} 
+                variant="outline" 
+                size="sm" 
+                className="w-full sm:w-auto text-xs sm:text-sm h-9"
+              >
+                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                <span>Export CSV</span>
+              </Button>
+              
+              <Button 
+                onClick={fetchCauseList} 
+                variant="outline" 
+                size="sm" 
+                className="w-full sm:w-auto text-xs sm:text-sm h-9"
+              >
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                <span>Refresh</span>
+              </Button>
+              
+              <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    onClick={resetForm} 
+                    size="sm" 
+                    className="w-full sm:w-auto text-xs sm:text-sm h-9"
+                  >
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                    <span>Add Cause</span>
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-lg sm:text-xl">Add New Cause</DialogTitle>
@@ -481,82 +502,84 @@ const CauseList = () => {
             </Dialog>
           </div>
 
-          {/* Filters */}
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
-                Filters & Search
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-5 sm:gap-4">
-                <div className="relative w-full sm:col-span-2 lg:col-span-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-9 text-sm w-full"
-                  />
-                </div>
+            {/* Filters */}
+            <Card className="w-full overflow-hidden">
+              <CardHeader className="p-3 sm:p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
+                  <Filter className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span className="truncate">Filters & Search</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+                <div className="flex flex-col gap-3 w-full">
+                  <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none z-10" />
+                    <Input
+                      placeholder="Search case or parties..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-9 text-sm w-full"
+                    />
+                  </div>
                 
-                <div className="w-full">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9 text-sm w-full">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="scheduled">Scheduled</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="adjourned">Adjourned</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="w-full">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="h-9 text-sm w-full">
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="adjourned">Adjourned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="w-full">
+                    <Select value={courtFilter} onValueChange={setCourtFilter}>
+                      <SelectTrigger className="h-9 text-sm w-full">
+                        <SelectValue placeholder="All Courts" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Courts</SelectItem>
+                        {uniqueCourts.map(court => (
+                          <SelectItem key={court} value={court}>{court}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="w-full">
+                    <Select value={judgeFilter} onValueChange={setJudgeFilter}>
+                      <SelectTrigger className="h-9 text-sm w-full">
+                        <SelectValue placeholder="All Judges" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Judges</SelectItem>
+                        {uniqueJudges.map(judge => (
+                          <SelectItem key={judge} value={judge}>{judge}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="w-full">
+                    <Input
+                      type="date"
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      placeholder="Filter by date"
+                      className="h-9 text-sm w-full"
+                    />
+                  </div>
                 </div>
-                
-                <div className="w-full">
-                  <Select value={courtFilter} onValueChange={setCourtFilter}>
-                    <SelectTrigger className="h-9 text-sm w-full">
-                      <SelectValue placeholder="Court" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Courts</SelectItem>
-                      {uniqueCourts.map(court => (
-                        <SelectItem key={court} value={court}>{court}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="w-full">
-                  <Select value={judgeFilter} onValueChange={setJudgeFilter}>
-                    <SelectTrigger className="h-9 text-sm w-full">
-                      <SelectValue placeholder="Judge" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Judges</SelectItem>
-                      {uniqueJudges.map(judge => (
-                        <SelectItem key={judge} value={judge}>{judge}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <Input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  placeholder="Date"
-                  className="h-9 text-sm w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Statistics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* Statistics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full">
             <Card className="min-w-0">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2 min-w-0">
@@ -985,6 +1008,7 @@ const CauseList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 };
