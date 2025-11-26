@@ -349,11 +349,11 @@ const CauseList = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Court Cause List</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Court Cause List</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Manage and track court hearings in real-time
           </p>
@@ -490,85 +490,91 @@ const CauseList = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-                <div className="relative sm:col-span-2 lg:col-span-1">
+              <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-5 sm:gap-4">
+                <div className="relative w-full sm:col-span-2 lg:col-span-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-9 text-sm"
+                    className="pl-10 h-9 text-sm w-full"
                   />
                 </div>
                 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="adjourned">Adjourned</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="w-full">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9 text-sm w-full">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="adjourned">Adjourned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 
-                <Select value={courtFilter} onValueChange={setCourtFilter}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Court" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courts</SelectItem>
-                    {uniqueCourts.map(court => (
-                      <SelectItem key={court} value={court}>{court}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-full">
+                  <Select value={courtFilter} onValueChange={setCourtFilter}>
+                    <SelectTrigger className="h-9 text-sm w-full">
+                      <SelectValue placeholder="Court" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Courts</SelectItem>
+                      {uniqueCourts.map(court => (
+                        <SelectItem key={court} value={court}>{court}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 
-                <Select value={judgeFilter} onValueChange={setJudgeFilter}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Judge" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Judges</SelectItem>
-                    {uniqueJudges.map(judge => (
-                      <SelectItem key={judge} value={judge}>{judge}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-full">
+                  <Select value={judgeFilter} onValueChange={setJudgeFilter}>
+                    <SelectTrigger className="h-9 text-sm w-full">
+                      <SelectValue placeholder="Judge" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Judges</SelectItem>
+                      {uniqueJudges.map(judge => (
+                        <SelectItem key={judge} value={judge}>{judge}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 
                 <Input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
                   placeholder="Date"
-                  className="h-9 text-sm"
+                  className="h-9 text-sm w-full"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Statistics */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="min-w-0">
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Total Cases</p>
                     <p className="text-xl sm:text-2xl font-bold">{filteredAndSortedData.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="min-w-0">
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Progress</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">In Progress</p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {filteredAndSortedData.filter(item => item.status === 'in_progress').length}
                     </p>
@@ -577,12 +583,12 @@ const CauseList = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="min-w-0">
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2">
-                  <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Complete</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Completed</p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {filteredAndSortedData.filter(item => item.status === 'completed').length}
                     </p>
@@ -591,12 +597,12 @@ const CauseList = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="min-w-0">
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Adjourn</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Adjourned</p>
                     <p className="text-xl sm:text-2xl font-bold">
                       {filteredAndSortedData.filter(item => item.status === 'adjourned').length}
                     </p>
@@ -607,7 +613,7 @@ const CauseList = () => {
           </div>
 
           {/* Enhanced Table with new fields */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardContent className="p-0">
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">
@@ -758,15 +764,15 @@ const CauseList = () => {
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden space-y-3 p-3">
+              <div className="md:hidden space-y-3 p-3 w-full">
                 {filteredAndSortedData.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
                     No cause list entries found
                   </div>
                 ) : (
                   filteredAndSortedData.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
-                      <CardContent className="p-4 space-y-3">
+                    <Card key={item.id} className="overflow-hidden w-full">
+                      <CardContent className="p-4 space-y-3 w-full min-w-0">
                         {/* Header */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
