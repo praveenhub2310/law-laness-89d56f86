@@ -328,7 +328,7 @@ export type Database = {
           court_name: string
           created_at: string
           description: string | null
-          duration: unknown | null
+          duration: unknown
           hearing_date: string
           id: string
           location: string | null
@@ -343,7 +343,7 @@ export type Database = {
           court_name: string
           created_at?: string
           description?: string | null
-          duration?: unknown | null
+          duration?: unknown
           hearing_date: string
           id?: string
           location?: string | null
@@ -358,7 +358,7 @@ export type Database = {
           court_name?: string
           created_at?: string
           description?: string | null
-          duration?: unknown | null
+          duration?: unknown
           hearing_date?: string
           id?: string
           location?: string | null
@@ -563,7 +563,7 @@ export type Database = {
           court_room: string | null
           created_at: string
           description: string | null
-          duration: unknown | null
+          duration: unknown
           hearing_date: string
           hearing_number: string
           hearing_time: string | null
@@ -584,7 +584,7 @@ export type Database = {
           court_room?: string | null
           created_at?: string
           description?: string | null
-          duration?: unknown | null
+          duration?: unknown
           hearing_date: string
           hearing_number: string
           hearing_time?: string | null
@@ -605,7 +605,7 @@ export type Database = {
           court_room?: string | null
           created_at?: string
           description?: string | null
-          duration?: unknown | null
+          duration?: unknown
           hearing_date?: string
           hearing_number?: string
           hearing_time?: string | null
@@ -925,7 +925,7 @@ export type Database = {
           details: Json | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           resolved: boolean | null
           resolved_at: string | null
           resolved_by: string | null
@@ -938,7 +938,7 @@ export type Database = {
           details?: Json | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -951,7 +951,7 @@ export type Database = {
           details?: Json | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -1145,7 +1145,7 @@ export type Database = {
           created_at: string | null
           details: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           level: string
           module: string
           session_id: string | null
@@ -1159,7 +1159,7 @@ export type Database = {
           created_at?: string | null
           details?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           level: string
           module: string
           session_id?: string | null
@@ -1173,7 +1173,7 @@ export type Database = {
           created_at?: string | null
           details?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           level?: string
           module?: string
           session_id?: string | null

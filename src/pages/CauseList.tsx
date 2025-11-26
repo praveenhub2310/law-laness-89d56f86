@@ -349,12 +349,12 @@ const CauseList = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Court Cause List</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Court Cause List</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage and track court hearings in real-time
           </p>
         </div>
@@ -363,39 +363,41 @@ const CauseList = () => {
       {/* Tabs for different functionalities */}
       <Tabs defaultValue="view" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="view" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            View Cause List
+          <TabsTrigger value="view" className="flex items-center gap-2 text-xs sm:text-sm">
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">View Cause List</span>
+            <span className="sm:hidden">View</span>
           </TabsTrigger>
-          <TabsTrigger value="upload" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Upload & Parse
+          <TabsTrigger value="upload" className="flex items-center gap-2 text-xs sm:text-sm">
+            <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Upload & Parse</span>
+            <span className="sm:hidden">Upload</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="view" className="space-y-6">
+        <TabsContent value="view" className="space-y-4 sm:space-y-6">
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2">
-            <Button onClick={exportToCSV} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button onClick={exportToCSV} variant="outline" size="sm" className="flex-1 sm:flex-none">
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="text-xs sm:text-sm">Export</span>
             </Button>
             
-            <Button onClick={fetchCauseList} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+            <Button onClick={fetchCauseList} variant="outline" size="sm" className="flex-1 sm:flex-none">
+              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="text-xs sm:text-sm">Refresh</span>
             </Button>
             
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
               <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Cause
+                <Button onClick={resetForm} size="sm" className="flex-1 sm:flex-none">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="text-xs sm:text-sm">Add Cause</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add New Cause</DialogTitle>
+                  <DialogTitle className="text-lg sm:text-xl">Add New Cause</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -481,21 +483,21 @@ const CauseList = () => {
 
           {/* Filters */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
                 Filters & Search
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div className="relative">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                <div className="relative sm:col-span-2 lg:col-span-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Search case number or parties..."
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-9 text-sm"
                   />
                 </div>
                 
@@ -547,26 +549,26 @@ const CauseList = () => {
           </Card>
 
           {/* Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-blue-500" />
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Cases</p>
-                    <p className="text-2xl font-bold">{filteredAndSortedData.length}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+                    <p className="text-xl sm:text-2xl font-bold">{filteredAndSortedData.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-yellow-500" />
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">In Progress</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Progress</p>
+                    <p className="text-xl sm:text-2xl font-bold">
                       {filteredAndSortedData.filter(item => item.status === 'in_progress').length}
                     </p>
                   </div>
@@ -575,12 +577,12 @@ const CauseList = () => {
             </Card>
             
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2">
-                  <Gavel className="h-5 w-5 text-green-500" />
+                  <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Completed</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Complete</p>
+                    <p className="text-xl sm:text-2xl font-bold">
                       {filteredAndSortedData.filter(item => item.status === 'completed').length}
                     </p>
                   </div>
@@ -589,12 +591,12 @@ const CauseList = () => {
             </Card>
             
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2">
-                  <Building className="h-5 w-5 text-orange-500" />
+                  <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Adjourned</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Adjourn</p>
+                    <p className="text-xl sm:text-2xl font-bold">
                       {filteredAndSortedData.filter(item => item.status === 'adjourned').length}
                     </p>
                   </div>
@@ -606,7 +608,8 @@ const CauseList = () => {
           {/* Enhanced Table with new fields */}
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -752,6 +755,117 @@ const CauseList = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3 p-3">
+                {filteredAndSortedData.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No cause list entries found
+                  </div>
+                ) : (
+                  filteredAndSortedData.map((item) => (
+                    <Card key={item.id} className="overflow-hidden">
+                      <CardContent className="p-4 space-y-3">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-sm font-semibold break-words">
+                              {item.case_number}
+                            </div>
+                            {item.item_number && (
+                              <Badge variant="outline" className="font-mono text-xs mt-1">
+                                #{item.item_number}
+                              </Badge>
+                            )}
+                          </div>
+                          {getStatusBadge(item.status)}
+                        </div>
+
+                        {/* Parties */}
+                        <div className="text-sm">
+                          <div className="text-xs text-muted-foreground mb-1">Parties</div>
+                          <div className="break-words">{item.parties}</div>
+                        </div>
+
+                        {/* Court & Judge */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Court</div>
+                            <div className="break-words">{item.court_name}</div>
+                            {item.court_room_number && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <Building className="h-3 w-3" />
+                                Room {item.court_room_number}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Judge</div>
+                            <div className="break-words">{item.judge_name}</div>
+                          </div>
+                        </div>
+
+                        {/* Date & Time */}
+                        <div className="text-sm">
+                          <div className="text-xs text-muted-foreground mb-1">Date & Time</div>
+                          <div>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</div>
+                          {item.time_slot && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <Clock className="h-3 w-3" />
+                              {item.time_slot}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Source */}
+                        <div className="flex flex-wrap gap-2">
+                          {item.parsed_from_file ? (
+                            <>
+                              <Badge className="bg-purple-100 text-purple-800 text-xs">
+                                <Upload className="h-3 w-3 mr-1" />
+                                Parsed
+                              </Badge>
+                              {item.mapped_case_id && (
+                                <Badge className="bg-green-100 text-green-800 text-xs">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  Mapped
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">Manual</Badge>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2 border-t">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(item)}
+                            className="flex-1 text-xs"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setCurrentItem(item);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="flex-1 text-xs"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -763,9 +877,9 @@ const CauseList = () => {
 
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Cause</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Edit Cause</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
