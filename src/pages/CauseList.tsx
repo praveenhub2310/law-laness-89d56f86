@@ -502,8 +502,8 @@ const CauseList = () => {
                 </div>
                 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
@@ -515,8 +515,8 @@ const CauseList = () => {
                 </Select>
                 
                 <Select value={courtFilter} onValueChange={setCourtFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by court" />
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Court" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Courts</SelectItem>
@@ -527,8 +527,8 @@ const CauseList = () => {
                 </Select>
                 
                 <Select value={judgeFilter} onValueChange={setJudgeFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by judge" />
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Judge" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Judges</SelectItem>
@@ -542,7 +542,8 @@ const CauseList = () => {
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  placeholder="Filter by date"
+                  placeholder="Date"
+                  className="h-9 text-sm"
                 />
               </div>
             </CardContent>
