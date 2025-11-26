@@ -350,46 +350,46 @@ const CauseList = () => {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden">
-      <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 max-w-full">
+      <div className="w-full max-w-full space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
         {/* Header */}
-        <div className="w-full min-w-0">
+        <div className="w-full">
           <div className="flex flex-col gap-2">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words w-full">
               Court Cause List
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-muted-foreground break-words">
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground break-words w-full">
               Manage and track court hearings in real-time
             </p>
           </div>
         </div>
 
         {/* Tabs for different functionalities */}
-        <Tabs defaultValue="view" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-auto">
+        <Tabs defaultValue="view" className="w-full max-w-full">
+          <TabsList className="grid w-full max-w-full grid-cols-2 h-auto">
             <TabsTrigger 
               value="view" 
-              className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2"
+              className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 min-w-0"
             >
               <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="truncate">View List</span>
             </TabsTrigger>
             <TabsTrigger 
               value="upload" 
-              className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2"
+              className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 min-w-0"
             >
               <Upload className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="truncate">Upload</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="view" className="space-y-4 sm:space-y-6 w-full">
+          <TabsContent value="view" className="w-full max-w-full space-y-4 sm:space-y-6">
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-end gap-2 w-full">
+            <div className="flex flex-col gap-2 w-full max-w-full">
               <Button 
                 onClick={exportToCSV} 
                 variant="outline" 
                 size="sm" 
-                className="w-full sm:w-auto text-xs sm:text-sm h-9"
+                className="w-full h-9 text-xs sm:text-sm"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
                 <span>Export CSV</span>
@@ -399,7 +399,7 @@ const CauseList = () => {
                 onClick={fetchCauseList} 
                 variant="outline" 
                 size="sm" 
-                className="w-full sm:w-auto text-xs sm:text-sm h-9"
+                className="w-full h-9 text-xs sm:text-sm"
               >
                 <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
                 <span>Refresh</span>
@@ -410,16 +410,16 @@ const CauseList = () => {
                   <Button 
                     onClick={resetForm} 
                     size="sm" 
-                    className="w-full sm:w-auto text-xs sm:text-sm h-9"
+                    className="w-full h-9 text-xs sm:text-sm"
                   >
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
                     <span>Add Cause</span>
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-lg sm:text-xl">Add New Cause</DialogTitle>
-                </DialogHeader>
+                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto mx-2">
+                  <DialogHeader>
+                    <DialogTitle className="text-base sm:text-lg md:text-xl">Add New Cause</DialogTitle>
+                  </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <Label htmlFor="case_number">Case Number</Label>
@@ -503,28 +503,28 @@ const CauseList = () => {
           </div>
 
             {/* Filters */}
-            <Card className="w-full overflow-hidden">
+            <Card className="w-full max-w-full overflow-hidden">
               <CardHeader className="p-3 sm:p-4 md:p-6">
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg w-full">
                   <Filter className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   <span className="truncate">Filters & Search</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
-                <div className="flex flex-col gap-3 w-full">
-                  <div className="relative w-full">
+              <CardContent className="p-3 sm:p-4 md:p-6 pt-0 w-full max-w-full">
+                <div className="flex flex-col gap-3 w-full max-w-full">
+                  <div className="relative w-full max-w-full">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none z-10" />
                     <Input
                       placeholder="Search case or parties..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-9 text-sm w-full"
+                      className="pl-10 h-9 text-sm w-full max-w-full"
                     />
                   </div>
                 
-                  <div className="w-full">
+                  <div className="w-full max-w-full">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="h-9 text-sm w-full">
+                      <SelectTrigger className="h-9 text-sm w-full max-w-full">
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
                       <SelectContent>
@@ -537,9 +537,9 @@ const CauseList = () => {
                     </Select>
                   </div>
                   
-                  <div className="w-full">
+                  <div className="w-full max-w-full">
                     <Select value={courtFilter} onValueChange={setCourtFilter}>
-                      <SelectTrigger className="h-9 text-sm w-full">
+                      <SelectTrigger className="h-9 text-sm w-full max-w-full">
                         <SelectValue placeholder="All Courts" />
                       </SelectTrigger>
                       <SelectContent>
@@ -551,9 +551,9 @@ const CauseList = () => {
                     </Select>
                   </div>
                   
-                  <div className="w-full">
+                  <div className="w-full max-w-full">
                     <Select value={judgeFilter} onValueChange={setJudgeFilter}>
-                      <SelectTrigger className="h-9 text-sm w-full">
+                      <SelectTrigger className="h-9 text-sm w-full max-w-full">
                         <SelectValue placeholder="All Judges" />
                       </SelectTrigger>
                       <SelectContent>
@@ -565,13 +565,13 @@ const CauseList = () => {
                     </Select>
                   </div>
                   
-                  <div className="w-full">
+                  <div className="w-full max-w-full">
                     <Input
                       type="date"
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
                       placeholder="Filter by date"
-                      className="h-9 text-sm w-full"
+                      className="h-9 text-sm w-full max-w-full"
                     />
                   </div>
                 </div>
@@ -579,67 +579,67 @@ const CauseList = () => {
             </Card>
 
             {/* Statistics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full">
-            <Card className="min-w-0">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Total Cases</p>
-                    <p className="text-xl sm:text-2xl font-bold">{filteredAndSortedData.length}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-full">
+              <Card className="w-full max-w-full overflow-hidden">
+                <CardContent className="p-3 sm:p-4 w-full">
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Total Cases</p>
+                      <p className="text-xl sm:text-2xl font-bold truncate">{filteredAndSortedData.length}</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             
-            <Card className="min-w-0">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">In Progress</p>
-                    <p className="text-xl sm:text-2xl font-bold">
-                      {filteredAndSortedData.filter(item => item.status === 'in_progress').length}
-                    </p>
+              <Card className="w-full max-w-full overflow-hidden">
+                <CardContent className="p-3 sm:p-4 w-full">
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">In Progress</p>
+                      <p className="text-xl sm:text-2xl font-bold truncate">
+                        {filteredAndSortedData.filter(item => item.status === 'in_progress').length}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             
-            <Card className="min-w-0">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Completed</p>
-                    <p className="text-xl sm:text-2xl font-bold">
-                      {filteredAndSortedData.filter(item => item.status === 'completed').length}
-                    </p>
+              <Card className="w-full max-w-full overflow-hidden">
+                <CardContent className="p-3 sm:p-4 w-full">
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Completed</p>
+                      <p className="text-xl sm:text-2xl font-bold truncate">
+                        {filteredAndSortedData.filter(item => item.status === 'completed').length}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             
-            <Card className="min-w-0">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Adjourned</p>
-                    <p className="text-xl sm:text-2xl font-bold">
-                      {filteredAndSortedData.filter(item => item.status === 'adjourned').length}
-                    </p>
+              <Card className="w-full max-w-full overflow-hidden">
+                <CardContent className="p-3 sm:p-4 w-full">
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    <Building className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Adjourned</p>
+                      <p className="text-xl sm:text-2xl font-bold truncate">
+                        {filteredAndSortedData.filter(item => item.status === 'adjourned').length}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Enhanced Table with new fields */}
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
+            {/* Enhanced Table with new fields */}
+            <Card className="w-full max-w-full overflow-hidden">
+              <CardContent className="p-0 w-full max-w-full">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto w-full">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -786,16 +786,16 @@ const CauseList = () => {
                 </Table>
               </div>
 
-              {/* Mobile Card View */}
-              <div className="md:hidden space-y-3 p-3 w-full">
-                {filteredAndSortedData.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    No cause list entries found
-                  </div>
-                ) : (
-                  filteredAndSortedData.map((item) => (
-                    <Card key={item.id} className="overflow-hidden w-full">
-                      <CardContent className="p-4 space-y-3 w-full min-w-0">
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3 p-3 w-full max-w-full">
+                  {filteredAndSortedData.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No cause list entries found
+                    </div>
+                  ) : (
+                    filteredAndSortedData.map((item) => (
+                      <Card key={item.id} className="w-full max-w-full overflow-hidden">
+                        <CardContent className="p-4 space-y-3 w-full max-w-full min-w-0">
                         {/* Header */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
@@ -900,17 +900,17 @@ const CauseList = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="upload" className="space-y-6">
+        <TabsContent value="upload" className="w-full max-w-full space-y-4 sm:space-y-6">
           <CauseListUploader />
         </TabsContent>
       </Tabs>
 
-      {/* Edit Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Edit Cause</DialogTitle>
-          </DialogHeader>
+        {/* Edit Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto mx-2">
+            <DialogHeader>
+              <DialogTitle className="text-base sm:text-lg md:text-xl">Edit Cause</DialogTitle>
+            </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="edit_case_number">Case Number</Label>
