@@ -18,6 +18,7 @@ const TopBar = () => {
   const { userProfile, signOut } = useAuth();
   
   const showBackButton = location.pathname !== '/dashboard';
+  const showTopBarTitle = location.pathname !== '/cause-list';
 
   const handleLogout = async () => {
     await signOut();
@@ -56,20 +57,22 @@ const TopBar = () => {
           </Button>
         )}
         
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            {location.pathname === '/dashboard' ? 'Dashboard' : 
-             location.pathname.split('/').pop()?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </p>
-        </div>
+        {showTopBarTitle && (
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {location.pathname === '/dashboard' ? 'Dashboard' : 
+               location.pathname.split('/').pop()?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center space-x-4">
