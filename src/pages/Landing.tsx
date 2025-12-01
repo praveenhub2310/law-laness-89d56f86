@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import dashboardScreenshot from '@/assets/dashboard-screenshot.png';
 import documentsScreenshot from '@/assets/documents-screenshot.png';
 import calendarScreenshot from '@/assets/calendar-screenshot.png';
+import logo from '@/assets/lawlanes_logo.png';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -151,8 +152,8 @@ const Landing = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <Scale className="h-8 w-8 text-primary" />
-              <span className="text-xl sm:text-2xl font-bold">AkraLegal</span>
+              <img src={logo} alt="Law Lanes Logo" className="h-10 w-10 object-contain" />
+              <span className="text-xl sm:text-2xl font-bold">Law Lanes</span>
             </div>
             
             {/* Desktop Navigation */}
@@ -244,7 +245,7 @@ const Landing = () => {
       <section className="bg-muted/30 py-12 sm:py-16 lg:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">See AkraLegal in Action</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">See Law Lanes in Action</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Experience the intuitive interface designed for legal professionals
             </p>
@@ -279,7 +280,7 @@ const Landing = () => {
                   <div className="absolute -inset-4 bg-primary/10 rounded-2xl blur-2xl" />
                   <img 
                     src={dashboardScreenshot} 
-                    alt="AkraLegal Dashboard Interface showcasing case management and analytics" 
+                    alt="Law Lanes Dashboard Interface showcasing case management and analytics" 
                     className="relative rounded-xl shadow-2xl w-full border border-border/50"
                   />
                 </div>
@@ -389,7 +390,7 @@ const Landing = () => {
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why Choose AkraLegal?</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why Choose Law Lanes?</h2>
             <p className="text-lg text-muted-foreground">
               Transform your legal practice with cutting-edge technology
             </p>
@@ -413,7 +414,7 @@ const Landing = () => {
             <div className="text-center mb-8">
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">Request a Demo</h2>
               <p className="text-lg text-muted-foreground">
-                See how AkraLegal can transform your legal practice. Fill out the form and our team will contact you shortly.
+                See how Law Lanes can transform your legal practice. Fill out the form and our team will contact you shortly.
               </p>
             </div>
 
@@ -492,7 +493,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Transform Your Legal Practice?</h2>
           <p className="text-lg sm:text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Join thousands of legal professionals who trust AkraLegal for their practice management
+            Join thousands of legal professionals who trust Law Lanes for their practice management
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" className="text-lg px-8 w-full sm:w-auto" onClick={() => navigate('/signup')}>
@@ -511,8 +512,8 @@ const Landing = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Scale className="h-6 w-6 text-primary" />
-                <span className="text-lg font-bold">AkraLegal</span>
+                <img src={logo} alt="Law Lanes Logo" className="h-6 w-6 object-contain" />
+                <span className="text-lg font-bold">Law Lanes</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Professional case management and legal workflow automation for modern law firms.
@@ -548,7 +549,7 @@ const Landing = () => {
           </div>
           
           <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} AkraLegal. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Law Lanes. All rights reserved.</p>
           </div>
         </div>
       </footer>
