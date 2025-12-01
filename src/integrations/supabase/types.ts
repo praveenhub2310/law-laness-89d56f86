@@ -811,6 +811,65 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll: {
+        Row: {
+          bonus_amount: number | null
+          created_at: string
+          deductions: number | null
+          employee_id: string
+          id: string
+          net_amount: number
+          notes: string | null
+          pay_period_end: string
+          pay_period_start: string
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string
+          salary_amount: number
+          updated_at: string
+        }
+        Insert: {
+          bonus_amount?: number | null
+          created_at?: string
+          deductions?: number | null
+          employee_id: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          pay_period_end: string
+          pay_period_start: string
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          salary_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          bonus_amount?: number | null
+          created_at?: string
+          deductions?: number | null
+          employee_id?: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          pay_period_end?: string
+          pay_period_start?: string
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          salary_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
