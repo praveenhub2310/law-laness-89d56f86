@@ -85,7 +85,11 @@ const AiScenarioGuidance = () => {
             rows={6}
             className="resize-none"
           />
-          <Button onClick={handleAnalyze} disabled={isLoading} className="w-full">
+          <Button 
+            onClick={handleAnalyze} 
+            disabled={isLoading} 
+            className="w-full pointer-events-auto cursor-pointer relative z-10"
+          >
             {isLoading ? (
               <>
                 <Bot className="mr-2 h-4 w-4 animate-spin" />
