@@ -252,10 +252,12 @@ const MeetingRecordings = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL for the uploaded file
-      const { data: urlData } = supabase.storage
+      // Get signed URL for the uploaded file (valid for 1 year)
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('meeting-recordings')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 31536000); // 1 year in seconds
+      
+      if (urlError) throw urlError;
 
       // Create recording metadata with proper role-based IDs
       const recordingData = {
@@ -270,7 +272,7 @@ const MeetingRecordings = () => {
         participants: newRecording.participants,
         is_confidential: newRecording.is_confidential,
         recording_type: file.type.startsWith('video/') ? 'video' : 'audio',
-        file_url: urlData.publicUrl,
+        file_url: urlData.signedUrl,
         transcript: null,
         status: 'processing',
         notes: newRecording.notes
@@ -367,12 +369,17 @@ const MeetingRecordings = () => {
 
       console.log('Storage upload successful:', uploadData);
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
+      // Get signed URL (valid for 1 year)
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('meeting-recordings')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 31536000); // 1 year in seconds
+      
+      if (urlError) {
+        console.error('Error creating signed URL:', urlError);
+        throw urlError;
+      }
 
-      console.log('File URL:', urlData.publicUrl);
+      console.log('File URL:', urlData.signedUrl);
 
       // Create recording metadata with proper role-based IDs
       const recordingData = {
@@ -387,7 +394,7 @@ const MeetingRecordings = () => {
         participants: newRecording.participants,
         is_confidential: newRecording.is_confidential,
         recording_type: 'audio' as const,
-        file_url: urlData.publicUrl,
+        file_url: urlData.signedUrl,
         transcript: null,
         status: 'ready' as const,
         notes: newRecording.notes
@@ -440,7 +447,7 @@ const MeetingRecordings = () => {
     }
   };
 
-  const handlePlayRecording = (recording: MeetingRecording) => {
+  const handlePlayRecording = async (recording: MeetingRecording) => {
     console.log('🎵 Attempting to play recording:', recording.id, recording.title);
     console.log('File URL:', recording.file_url);
     console.log('Recording type:', recording.recording_type);
@@ -453,6 +460,43 @@ const MeetingRecordings = () => {
         variant: 'destructive'
       });
       return;
+    }
+
+    // If URL is expired or needs refresh, get a new signed URL
+    let playbackUrl = recording.file_url;
+    
+    // Check if URL needs refreshing (if it contains 'token=' it's a signed URL that may expire)
+    if (recording.file_url.includes('token=')) {
+      try {
+        // Extract file path from URL
+        const urlParts = recording.file_url.split('/');
+        const bucketIndex = urlParts.indexOf('meeting-recordings');
+        if (bucketIndex !== -1 && bucketIndex + 1 < urlParts.length) {
+          const filePath = urlParts.slice(bucketIndex + 1).join('/').split('?')[0];
+          
+          console.log('🔄 Refreshing signed URL for file:', filePath);
+          
+          const { data: newUrl, error: urlError } = await supabase.storage
+            .from('meeting-recordings')
+            .createSignedUrl(filePath, 3600); // 1 hour validity
+          
+          if (urlError) {
+            console.error('❌ Error creating signed URL:', urlError);
+            throw urlError;
+          }
+          
+          playbackUrl = newUrl.signedUrl;
+          console.log('✅ New signed URL created');
+        }
+      } catch (error) {
+        console.error('❌ Failed to refresh URL:', error);
+        toast({
+          title: 'URL Refresh Failed',
+          description: 'Failed to generate playback URL. Please try again.',
+          variant: 'destructive'
+        });
+        return;
+      }
     }
 
     // Stop any currently playing recording
@@ -572,7 +616,7 @@ const MeetingRecordings = () => {
       
       // Set source and load
       console.log('🔄 Setting source and loading media...');
-      mediaElement.src = recording.file_url;
+      mediaElement.src = playbackUrl;
       mediaElement.load();
       
       // Store reference
@@ -673,7 +717,26 @@ const MeetingRecordings = () => {
     }
 
     try {
-      const response = await fetch(recording.file_url);
+      // Get fresh signed URL for download
+      let downloadUrl = recording.file_url;
+      
+      if (recording.file_url.includes('token=')) {
+        const urlParts = recording.file_url.split('/');
+        const bucketIndex = urlParts.indexOf('meeting-recordings');
+        if (bucketIndex !== -1 && bucketIndex + 1 < urlParts.length) {
+          const filePath = urlParts.slice(bucketIndex + 1).join('/').split('?')[0];
+          
+          const { data: newUrl, error: urlError } = await supabase.storage
+            .from('meeting-recordings')
+            .createSignedUrl(filePath, 3600); // 1 hour validity
+          
+          if (!urlError && newUrl) {
+            downloadUrl = newUrl.signedUrl;
+          }
+        }
+      }
+      
+      const response = await fetch(downloadUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
