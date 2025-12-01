@@ -164,6 +164,7 @@ const Profile = () => {
                   id="first_name"
                   value={profileData.first_name}
                   onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))}
+                  className="pointer-events-auto"
                 />
               </div>
               <div>
@@ -172,6 +173,7 @@ const Profile = () => {
                   id="last_name"
                   value={profileData.last_name}
                   onChange={(e) => setProfileData(prev => ({ ...prev, last_name: e.target.value }))}
+                  className="pointer-events-auto"
                 />
               </div>
             </div>
@@ -192,6 +194,7 @@ const Profile = () => {
                 id="phone"
                 value={profileData.phone}
                 onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                className="pointer-events-auto"
               />
             </div>
           </CardContent>
@@ -212,6 +215,7 @@ const Profile = () => {
                 id="bar_number"
                 value={profileData.bar_number}
                 onChange={(e) => setProfileData(prev => ({ ...prev, bar_number: e.target.value }))}
+                className="pointer-events-auto"
               />
             </div>
             
@@ -223,6 +227,7 @@ const Profile = () => {
                   type="number"
                   value={profileData.experience_years}
                   onChange={(e) => setProfileData(prev => ({ ...prev, experience_years: e.target.value }))}
+                  className="pointer-events-auto"
                 />
               </div>
               <div>
@@ -232,6 +237,7 @@ const Profile = () => {
                   type="number"
                   value={profileData.hourly_rate}
                   onChange={(e) => setProfileData(prev => ({ ...prev, hourly_rate: e.target.value }))}
+                  className="pointer-events-auto"
                 />
               </div>
             </div>
@@ -240,19 +246,19 @@ const Profile = () => {
               <Label>Specializations</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {profileData.specialization.map((spec, index) => (
-                  <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeSpecialization(spec)}>
+                  <Badge key={index} variant="secondary" className="cursor-pointer pointer-events-auto relative z-10" onClick={() => removeSpecialization(spec)}>
                     {spec} ×
                   </Badge>
                 ))}
               </div>
               <div className="flex gap-2 mt-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => addSpecialization('Criminal Law')}>
+                <Button type="button" variant="outline" size="sm" onClick={() => addSpecialization('Criminal Law')} className="pointer-events-auto cursor-pointer relative z-10">
                   + Criminal Law
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => addSpecialization('Civil Law')}>
+                <Button type="button" variant="outline" size="sm" onClick={() => addSpecialization('Civil Law')} className="pointer-events-auto cursor-pointer relative z-10">
                   + Civil Law
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => addSpecialization('Family Law')}>
+                <Button type="button" variant="outline" size="sm" onClick={() => addSpecialization('Family Law')} className="pointer-events-auto cursor-pointer relative z-10">
                   + Family Law
                 </Button>
               </div>
@@ -274,13 +280,18 @@ const Profile = () => {
               value={profileData.bio}
               onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
               rows={4}
+              className="pointer-events-auto"
             />
           </CardContent>
         </Card>
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={loading}>
+        <Button 
+          onClick={handleSave} 
+          disabled={loading}
+          className="pointer-events-auto cursor-pointer relative z-10"
+        >
           <Save className="h-4 w-4 mr-2" />
           {loading ? 'Saving...' : 'Save Changes'}
         </Button>
