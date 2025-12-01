@@ -52,12 +52,23 @@ const MeetingRecordings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState<MeetingRecording | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Audio player states
+  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   
   const [newRecording, setNewRecording] = useState({
     title: '',
@@ -430,44 +441,225 @@ const MeetingRecordings = () => {
   };
 
   const handlePlayRecording = (recording: MeetingRecording) => {
-    if (recording.file_url) {
-      // Create audio/video element and play
-      const mediaElement = document.createElement(recording.recording_type === 'video' ? 'video' : 'audio');
-      mediaElement.src = recording.file_url;
-      mediaElement.controls = true;
-      mediaElement.style.width = '100%';
-      
-      // Open in a new modal or window for playback
-      const playbackWindow = window.open('', '_blank', 'width=600,height=400');
-      if (playbackWindow) {
-        playbackWindow.document.write(`
-          <html>
-            <head>
-              <title>${recording.title} - Playback</title>
-              <style>
-                body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-                .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                h2 { margin-top: 0; color: #333; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <h2>${recording.title}</h2>
-                <p><strong>Date:</strong> ${new Date(recording.meeting_date).toLocaleDateString()}</p>
-                <p><strong>Duration:</strong> ${recording.duration ? `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}` : 'Unknown'}</p>
-                ${mediaElement.outerHTML}
-              </div>
-            </body>
-          </html>
-        `);
-      }
-    } else {
+    console.log('🎵 Attempting to play recording:', recording.id, recording.title);
+    console.log('File URL:', recording.file_url);
+    console.log('Recording type:', recording.recording_type);
+    
+    if (!recording.file_url) {
+      console.error('❌ No file URL available');
       toast({
         title: 'File Not Available',
-        description: 'Recording file is not accessible.',
+        description: 'Recording file URL is missing.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Stop any currently playing recording
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current = null;
+    }
+
+    // Reset error state
+    setAudioError(null);
+    setIsLoadingAudio(true);
+    setPlayingRecordingId(recording.id);
+    
+    try {
+      // Create appropriate media element
+      const mediaElement = recording.recording_type === 'video' 
+        ? document.createElement('video')
+        : document.createElement('audio');
+      
+      console.log('🔧 Created media element:', mediaElement.tagName);
+      
+      // Set CORS to allow cross-origin requests
+      mediaElement.crossOrigin = 'anonymous';
+      mediaElement.preload = 'metadata';
+      
+      // Event listeners
+      mediaElement.addEventListener('loadedmetadata', () => {
+        console.log('✅ Metadata loaded, duration:', mediaElement.duration);
+        setDuration(mediaElement.duration);
+        setIsLoadingAudio(false);
+      });
+
+      mediaElement.addEventListener('loadeddata', () => {
+        console.log('✅ Data loaded, ready to play');
+      });
+
+      mediaElement.addEventListener('canplay', () => {
+        console.log('✅ Can play audio/video');
+        setIsLoadingAudio(false);
+        mediaElement.play()
+          .then(() => {
+            console.log('✅ Playback started successfully');
+            setIsPlaying(true);
+          })
+          .catch(error => {
+            console.error('❌ Play error:', error);
+            setAudioError(`Playback error: ${error.message}`);
+            setIsLoadingAudio(false);
+            toast({
+              title: 'Playback Error',
+              description: 'Failed to start playback. Please try again.',
+              variant: 'destructive'
+            });
+          });
+      });
+
+      mediaElement.addEventListener('timeupdate', () => {
+        setCurrentTime(mediaElement.currentTime);
+      });
+
+      mediaElement.addEventListener('ended', () => {
+        console.log('🎵 Playback ended');
+        setIsPlaying(false);
+        setCurrentTime(0);
+      });
+
+      mediaElement.addEventListener('pause', () => {
+        console.log('⏸️ Playback paused');
+        setIsPlaying(false);
+      });
+
+      mediaElement.addEventListener('play', () => {
+        console.log('▶️ Playback resumed');
+        setIsPlaying(true);
+      });
+
+      mediaElement.addEventListener('error', (e) => {
+        console.error('❌ Media error event:', e);
+        console.error('Error code:', mediaElement.error?.code);
+        console.error('Error message:', mediaElement.error?.message);
+        
+        let errorMessage = 'Failed to load media file';
+        if (mediaElement.error) {
+          switch (mediaElement.error.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              errorMessage = 'Playback aborted';
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              errorMessage = 'Network error while loading media';
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              errorMessage = 'Media decoding error';
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              errorMessage = 'Media format not supported';
+              break;
+          }
+        }
+        
+        setAudioError(errorMessage);
+        setIsLoadingAudio(false);
+        setIsPlaying(false);
+        
+        toast({
+          title: 'Media Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      });
+
+      // Set volume
+      mediaElement.volume = volume;
+      
+      // Set source and load
+      console.log('🔄 Setting source and loading media...');
+      mediaElement.src = recording.file_url;
+      mediaElement.load();
+      
+      // Store reference
+      if (recording.recording_type === 'video') {
+        videoRef.current = mediaElement as HTMLVideoElement;
+      } else {
+        audioRef.current = mediaElement as HTMLAudioElement;
+      }
+
+      console.log('✅ Media element setup complete');
+      
+    } catch (error) {
+      console.error('❌ Error setting up media player:', error);
+      setAudioError(`Setup error: ${error.message}`);
+      setIsLoadingAudio(false);
+      toast({
+        title: 'Setup Error',
+        description: 'Failed to initialize media player.',
         variant: 'destructive'
       });
     }
+  };
+
+  const handlePauseRecording = () => {
+    console.log('⏸️ Pausing playback');
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+    setIsPlaying(false);
+  };
+
+  const handleResumeRecording = () => {
+    console.log('▶️ Resuming playback');
+    const mediaElement = audioRef.current || videoRef.current;
+    if (mediaElement) {
+      mediaElement.play().catch(error => {
+        console.error('❌ Resume error:', error);
+        toast({
+          title: 'Playback Error',
+          description: 'Failed to resume playback.',
+          variant: 'destructive'
+        });
+      });
+    }
+  };
+
+  const handleStopRecording = () => {
+    console.log('⏹️ Stopping playback');
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setPlayingRecordingId(null);
+  };
+
+  const handleSeek = (time: number) => {
+    const mediaElement = audioRef.current || videoRef.current;
+    if (mediaElement) {
+      mediaElement.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleDownloadRecording = async (recording: MeetingRecording) => {
@@ -707,15 +899,105 @@ const MeetingRecordings = () => {
                     </div>
                   )}
 
+                  {/* Inline Audio Player */}
+                  {playingRecordingId === recording.id && (
+                    <div className="space-y-3 mb-4 p-4 bg-muted/50 rounded-lg border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Now Playing</span>
+                        {isLoadingAudio && (
+                          <span className="text-xs text-muted-foreground">Loading...</span>
+                        )}
+                        {audioError && (
+                          <span className="text-xs text-destructive">{audioError}</span>
+                        )}
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="space-y-1">
+                        <input
+                          type="range"
+                          min="0"
+                          max={duration || 100}
+                          value={currentTime}
+                          onChange={(e) => handleSeek(Number(e.target.value))}
+                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                          disabled={isLoadingAudio || !!audioError}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{formatTime(currentTime)}</span>
+                          <span>{formatTime(duration)}</span>
+                        </div>
+                      </div>
+
+                      {/* Playback Controls */}
+                      <div className="flex items-center gap-2">
+                        {!isPlaying ? (
+                          <Button 
+                            size="sm" 
+                            onClick={handleResumeRecording}
+                            disabled={isLoadingAudio || !!audioError}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Play
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            onClick={handlePauseRecording}
+                          >
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pause
+                          </Button>
+                        )}
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleStopRecording}
+                        >
+                          Stop
+                        </Button>
+
+                        {/* Volume Control */}
+                        <div className="flex items-center gap-2 ml-auto">
+                          <span className="text-xs text-muted-foreground">Volume</span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={volume}
+                            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                            className="w-20 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                          />
+                          <span className="text-xs text-muted-foreground w-8">
+                            {Math.round(volume * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-2 border-t">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handlePlayRecording(recording)}
-                      disabled={recording.status !== 'ready'}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Play
-                    </Button>
+                    {playingRecordingId === recording.id ? (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={handleStopRecording}
+                      >
+                        <Pause className="h-4 w-4 mr-2" />
+                        Stop Playing
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        onClick={() => handlePlayRecording(recording)}
+                        disabled={recording.status !== 'ready' || isLoadingAudio}
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        {isLoadingAudio && playingRecordingId === recording.id ? 'Loading...' : 'Play'}
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -740,7 +1022,7 @@ const MeetingRecordings = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleDeleteRecording(recording)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete
