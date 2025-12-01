@@ -57,6 +57,7 @@ const EnhancedCourtCalendar: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [calendarView, setCalendarView] = useState<View>('month');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [newHearing, setNewHearing] = useState({
     case_id: '',
@@ -253,27 +254,84 @@ const EnhancedCourtCalendar: React.FC = () => {
   const handleSubmitNewHearing = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newHearing.title || !newHearing.hearing_date || !newHearing.hearing_number || !newHearing.court_name) {
+    // Validate required fields
+    if (!newHearing.title) {
       toast({
         title: 'Validation Error',
-        description: 'Please fill in all required fields.',
+        description: 'Please enter a hearing title.',
         variant: 'destructive'
       });
       return;
     }
 
-    try {
-      await addHearing({
-        ...newHearing,
-        client_id: user?.id,
-        lawyer_id: user?.id
+    if (!newHearing.hearing_date) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a hearing date.',
+        variant: 'destructive'
       });
+      return;
+    }
+
+    if (!newHearing.court_name) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter the court name.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!newHearing.hearing_time) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a start time.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!newHearing.duration) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a duration.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Auto-generate hearing number if not provided
+    const hearingNumber = newHearing.hearing_number || `HR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    try {
+      setIsSubmitting(true);
+
+      const hearingData = {
+        title: newHearing.title.trim(),
+        hearing_number: hearingNumber,
+        hearing_date: newHearing.hearing_date,
+        hearing_time: newHearing.hearing_time,
+        duration: newHearing.duration,
+        court_name: newHearing.court_name.trim(),
+        court_room: newHearing.court_room?.trim() || null,
+        judge_name: newHearing.judge_name?.trim() || null,
+        hearing_type: newHearing.hearing_type || null,
+        status: newHearing.status,
+        description: newHearing.description?.trim() || null,
+        notes: newHearing.notes?.trim() || null,
+        case_id: newHearing.case_id || null,
+        client_id: user?.id || null,
+        lawyer_id: user?.id || null
+      };
+
+      await addHearing(hearingData);
       
       toast({
         title: 'Success',
-        description: 'Hearing scheduled successfully.'
+        description: `Hearing "${newHearing.title}" scheduled successfully for ${moment(newHearing.hearing_date).format('MMMM D, YYYY')}.`,
       });
       
+      // Reset form and close modal
       setIsAddModalOpen(false);
       setNewHearing({
         case_id: '',
@@ -290,12 +348,15 @@ const EnhancedCourtCalendar: React.FC = () => {
         status: 'scheduled',
         notes: ''
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error scheduling hearing:', error);
       toast({
         title: 'Error',
-        description: 'Failed to schedule hearing. Please try again.',
+        description: error?.message || 'Failed to schedule hearing. Please try again.',
         variant: 'destructive'
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -545,13 +606,15 @@ const EnhancedCourtCalendar: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="hearing_number">Hearing Number *</Label>
+                <Label htmlFor="hearing_number">
+                  Hearing Number 
+                  <span className="text-xs text-muted-foreground ml-1">(auto-generated if empty)</span>
+                </Label>
                 <Input
                   id="hearing_number"
                   value={newHearing.hearing_number}
                   onChange={(e) => setNewHearing(prev => ({ ...prev, hearing_number: e.target.value }))}
-                  placeholder="e.g., HR001-2024"
-                  required
+                  placeholder="e.g., HR001-2024 (optional)"
                 />
               </div>
               <div>
@@ -664,14 +727,26 @@ const EnhancedCourtCalendar: React.FC = () => {
               />
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit" className="flex-1">
-                Schedule Hearing
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                type="submit" 
+                className="flex-1 pointer-events-auto"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Scheduling...
+                  </>
+                ) : (
+                  'Schedule Hearing'
+                )}
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => setIsAddModalOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
