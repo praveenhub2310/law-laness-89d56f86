@@ -49,10 +49,11 @@ const ViewHearings = () => {
   };
 
   const handleViewCaseDetails = (hearing: any) => {
+    console.log('📋 Viewing case details from hearing:', hearing.case_id);
     if (hearing.case_id) {
-      navigate(`/case-details/${hearing.case_id}`);
+      navigate(`/dashboard/case-details/${hearing.case_id}`);
     } else {
-      navigate('/projects');
+      navigate('/dashboard/projects');
     }
   };
 
