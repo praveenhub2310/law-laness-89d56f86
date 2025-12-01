@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, DollarSign, FileText, TrendingUp, Calendar, Settings, Save } from 'lucide-react';
+import { Building2, Users, DollarSign, FileText, TrendingUp, Calendar, Settings, Save, Eye, Edit, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -28,10 +28,10 @@ const FirmDashboard = () => {
     description: ''
   });
   const firmMetrics = [
-    { label: 'Total Revenue', value: '$142,580', change: '+12%', icon: DollarSign, color: 'text-green-600' },
-    { label: 'Active Lawyers', value: '8', change: '+1', icon: Users, color: 'text-blue-600' },
-    { label: 'Open Cases', value: '67', change: '+5', icon: FileText, color: 'text-purple-600' },
-    { label: 'Client Satisfaction', value: '94%', change: '+2%', icon: TrendingUp, color: 'text-orange-600' }
+    { label: 'Total Revenue', value: '$142,580', change: '+12%', icon: DollarSign, color: 'text-green-600', route: '/transactions' },
+    { label: 'Active Lawyers', value: '8', change: '+1', icon: Users, color: 'text-blue-600', route: '/team-management' },
+    { label: 'Open Cases', value: '67', change: '+5', icon: FileText, color: 'text-purple-600', route: '/projects/all-cases' },
+    { label: 'Client Satisfaction', value: '94%', change: '+2%', icon: TrendingUp, color: 'text-orange-600', route: '/analytics' }
   ];
 
   const recentBilling = [
@@ -136,7 +136,11 @@ const FirmDashboard = () => {
         {firmMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
           return (
-            <Card key={index}>
+            <Card 
+              key={index}
+              className="cursor-pointer hover:shadow-lg transition-shadow pointer-events-auto relative z-10"
+              onClick={() => navigate(metric.route)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-gray-600">{metric.label}</CardTitle>
@@ -155,22 +159,47 @@ const FirmDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Billing</CardTitle>
-            <CardDescription>Latest invoices and payment status</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent Billing</CardTitle>
+                <CardDescription>Latest invoices and payment status</CardDescription>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate('/invoices')}
+                className="pointer-events-auto cursor-pointer relative z-10"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Invoice
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {recentBilling.map((bill, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
                     <h4 className="font-medium">{bill.client}</h4>
                     <p className="text-sm text-gray-600">{bill.date}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{bill.amount}</p>
-                    <Badge variant={bill.status === 'Paid' ? 'default' : bill.status === 'Pending' ? 'secondary' : 'destructive'}>
-                      {bill.status}
-                    </Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-medium">{bill.amount}</p>
+                      <Badge variant={bill.status === 'Paid' ? 'default' : bill.status === 'Pending' ? 'secondary' : 'destructive'}>
+                        {bill.status}
+                      </Badge>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/invoices');
+                      }}
+                      className="pointer-events-auto cursor-pointer relative z-10"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -187,22 +216,47 @@ const FirmDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Team Workflow</CardTitle>
-            <CardDescription>Lawyer utilization and caseload distribution</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Team Workflow</CardTitle>
+                <CardDescription>Lawyer utilization and caseload distribution</CardDescription>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate('/team-management')}
+                className="pointer-events-auto cursor-pointer relative z-10"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Member
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {teamWorkflow.map((member, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
                     <h4 className="font-medium">{member.lawyer}</h4>
                     <p className="text-sm text-gray-600">{member.cases} active cases</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{member.utilization}</p>
-                    <Badge variant={member.status === 'High' ? 'destructive' : member.status === 'Medium' ? 'default' : 'secondary'}>
-                      {member.status}
-                    </Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-medium">{member.utilization}</p>
+                      <Badge variant={member.status === 'High' ? 'destructive' : member.status === 'Medium' ? 'default' : 'secondary'}>
+                        {member.status}
+                      </Badge>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/team-management');
+                      }}
+                      className="pointer-events-auto cursor-pointer relative z-10"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -220,24 +274,45 @@ const FirmDashboard = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Document Archive & Compliance</CardTitle>
-          <CardDescription>Centralized document management and regulatory compliance</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Document Archive & Compliance</CardTitle>
+              <CardDescription>Centralized document management and regulatory compliance</CardDescription>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate('/documents')}
+              className="pointer-events-auto cursor-pointer relative z-10"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Manage Documents
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 border rounded-lg">
+            <div 
+              className="text-center p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors pointer-events-auto relative z-10"
+              onClick={() => navigate('/documents')}
+            >
               <FileText className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <h4 className="font-medium">Documents</h4>
               <p className="text-2xl font-bold text-blue-600">2,347</p>
               <p className="text-sm text-gray-600">Total archived</p>
             </div>
-            <div className="text-center p-4 border rounded-lg">
+            <div 
+              className="text-center p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors pointer-events-auto relative z-10"
+              onClick={() => navigate('/analytics')}
+            >
               <Building2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <h4 className="font-medium">Compliance</h4>
               <p className="text-2xl font-bold text-green-600">98%</p>
               <p className="text-sm text-gray-600">Compliance rate</p>
             </div>
-            <div className="text-center p-4 border rounded-lg">
+            <div 
+              className="text-center p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors pointer-events-auto relative z-10"
+              onClick={() => navigate('/documents')}
+            >
               <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <h4 className="font-medium">Retention</h4>
               <p className="text-2xl font-bold text-purple-600">7 Years</p>
