@@ -151,9 +151,66 @@ const Transactions = () => {
     { key: 'description', label: 'Description', type: 'textarea' as const }
   ];
 
+  const exportToCSV = () => {
+    if (!data || data.length === 0) {
+      console.warn('No data to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'Transaction ID',
+      'Date',
+      'Time',
+      'Type',
+      'Client ID',
+      'Amount',
+      'Currency',
+      'Payment Method',
+      'Status',
+      'Processed By',
+      'Description'
+    ];
+
+    // Convert data to CSV rows
+    const rows = data.map(item => [
+      item.transaction_number || '',
+      format(new Date(item.created_at), 'MMM dd, yyyy'),
+      format(new Date(item.created_at), 'hh:mm a'),
+      item.transaction_type || '',
+      item.client_id || 'N/A',
+      item.amount || 0,
+      item.currency || 'USD',
+      item.method || '',
+      item.status || '',
+      item.processed_by || 'System',
+      item.description || ''
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('CSV export completed successfully');
+  };
+
   const exportData = () => {
-    // Export functionality can be added here
-    console.log('Exporting transaction data...');
+    exportToCSV();
   };
 
   if (loading) {

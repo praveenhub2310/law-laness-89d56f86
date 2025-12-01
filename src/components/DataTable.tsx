@@ -295,7 +295,12 @@ const DataTable = ({
               <CardTitle className="text-lg sm:text-xl font-semibold">{title}</CardTitle>
               <div className="flex items-center gap-2">
                 {renderFilterPopover()}
-                <Button variant="outline" size="sm" onClick={handleExport} className="flex-1 sm:flex-none min-w-[80px]">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExport} 
+                  className="flex-1 sm:flex-none min-w-[80px] pointer-events-auto cursor-pointer relative z-10"
+                >
                   <Download className="h-4 w-4 sm:mr-2" />
                   <span className="text-xs sm:text-sm">Export</span>
                 </Button>
