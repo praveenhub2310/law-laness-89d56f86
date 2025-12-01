@@ -1,11 +1,12 @@
-
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Users, DollarSign, FileText, TrendingUp, Calendar } from 'lucide-react';
 
 const FirmDashboard = () => {
+  const navigate = useNavigate();
   const firmMetrics = [
     { label: 'Total Revenue', value: '$142,580', change: '+12%', icon: DollarSign, color: 'text-green-600' },
     { label: 'Active Lawyers', value: '8', change: '+1', icon: Users, color: 'text-blue-600' },
@@ -75,7 +76,13 @@ const FirmDashboard = () => {
                 </div>
               ))}
             </div>
-            <Button className="w-full mt-4" variant="outline">View All Invoices</Button>
+            <Button 
+              className="w-full mt-4 pointer-events-auto cursor-pointer relative z-10" 
+              variant="outline"
+              onClick={() => navigate('/invoices')}
+            >
+              View All Invoices
+            </Button>
           </CardContent>
         </Card>
 
@@ -101,7 +108,13 @@ const FirmDashboard = () => {
                 </div>
               ))}
             </div>
-            <Button className="w-full mt-4" variant="outline">Manage Team</Button>
+            <Button 
+              className="w-full mt-4 pointer-events-auto cursor-pointer relative z-10" 
+              variant="outline"
+              onClick={() => navigate('/team-management')}
+            >
+              Manage Team
+            </Button>
           </CardContent>
         </Card>
       </div>
