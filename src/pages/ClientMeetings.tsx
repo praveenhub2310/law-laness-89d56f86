@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Play, Video, Mic, Download, FileText, Calendar, Clock, Users } from 'lucide-react';
+import { toast } from 'sonner';
 
 const ClientMeetings = () => {
   const [meetings] = useState([
@@ -48,6 +49,39 @@ const ClientMeetings = () => {
 
   const joinMeeting = (meeting: any) => {
     setSelectedMeeting(meeting);
+    toast.success('Joining Meeting', {
+      description: 'Connecting to video call...'
+    });
+  };
+
+  const handlePlayRecording = (meetingTitle: string) => {
+    toast.info('Playing Recording', {
+      description: `Starting playback of "${meetingTitle}"`
+    });
+  };
+
+  const handleDownloadRecording = (meetingTitle: string) => {
+    toast.success('Download Started', {
+      description: `Downloading recording of "${meetingTitle}"`
+    });
+  };
+
+  const handleDownloadTranscript = (meetingTitle: string) => {
+    toast.success('Download Started', {
+      description: `Downloading transcript of "${meetingTitle}"`
+    });
+  };
+
+  const handleToggleMute = () => {
+    toast.info('Microphone', {
+      description: 'Microphone toggled'
+    });
+  };
+
+  const handleToggleCamera = () => {
+    toast.info('Camera', {
+      description: 'Camera toggled'
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -139,11 +173,20 @@ const ClientMeetings = () => {
                   <div>
                     <h4 className="font-semibold mb-2">Meeting Recording</h4>
                     <div className="flex gap-2">
-                      <Button size="sm">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handlePlayRecording(meeting.title)}
+                        className="cursor-pointer pointer-events-auto"
+                      >
                         <Play className="h-4 w-4 mr-2" />
                         Play Recording
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownloadRecording(meeting.title)}
+                        className="cursor-pointer pointer-events-auto"
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Download
                       </Button>
@@ -158,7 +201,12 @@ const ClientMeetings = () => {
                         readOnly
                         className="min-h-[120px]"
                       />
-                      <Button variant="outline" size="sm" className="mt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2 cursor-pointer pointer-events-auto"
+                        onClick={() => handleDownloadTranscript(meeting.title)}
+                      >
                         <FileText className="h-4 w-4 mr-2" />
                         Download Transcript
                       </Button>
@@ -193,15 +241,27 @@ const ClientMeetings = () => {
                 Meeting with {selectedMeeting.participants.join(', ')}
               </p>
               <div className="flex justify-center gap-3">
-                <Button variant="outline">
+                <Button 
+                  variant="outline"
+                  onClick={handleToggleMute}
+                  className="cursor-pointer pointer-events-auto"
+                >
                   <Mic className="h-4 w-4 mr-2" />
                   Mute
                 </Button>
-                <Button variant="outline">
+                <Button 
+                  variant="outline"
+                  onClick={handleToggleCamera}
+                  className="cursor-pointer pointer-events-auto"
+                >
                   <Video className="h-4 w-4 mr-2" />
                   Camera
                 </Button>
-                <Button variant="destructive" onClick={() => setSelectedMeeting(null)}>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setSelectedMeeting(null)}
+                  className="cursor-pointer pointer-events-auto"
+                >
                   End Call
                 </Button>
               </div>
