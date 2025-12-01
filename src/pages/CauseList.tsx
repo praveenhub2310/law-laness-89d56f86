@@ -389,7 +389,7 @@ const CauseList = () => {
                 onClick={exportToCSV} 
                 variant="outline" 
                 size="sm" 
-                className="w-full h-9 text-xs sm:text-sm"
+                className="w-full h-9 text-xs sm:text-sm pointer-events-auto cursor-pointer relative z-10"
               >
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
                 <span>Export CSV</span>
@@ -399,7 +399,7 @@ const CauseList = () => {
                 onClick={fetchCauseList} 
                 variant="outline" 
                 size="sm" 
-                className="w-full h-9 text-xs sm:text-sm"
+                className="w-full h-9 text-xs sm:text-sm pointer-events-auto cursor-pointer relative z-10"
               >
                 <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
                 <span>Refresh</span>
@@ -410,13 +410,13 @@ const CauseList = () => {
                   <Button 
                     onClick={resetForm} 
                     size="sm" 
-                    className="w-full h-9 text-xs sm:text-sm"
+                    className="w-full h-9 text-xs sm:text-sm pointer-events-auto cursor-pointer relative z-10"
                   >
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
                     <span>Add Cause</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto mx-2">
+                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto mx-2 bg-background border shadow-lg z-[100]">
                   <DialogHeader>
                     <DialogTitle className="text-base sm:text-lg md:text-xl">Add New Cause</DialogTitle>
                   </DialogHeader>
@@ -428,6 +428,7 @@ const CauseList = () => {
                       value={formData.case_number}
                       onChange={(e) => setFormData(prev => ({ ...prev, case_number: e.target.value }))}
                       required
+                      className="pointer-events-auto"
                     />
                   </div>
                   
@@ -439,6 +440,7 @@ const CauseList = () => {
                       onChange={(e) => setFormData(prev => ({ ...prev, parties: e.target.value }))}
                       placeholder="Petitioner vs Respondent"
                       required
+                      className="pointer-events-auto"
                     />
                   </div>
                   
@@ -449,6 +451,7 @@ const CauseList = () => {
                       value={formData.court_name}
                       onChange={(e) => setFormData(prev => ({ ...prev, court_name: e.target.value }))}
                       required
+                      className="pointer-events-auto"
                     />
                   </div>
                   
@@ -459,6 +462,7 @@ const CauseList = () => {
                       value={formData.judge_name}
                       onChange={(e) => setFormData(prev => ({ ...prev, judge_name: e.target.value }))}
                       required
+                      className="pointer-events-auto"
                     />
                   </div>
                   
@@ -470,6 +474,7 @@ const CauseList = () => {
                       value={formData.date}
                       onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                       required
+                      className="pointer-events-auto"
                     />
                   </div>
                   
@@ -479,10 +484,10 @@ const CauseList = () => {
                       value={formData.status}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="pointer-events-auto cursor-pointer relative z-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-[100]">
                         <SelectItem value="scheduled">Scheduled</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
@@ -492,10 +497,20 @@ const CauseList = () => {
                   </div>
                   
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="pointer-events-auto"
+                    >
                       Cancel
                     </Button>
-                    <Button type="submit">Add Cause</Button>
+                    <Button 
+                      type="submit"
+                      className="pointer-events-auto"
+                    >
+                      Add Cause
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -518,16 +533,16 @@ const CauseList = () => {
                       placeholder="Search case or parties..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-9 text-sm w-full max-w-full"
+                      className="pl-10 h-9 text-sm w-full max-w-full pointer-events-auto"
                     />
                   </div>
                 
                   <div className="w-full max-w-full">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="h-9 text-sm w-full max-w-full">
+                      <SelectTrigger className="h-9 text-sm w-full max-w-full pointer-events-auto cursor-pointer relative z-10">
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-[100]">
                         <SelectItem value="all">All Statuses</SelectItem>
                         <SelectItem value="scheduled">Scheduled</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
@@ -539,10 +554,10 @@ const CauseList = () => {
                   
                   <div className="w-full max-w-full">
                     <Select value={courtFilter} onValueChange={setCourtFilter}>
-                      <SelectTrigger className="h-9 text-sm w-full max-w-full">
+                      <SelectTrigger className="h-9 text-sm w-full max-w-full pointer-events-auto cursor-pointer relative z-10">
                         <SelectValue placeholder="All Courts" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-[100]">
                         <SelectItem value="all">All Courts</SelectItem>
                         {uniqueCourts.map(court => (
                           <SelectItem key={court} value={court}>{court}</SelectItem>
@@ -553,10 +568,10 @@ const CauseList = () => {
                   
                   <div className="w-full max-w-full">
                     <Select value={judgeFilter} onValueChange={setJudgeFilter}>
-                      <SelectTrigger className="h-9 text-sm w-full max-w-full">
+                      <SelectTrigger className="h-9 text-sm w-full max-w-full pointer-events-auto cursor-pointer relative z-10">
                         <SelectValue placeholder="All Judges" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border shadow-lg z-[100]">
                         <SelectItem value="all">All Judges</SelectItem>
                         {uniqueJudges.map(judge => (
                           <SelectItem key={judge} value={judge}>{judge}</SelectItem>
@@ -571,7 +586,7 @@ const CauseList = () => {
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
                       placeholder="Filter by date"
-                      className="h-9 text-sm w-full max-w-full"
+                      className="h-9 text-sm w-full max-w-full pointer-events-auto"
                     />
                   </div>
                 </div>
@@ -764,6 +779,7 @@ const CauseList = () => {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleEdit(item)}
+                                className="pointer-events-auto cursor-pointer"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -774,6 +790,7 @@ const CauseList = () => {
                                   setCurrentItem(item);
                                   setIsDeleteDialogOpen(true);
                                 }}
+                                className="pointer-events-auto cursor-pointer"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -873,7 +890,7 @@ const CauseList = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => handleEdit(item)}
-                            className="flex-1 text-xs"
+                            className="flex-1 text-xs pointer-events-auto cursor-pointer"
                           >
                             <Edit className="h-3 w-3 mr-1" />
                             Edit
@@ -885,7 +902,7 @@ const CauseList = () => {
                               setCurrentItem(item);
                               setIsDeleteDialogOpen(true);
                             }}
-                            className="flex-1 text-xs"
+                            className="flex-1 text-xs pointer-events-auto cursor-pointer"
                           >
                             <Trash2 className="h-3 w-3 mr-1" />
                             Delete
@@ -907,7 +924,7 @@ const CauseList = () => {
 
         {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto mx-2">
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto mx-2 bg-background border shadow-lg z-[100]">
             <DialogHeader>
               <DialogTitle className="text-base sm:text-lg md:text-xl">Edit Cause</DialogTitle>
             </DialogHeader>
@@ -919,6 +936,7 @@ const CauseList = () => {
                 value={formData.case_number}
                 onChange={(e) => setFormData(prev => ({ ...prev, case_number: e.target.value }))}
                 required
+                className="pointer-events-auto"
               />
             </div>
             
@@ -929,6 +947,7 @@ const CauseList = () => {
                 value={formData.parties}
                 onChange={(e) => setFormData(prev => ({ ...prev, parties: e.target.value }))}
                 required
+                className="pointer-events-auto"
               />
             </div>
             
@@ -939,6 +958,7 @@ const CauseList = () => {
                 value={formData.court_name}
                 onChange={(e) => setFormData(prev => ({ ...prev, court_name: e.target.value }))}
                 required
+                className="pointer-events-auto"
               />
             </div>
             
@@ -949,6 +969,7 @@ const CauseList = () => {
                 value={formData.judge_name}
                 onChange={(e) => setFormData(prev => ({ ...prev, judge_name: e.target.value }))}
                 required
+                className="pointer-events-auto"
               />
             </div>
             
@@ -960,6 +981,7 @@ const CauseList = () => {
                 value={formData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                 required
+                className="pointer-events-auto"
               />
             </div>
             
@@ -969,10 +991,10 @@ const CauseList = () => {
                 value={formData.status}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="pointer-events-auto cursor-pointer relative z-10">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-lg z-[100]">
                   <SelectItem value="scheduled">Scheduled</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -982,10 +1004,20 @@ const CauseList = () => {
             </div>
             
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsEditModalOpen(false)}
+                className="pointer-events-auto"
+              >
                 Cancel
               </Button>
-              <Button type="submit">Update Cause</Button>
+              <Button 
+                type="submit"
+                className="pointer-events-auto"
+              >
+                Update Cause
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -993,7 +1025,7 @@ const CauseList = () => {
 
       {/* Delete Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-background border shadow-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Cause List Entry</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1003,8 +1035,13 @@ const CauseList = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel className="pointer-events-auto cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="pointer-events-auto cursor-pointer"
+            >
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
