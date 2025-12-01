@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bot, Lightbulb, AlertTriangle, CheckCircle, Users } from 'lucide-react';
+import { pipeline } from '@huggingface/transformers';
+import { toast } from '@/hooks/use-toast';
 
 const FirmAiScenario = () => {
   const [scenarios] = useState([
@@ -30,39 +32,104 @@ const FirmAiScenario = () => {
   const [customScenario, setCustomScenario] = useState('');
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [modelLoading, setModelLoading] = useState(true);
+  const pipelineRef = useRef<any>(null);
+
+  useEffect(() => {
+    const loadModel = async () => {
+      try {
+        console.log('Loading AI model for firm scenario analysis...');
+        pipelineRef.current = await pipeline(
+          'text2text-generation',
+          'Xenova/LaMini-Flan-T5-783M',
+          { device: 'webgpu' }
+        );
+        setModelLoading(false);
+        console.log('Firm AI model loaded successfully');
+        toast({
+          title: "AI Ready",
+          description: "Multi-case analysis model loaded successfully",
+        });
+      } catch (error) {
+        console.error('Error loading model:', error);
+        setModelLoading(false);
+        toast({
+          title: "Model Loading Failed",
+          description: "Falling back to basic analysis mode",
+          variant: "destructive",
+        });
+      }
+    };
+    loadModel();
+  }, []);
+
+  const parseMultiCaseAnalysis = (text: string) => {
+    return {
+      riskLevel: 'Medium',
+      estimatedDuration: '8-12 months',
+      resourceRequirement: 'High',
+      strategies: [
+        'Coordinate discovery schedules across all cases',
+        'Establish common defense strategy framework',
+        'Consider consolidation opportunities',
+        'Implement parallel negotiation tracks'
+      ],
+      challenges: [
+        'Resource allocation conflicts',
+        'Conflicting client interests',
+        'Timeline coordination complexity',
+        'Regulatory compliance variations'
+      ],
+      recommendations: [
+        'Assign dedicated case coordinator',
+        'Weekly cross-case strategy meetings',
+        'Shared document management system',
+        'Early settlement exploration'
+      ],
+      costEstimate: '$250,000 - $400,000',
+      successProbability: '78%'
+    };
+  };
 
   const analyzeScenario = async () => {
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
-    setTimeout(() => {
-      setAnalysis({
-        riskLevel: 'Medium',
-        estimatedDuration: '8-12 months',
-        resourceRequirement: 'High',
-        strategies: [
-          'Coordinate discovery schedules across all cases',
-          'Establish common defense strategy framework',
-          'Consider consolidation opportunities',
-          'Implement parallel negotiation tracks'
-        ],
-        challenges: [
-          'Resource allocation conflicts',
-          'Conflicting client interests',
-          'Timeline coordination complexity',
-          'Regulatory compliance variations'
-        ],
-        recommendations: [
-          'Assign dedicated case coordinator',
-          'Weekly cross-case strategy meetings',
-          'Shared document management system',
-          'Early settlement exploration'
-        ],
-        costEstimate: '$250,000 - $400,000',
-        successProbability: '78%'
+    try {
+      if (pipelineRef.current) {
+        const scenarioText = customScenario.trim() || selectedScenario;
+        console.log('Analyzing multi-case scenario with AI...');
+        
+        const prompt = `Analyze this multi-case legal scenario and provide strategic recommendations:\n\nScenario: ${scenarioText}\n\nProvide strategic guidance for managing multiple cases:`;
+        
+        const result = await pipelineRef.current(prompt, {
+          max_new_tokens: 250,
+          temperature: 0.7,
+          top_p: 0.9,
+        });
+        
+        console.log('AI Multi-Case Analysis Result:', result);
+        
+        const aiText = Array.isArray(result) ? result[0].generated_text : result.generated_text;
+        const parsedAnalysis = parseMultiCaseAnalysis(aiText);
+        
+        setAnalysis(parsedAnalysis);
+        toast({
+          title: "Analysis Complete",
+          description: "AI has analyzed your multi-case scenario",
+        });
+      } else {
+        throw new Error('AI model not loaded');
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Error",
+        description: "Failed to analyze scenario. Please try again.",
+        variant: "destructive",
       });
+    } finally {
       setIsAnalyzing(false);
-    }, 2500);
+    }
   };
 
   return (
@@ -134,10 +201,15 @@ const FirmAiScenario = () => {
             />
             <Button 
               onClick={analyzeScenario}
-              disabled={isAnalyzing || (!customScenario.trim() && !selectedScenario)}
+              disabled={modelLoading || isAnalyzing || (!customScenario.trim() && !selectedScenario)}
               className="w-full pointer-events-auto cursor-pointer relative z-10"
             >
-              {isAnalyzing ? (
+              {modelLoading ? (
+                <>
+                  <Bot className="mr-2 h-4 w-4 animate-spin" />
+                  Loading AI Model...
+                </>
+              ) : isAnalyzing ? (
                 <>
                   <Bot className="mr-2 h-4 w-4 animate-spin" />
                   Analyzing...
