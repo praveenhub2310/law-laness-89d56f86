@@ -124,7 +124,7 @@ const OnlinePayments = () => {
                   {getStatusBadge(payment.status)}
                   
                   {payment.status !== 'paid' && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 relative z-10">
                       <Button 
                         size="sm" 
                         variant="outline"
@@ -132,12 +132,14 @@ const OnlinePayments = () => {
                           title: "Invoice Downloaded",
                           description: "Invoice has been downloaded to your device.",
                         })}
+                        className="cursor-pointer pointer-events-auto"
                       >
                         Download Invoice
                       </Button>
                       <Button 
                         size="sm"
                         onClick={() => handlePayment(payment.id, payment.amount)}
+                        className="cursor-pointer pointer-events-auto"
                       >
                         <CreditCard className="h-4 w-4 mr-2" />
                         Pay Now
