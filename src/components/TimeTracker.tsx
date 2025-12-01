@@ -1,26 +1,59 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Play, Square, Plus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Clock, Play, Square } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const TimeTracker = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isTracking, setIsTracking] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [currentTask, setCurrentTask] = useState('');
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [timeEntries, setTimeEntries] = useState([
-    { id: 1, case: 'Johnson vs Insurance Co.', task: 'Document Review & Analysis', hours: 2.5, date: '2024-01-15', billable: true, description: 'Reviewed insurance policy documents and medical records' },
-    { id: 2, case: 'Smith Property Dispute', task: 'Client Consultation', hours: 1.0, date: '2024-01-15', billable: true, description: 'Initial consultation regarding property boundary dispute' },
-    { id: 3, case: 'Corporate Contract Review', task: 'Legal Research', hours: 3.0, date: '2024-01-14', billable: false, description: 'Research on corporate law precedents' },
-    { id: 4, case: 'Miller Divorce Case', task: 'Court Preparation', hours: 4.0, date: '2024-01-13', billable: true, description: 'Prepared documents for divorce proceedings' },
-    { id: 5, case: 'ABC Corp Merger', task: 'Due Diligence', hours: 6.5, date: '2024-01-12', billable: true, description: 'Conducted legal due diligence for merger' }
-  ]);
+  const [timeEntries, setTimeEntries] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch time entries and projects
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoading(true);
+        const [entriesRes, projectsRes] = await Promise.all([
+          supabase
+            .from('time_tracker')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10),
+          supabase
+            .from('projects')
+            .select('*')
+            .eq('lawyer_id', user.id)
+        ]);
+
+        if (entriesRes.data) setTimeEntries(entriesRes.data);
+        if (projectsRes.data) setProjects(projectsRes.data);
+      } catch (error) {
+        console.error('Error fetching time entries:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user?.id]);
 
   // Timer effect
   React.useEffect(() => {
@@ -58,32 +91,53 @@ const TimeTracker = () => {
     });
   };
 
-  const handleStopTracking = () => {
-    if (startTime) {
+  const handleStopTracking = async () => {
+    if (!startTime || !user?.id) return;
+
+    try {
+      setIsSaving(true);
       const endTime = new Date();
-      const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60); // hours
+      const durationInSeconds = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
       
-      const newEntry = {
-        id: timeEntries.length + 1,
-        case: 'Current Case',
-        task: currentTask,
-        hours: Math.round(duration * 100) / 100,
-        date: new Date().toISOString().split('T')[0],
-        billable: true,
-        description: currentTask
-      };
-      
-      setTimeEntries([newEntry, ...timeEntries]);
+      const { data, error } = await supabase
+        .from('time_tracker')
+        .insert({
+          user_id: user.id,
+          task_description: currentTask,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          duration: durationInSeconds,
+          case_id: null // Can be enhanced to select a case
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to local state
+      if (data) {
+        setTimeEntries([data, ...timeEntries]);
+      }
+
+      setIsTracking(false);
+      setStartTime(null);
+      setElapsedTime(0);
+      setCurrentTask('');
+
+      toast({
+        title: "Time Entry Saved",
+        description: `Tracked ${(durationInSeconds / 3600).toFixed(2)} hours for: ${currentTask}`,
+      });
+    } catch (error) {
+      console.error('Error saving time entry:', error);
+      toast({
+        title: "Error Saving Entry",
+        description: "Failed to save time entry. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
-    
-    setIsTracking(false);
-    setStartTime(null);
-    setElapsedTime(0);
-    toast({
-      title: "Time Tracking Stopped",
-      description: "Time entry has been saved.",
-    });
-    setCurrentTask('');
   };
 
   return (
@@ -109,14 +163,23 @@ const TimeTracker = () => {
             </div>
             <div className="flex items-end">
               {!isTracking ? (
-                <Button onClick={handleStartTracking} className="w-full">
+                <Button 
+                  onClick={handleStartTracking} 
+                  className="w-full"
+                  disabled={isSaving}
+                >
                   <Play className="h-4 w-4 mr-2" />
                   Start Timer
                 </Button>
               ) : (
-                <Button onClick={handleStopTracking} variant="destructive" className="w-full">
+                <Button 
+                  onClick={handleStopTracking} 
+                  variant="destructive" 
+                  className="w-full"
+                  disabled={isSaving}
+                >
                   <Square className="h-4 w-4 mr-2" />
-                  Stop Timer
+                  {isSaving ? 'Saving...' : 'Stop Timer'}
                 </Button>
               )}
             </div>
@@ -144,24 +207,59 @@ const TimeTracker = () => {
           <CardTitle>Recent Time Entries</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {timeEntries.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex-1">
-                  <h4 className="font-medium text-lg">{entry.case}</h4>
-                  <p className="text-sm text-gray-600 font-medium">{entry.task}</p>
-                  <p className="text-sm text-gray-500 mt-1">{entry.description}</p>
-                  <p className="text-xs text-gray-400 mt-1">{entry.date}</p>
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
+                  <div className="text-right space-y-1">
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
                 </div>
-                <div className="text-right space-y-1">
-                  <p className="font-bold text-lg">{entry.hours}h</p>
-                  <Badge variant={entry.billable ? 'default' : 'secondary'}>
-                    {entry.billable ? 'Billable' : 'Non-billable'}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : timeEntries.length > 0 ? (
+            <div className="space-y-3">
+              {timeEntries.map((entry) => {
+                const project = projects.find(p => p.id === entry.case_id);
+                const hours = entry.duration ? (entry.duration / 3600).toFixed(2) : '0.00';
+                const entryDate = new Date(entry.start_time).toLocaleDateString();
+                
+                return (
+                  <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-lg">
+                        {project?.title || 'General Task'}
+                      </h4>
+                      <p className="text-sm text-gray-600 font-medium">{entry.task_description}</p>
+                      <p className="text-xs text-gray-400 mt-1">{entryDate}</p>
+                      {entry.start_time && entry.end_time && (
+                        <p className="text-xs text-gray-500">
+                          {new Date(entry.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(entry.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="font-bold text-lg">{hours}h</p>
+                      <Badge variant="default">
+                        Billable
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No time entries yet. Start tracking to see your entries here!</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
