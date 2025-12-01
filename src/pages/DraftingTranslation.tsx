@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,13 +11,15 @@ import { toast } from '@/hooks/use-toast';
 
 const DraftingTranslation = () => {
   const [draftContent, setDraftContent] = useState('');
-  const [translationContent, setTranslationContent] = useState('');
+  const [sourceText, setSourceText] = useState('');
+  const [translatedText, setTranslatedText] = useState('');
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('');
   const [selectedDocType, setSelectedDocType] = useState('');
   const [sourceLanguage, setSourceLanguage] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('');
   const [isDrafting, setIsDrafting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const jurisdictions = [
     'Supreme Court of India',
@@ -81,8 +83,21 @@ const DraftingTranslation = () => {
     { code: 'fr', name: 'French' },
     { code: 'de', name: 'German' },
     { code: 'hi', name: 'Hindi' },
-    { code: 'zh', name: 'Chinese' },
-    { code: 'ar', name: 'Arabic' }
+    { code: 'zh-CN', name: 'Chinese' },
+    { code: 'ar', name: 'Arabic' },
+    { code: 'bn', name: 'Bengali' },
+    { code: 'te', name: 'Telugu' },
+    { code: 'mr', name: 'Marathi' },
+    { code: 'ta', name: 'Tamil' },
+    { code: 'gu', name: 'Gujarati' },
+    { code: 'kn', name: 'Kannada' },
+    { code: 'ml', name: 'Malayalam' },
+    { code: 'pa', name: 'Punjabi' },
+    { code: 'it', name: 'Italian' },
+    { code: 'pt', name: 'Portuguese' },
+    { code: 'ru', name: 'Russian' },
+    { code: 'ja', name: 'Japanese' },
+    { code: 'ko', name: 'Korean' }
   ];
 
   const generateDraft = async () => {
@@ -125,21 +140,60 @@ First Party Signature             Second Party Signature`);
     }, 2000);
   };
 
-  const translateDocument = async () => {
-    if (!translationContent.trim() || !sourceLanguage || !targetLanguage) return;
-    
-    setIsTranslating(true);
-    // Simulate AI translation
-    setTimeout(() => {
-      const targetLang = languages.find(l => l.code === targetLanguage)?.name;
-      setTranslationContent(`[Translated to ${targetLang}]
-
-${translationContent}
-
-[Translation Note: This is a professional legal translation. All legal terminology has been adapted for the target jurisdiction and language requirements.]`);
+  // Real-time translation using MyMemory API
+  const translateText = async (text: string, fromLang: string, toLang: string) => {
+    if (!text.trim() || !fromLang || !toLang || fromLang === toLang) {
+      setTranslatedText('');
       setIsTranslating(false);
-    }, 2000);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`
+      );
+      const data = await response.json();
+      
+      if (data.responseStatus === 200 && data.responseData) {
+        setTranslatedText(data.responseData.translatedText);
+      } else {
+        throw new Error('Translation failed');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      toast({
+        title: "Translation Error",
+        description: "Failed to translate text. Please try again.",
+        variant: "destructive",
+      });
+      setTranslatedText('');
+    } finally {
+      setIsTranslating(false);
+    }
   };
+
+  // Debounced real-time translation
+  useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    if (sourceText.trim() && sourceLanguage && targetLanguage && sourceLanguage !== targetLanguage) {
+      setIsTranslating(true);
+      debounceTimer.current = setTimeout(() => {
+        translateText(sourceText, sourceLanguage, targetLanguage);
+      }, 800); // 800ms debounce delay
+    } else {
+      setTranslatedText('');
+      setIsTranslating(false);
+    }
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [sourceText, sourceLanguage, targetLanguage]);
 
   const copyToClipboard = async (content: string) => {
     console.log('Copy button clicked, content:', content?.slice(0, 100));
@@ -362,58 +416,69 @@ ${translationContent}
                   </div>
                 </div>
 
-                <Textarea
-                  placeholder="Paste document content to translate..."
-                  value={translationContent}
-                  onChange={(e) => setTranslationContent(e.target.value)}
-                  className="min-h-[300px]"
-                />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Source Text</label>
+                  <Textarea
+                    placeholder="Type or paste text to translate in real-time..."
+                    value={sourceText}
+                    onChange={(e) => setSourceText(e.target.value)}
+                    className="min-h-[300px]"
+                  />
+                </div>
 
-                <Button 
-                  onClick={translateDocument} 
-                  disabled={isTranslating || !translationContent.trim() || !sourceLanguage || !targetLanguage}
-                  className="w-full"
-                >
-                  {isTranslating ? 'Translating...' : 'Translate Document'}
-                </Button>
+                {isTranslating && sourceText.trim() && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    Translating in real-time...
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <CardTitle>Translation Result</CardTitle>
-                <CardDescription>Professional legal translation</CardDescription>
+                <CardDescription>Real-time translation powered by MyMemory</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={translationContent}
-                  readOnly
-                  placeholder="Translation will appear here..."
-                  className="min-h-[400px]"
-                />
-                {translationContent && (
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => copyToClipboard(translationContent)}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Translation
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        const sourceLang = languages.find(l => l.code === sourceLanguage)?.name || 'Source';
-                        const targetLang = languages.find(l => l.code === targetLanguage)?.name || 'Target';
-                        const filename = `Translation_${sourceLang}_to_${targetLang}.docx`;
-                        downloadAsWord(translationContent, filename);
-                      }}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
+              <CardContent className="space-y-4">
+                {translatedText ? (
+                  <>
+                    <div className="bg-muted/30 rounded-lg p-4 min-h-[300px]">
+                      <pre className="whitespace-pre-wrap text-sm">{translatedText}</pre>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => copyToClipboard(translatedText)}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Translation
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const sourceLang = languages.find(l => l.code === sourceLanguage)?.name || 'Source';
+                          const targetLang = languages.find(l => l.code === targetLanguage)?.name || 'Target';
+                          const filename = `Translation_${sourceLang}_to_${targetLang}.docx`;
+                          downloadAsWord(translatedText, filename);
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-[300px] text-muted-foreground">
+                    <Languages className="h-12 w-12 opacity-30 mb-4" />
+                    <p className="text-center">Translation will appear here automatically</p>
+                    <p className="text-sm text-center mt-2">
+                      {!sourceLanguage || !targetLanguage 
+                        ? 'Select source and target languages'
+                        : 'Start typing in the source text field'}
+                    </p>
                   </div>
                 )}
               </CardContent>
