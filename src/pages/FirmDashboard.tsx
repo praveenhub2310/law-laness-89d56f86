@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users, DollarSign, FileText, TrendingUp, Calendar } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, Users, DollarSign, FileText, TrendingUp, Calendar, Settings, Save } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const FirmDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [companySettings, setCompanySettings] = useState({
+    company_name: '',
+    registration_number: '',
+    address: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    website: '',
+    description: ''
+  });
   const firmMetrics = [
     { label: 'Total Revenue', value: '$142,580', change: '+12%', icon: DollarSign, color: 'text-green-600' },
     { label: 'Active Lawyers', value: '8', change: '+1', icon: Users, color: 'text-blue-600' },
@@ -26,12 +46,91 @@ const FirmDashboard = () => {
     { lawyer: 'Emily Chen', cases: 4, utilization: '65%', status: 'Low' }
   ];
 
+  useEffect(() => {
+    loadCompanySettings();
+  }, [user]);
+
+  const loadCompanySettings = async () => {
+    if (!user) return;
+    
+    setSettingsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setCompanySettings({
+          company_name: data.company_name || '',
+          registration_number: data.registration_number || '',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          postal_code: data.postal_code || '',
+          website: data.website || '',
+          description: data.description || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading company settings:', error);
+      toast.error('Failed to load company settings');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          company_name: companySettings.company_name,
+          registration_number: companySettings.registration_number,
+          address: companySettings.address,
+          city: companySettings.city,
+          state: companySettings.state,
+          postal_code: companySettings.postal_code,
+          website: companySettings.website,
+          description: companySettings.description
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Settings saved successfully');
+      loadCompanySettings();
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Firm Dashboard</h1>
         <p className="text-gray-600 mt-2">Comprehensive firm management and analytics</p>
       </div>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="bg-background border">
+          <TabsTrigger value="overview" className="pointer-events-auto cursor-pointer">Overview</TabsTrigger>
+          <TabsTrigger value="settings" className="pointer-events-auto cursor-pointer">
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {firmMetrics.map((metric, index) => {
@@ -147,6 +246,135 @@ const FirmDashboard = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Company Information
+              </CardTitle>
+              <CardDescription>
+                Manage your firm's basic information and contact details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {settingsLoading ? (
+                <div className="space-y-4">
+                  <div className="h-10 bg-muted animate-pulse rounded" />
+                  <div className="h-10 bg-muted animate-pulse rounded" />
+                  <div className="h-10 bg-muted animate-pulse rounded" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company_name">Company Name *</Label>
+                      <Input
+                        id="company_name"
+                        value={companySettings.company_name}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, company_name: e.target.value }))}
+                        placeholder="Enter company name"
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="registration_number">Registration Number</Label>
+                      <Input
+                        id="registration_number"
+                        value={companySettings.registration_number}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, registration_number: e.target.value }))}
+                        placeholder="Enter registration number"
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={companySettings.address}
+                      onChange={(e) => setCompanySettings(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Enter street address"
+                      className="pointer-events-auto"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={companySettings.city}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, city: e.target.value }))}
+                        placeholder="Enter city"
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State</Label>
+                      <Input
+                        id="state"
+                        value={companySettings.state}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, state: e.target.value }))}
+                        placeholder="Enter state"
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="postal_code">Postal Code</Label>
+                      <Input
+                        id="postal_code"
+                        value={companySettings.postal_code}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, postal_code: e.target.value }))}
+                        placeholder="Enter postal code"
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={companySettings.website}
+                      onChange={(e) => setCompanySettings(prev => ({ ...prev, website: e.target.value }))}
+                      placeholder="https://example.com"
+                      className="pointer-events-auto"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={companySettings.description}
+                      onChange={(e) => setCompanySettings(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Brief description of your firm"
+                      rows={4}
+                      className="pointer-events-auto"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      onClick={handleSaveSettings}
+                      disabled={loading}
+                      className="pointer-events-auto cursor-pointer relative z-10"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {loading ? 'Saving...' : 'Save Settings'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
