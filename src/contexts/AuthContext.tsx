@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
               toast({
                 title: 'Email Confirmed!',
-                description: 'Welcome to Akra Legal Case Management System',
+                description: 'Welcome to Law Lanes Case Management System',
               });
               window.location.href = '/dashboard';
             }
@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         toast({
           title: 'Login Successful',
-          description: 'Welcome to Akra Legal Case Management System',
+          description: 'Welcome to Law Lanes Case Management System',
         });
       }
 
