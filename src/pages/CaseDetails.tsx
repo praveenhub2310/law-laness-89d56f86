@@ -15,8 +15,19 @@ import {
   Edit,
   MoreHorizontal,
   Trash2,
-  Plus
+  Plus,
+  Copy,
+  Archive,
+  Share2
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -149,6 +160,42 @@ const CaseDetails = () => {
     return ['super_admin', 'company', 'advocate'].includes(userRole);
   };
 
+  const handleEditCase = () => {
+    console.log('✏️ Editing case:', project.id);
+    toast.info('Edit case', {
+      description: 'Opening case editor...'
+    });
+    // Navigate to edit page or open edit modal
+    navigate(`/dashboard/projects?edit=${project.id}`);
+  };
+
+  const handleDuplicateCase = () => {
+    console.log('📋 Duplicating case:', project.id);
+    toast.info('Duplicate case', {
+      description: 'This will create a copy of the current case'
+    });
+    // Implement duplication logic
+  };
+
+  const handleArchiveCase = async () => {
+    console.log('📦 Archiving case:', project.id);
+    
+    if (!confirm(`Are you sure you want to archive "${project.title}"?`)) {
+      return;
+    }
+
+    toast.info('Archive case', {
+      description: 'Case archival functionality will be implemented'
+    });
+  };
+
+  const handleShareCase = () => {
+    console.log('🔗 Sharing case:', project.id);
+    toast.info('Share case', {
+      description: 'Share functionality will be available soon'
+    });
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -201,13 +248,55 @@ const CaseDetails = () => {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={getStatusColor(project.status)}>{project.status}</Badge>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleEditCase}
+            className="relative z-10"
+          >
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline" size="sm">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="relative z-10"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="end" 
+              className="w-56 bg-background border shadow-lg z-50"
+            >
+              <DropdownMenuLabel>Case Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleDuplicateCase}
+                className="cursor-pointer"
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Duplicate Case</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleShareCase}
+                className="cursor-pointer"
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                <span>Share Case</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleArchiveCase}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                <span>Archive Case</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
