@@ -46,7 +46,7 @@ const MenuItem = ({ item, expandedItems, toggleExpanded }: MenuItemProps) => {
         <Collapsible open={expandedItems.includes(item.title)}>
           <CollapsibleTrigger
             onClick={() => toggleExpanded(item.title)}
-            className={`flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors ${
+            className={`flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors pointer-events-auto cursor-pointer relative z-10 ${
               isActive(item.path) || isParentActive(item)
                 ? 'bg-blue-700 text-white' 
                 : 'text-blue-100 hover:bg-blue-700 hover:text-white'
@@ -67,7 +67,7 @@ const MenuItem = ({ item, expandedItems, toggleExpanded }: MenuItemProps) => {
               <SidebarMenuButton
                 key={subItem.title}
                 onClick={() => navigate(subItem.path)}
-                className={`flex items-center w-full py-2.5 text-sm rounded-md transition-colors ml-8 ${
+                className={`flex items-center w-full py-2.5 text-sm rounded-md transition-colors ml-8 pointer-events-auto cursor-pointer relative z-10 ${
                   isActive(subItem.path) 
                     ? 'bg-blue-700 text-white' 
                     : 'text-blue-100 hover:bg-blue-700 hover:text-white'
@@ -90,7 +90,7 @@ const MenuItem = ({ item, expandedItems, toggleExpanded }: MenuItemProps) => {
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => navigate(item.path)}
-        className={`flex items-center px-4 py-3 text-sm rounded-md transition-colors ${
+        className={`flex items-center px-4 py-3 text-sm rounded-md transition-colors pointer-events-auto cursor-pointer relative z-10 ${
           isActive(item.path) 
             ? 'bg-blue-700 text-white' 
             : 'text-blue-100 hover:bg-blue-700 hover:text-white'
