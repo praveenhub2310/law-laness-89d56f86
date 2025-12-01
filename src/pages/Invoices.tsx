@@ -1,16 +1,23 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import DataTable from '@/components/DataTable';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadInvoicePDF, previewInvoicePDF } from '@/utils/pdfGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Invoices = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [paymentDateFilter, setPaymentDateFilter] = useState<Date | undefined>();
+  const [issueDateFilter, setIssueDateFilter] = useState<Date | undefined>();
   
   const {
     data: invoices,
@@ -131,28 +138,50 @@ const Invoices = () => {
     previewInvoicePDF(pdfData);
   };
 
-  // Format data for display with proper date handling
-  const formattedData = invoices.map(invoice => {
-    const parseDate = (dateString: string | null | undefined) => {
-      if (!dateString) return null;
-      const date = new Date(dateString);
-      return isNaN(date.getTime()) ? null : date;
-    };
+  // Format and filter data for display with proper date handling
+  const formattedData = invoices
+    .filter(invoice => {
+      // Filter by payment date if selected
+      if (paymentDateFilter && invoice.payment_date) {
+        const paymentDate = new Date(invoice.payment_date);
+        const filterDate = new Date(paymentDateFilter);
+        if (paymentDate.toDateString() !== filterDate.toDateString()) {
+          return false;
+        }
+      }
+      
+      // Filter by issue date if selected
+      if (issueDateFilter && invoice.issued_date) {
+        const issueDate = new Date(invoice.issued_date);
+        const filterDate = new Date(issueDateFilter);
+        if (issueDate.toDateString() !== filterDate.toDateString()) {
+          return false;
+        }
+      }
+      
+      return true;
+    })
+    .map(invoice => {
+      const parseDate = (dateString: string | null | undefined) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? null : date;
+      };
 
-    const issuedDate = parseDate(invoice.issued_date);
-    const dueDate = parseDate(invoice.due_date);
-    const paymentDate = parseDate(invoice.payment_date);
+      const issuedDate = parseDate(invoice.issued_date);
+      const dueDate = parseDate(invoice.due_date);
+      const paymentDate = parseDate(invoice.payment_date);
 
-    return {
-      ...invoice, // Keep all original properties
-      clientName: invoice.client_id || 'N/A',
-      amount: `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
-      issueDate: issuedDate ? issuedDate.toLocaleDateString() : 'N/A',
-      dueDate: dueDate ? dueDate.toLocaleDateString() : 'N/A',
-      paymentDate: paymentDate ? paymentDate.toLocaleDateString() : 'N/A',
-      taxAmount: `$${invoice.tax_amount?.toFixed(2) || '0.00'}`
-    };
-  });
+      return {
+        ...invoice, // Keep all original properties
+        clientName: invoice.client_id || 'N/A',
+        amount: `$${invoice.total_amount?.toFixed(2) || '0.00'}`,
+        issueDate: issuedDate ? issuedDate.toLocaleDateString() : 'N/A',
+        dueDate: dueDate ? dueDate.toLocaleDateString() : 'N/A',
+        paymentDate: paymentDate ? paymentDate.toLocaleDateString() : 'N/A',
+        taxAmount: `$${invoice.tax_amount?.toFixed(2) || '0.00'}`
+      };
+    });
 
   const handleExportData = () => {
     const csvData = invoices.map(invoice => ({
@@ -267,7 +296,94 @@ const Invoices = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-4 md:p-6">
+      {/* Date Filter Section */}
+      <div className="mb-4 p-4 bg-card border rounded-lg">
+        <h3 className="text-sm font-semibold mb-3">Filter by Date</h3>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Payment Date Filter */}
+          <div className="flex-1">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Payment Date
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal pointer-events-auto cursor-pointer relative z-10",
+                    !paymentDateFilter && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {paymentDateFilter ? format(paymentDateFilter, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-auto p-0 bg-background border shadow-lg z-[100]" 
+                align="start"
+                sideOffset={8}
+              >
+                <Calendar
+                  mode="single"
+                  selected={paymentDateFilter}
+                  onSelect={setPaymentDateFilter}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Issue Date Filter */}
+          <div className="flex-1">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Issue Date
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal pointer-events-auto cursor-pointer relative z-10",
+                    !issueDateFilter && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {issueDateFilter ? format(issueDateFilter, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-auto p-0 bg-background border shadow-lg z-[100]" 
+                align="start"
+                sideOffset={8}
+              >
+                <Calendar
+                  mode="single"
+                  selected={issueDateFilter}
+                  onSelect={setIssueDateFilter}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Clear Filters Button */}
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPaymentDateFilter(undefined);
+                setIssueDateFilter(undefined);
+              }}
+              disabled={!paymentDateFilter && !issueDateFilter}
+              className="w-full sm:w-auto pointer-events-auto"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <DataTable
         title="Invoices Management"
         columns={columns}
