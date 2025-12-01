@@ -76,14 +76,24 @@ const TopBar = () => {
       </div>
 
       <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-        <Button variant="ghost" size="sm" className="relative flex-shrink-0">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/dashboard/messages')}
+          className="relative flex-shrink-0"
+        >
           <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
           <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center bg-red-500 text-white text-[10px] sm:text-xs">
             3
           </Badge>
         </Button>
         
-        <Button variant="ghost" size="sm" className="hidden sm:flex flex-shrink-0">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/dashboard/court-calendar')}
+          className="hidden sm:flex flex-shrink-0"
+        >
           <Calendar className="h-5 w-5" />
         </Button>
         
