@@ -189,10 +189,10 @@ function App() {
           <Route path="/dashboard/client-translation" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><DocumentTranslation /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/client-fee-calculator" element={<RoleGuard allowedRoles={['client']}><DashboardLayout><CourtFeeCalculator /></DashboardLayout></RoleGuard>} />
           
-          {/* Cloud Storage - Available to all authenticated users */}
+          {/* Cloud Storage and Case Details - Available to all authenticated users */}
           <Route path="/dashboard/cloud-storage" element={<ProtectedRoute><DashboardLayout><CloudStorage /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/case-details/:id" element={<ProtectedRoute><DashboardLayout><CaseDetails /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/schedule/:caseId" element={<ProtectedRoute><DashboardLayout><Schedule /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/dashboard/case-details/:id" element={<ProtectedRoute><DashboardLayout><CaseDetails /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/dashboard/schedule/:caseId" element={<ProtectedRoute><DashboardLayout><Schedule /></DashboardLayout></ProtectedRoute>} />
           
           {/* Catch all route */}
           <Route path="*" element={<NotFound />} />

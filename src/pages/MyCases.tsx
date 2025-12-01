@@ -125,15 +125,18 @@ const MyCases = () => {
   };
 
   const handleViewDetails = (caseId: string) => {
-    navigate(`/case-details/${caseId}`);
+    console.log('📋 Navigating to case details:', caseId);
+    navigate(`/dashboard/case-details/${caseId}`);
   };
 
   const handleDocuments = () => {
+    console.log('📁 Navigating to cloud storage');
     navigate('/dashboard/cloud-storage');
   };
 
   const handleSchedule = (caseId: string) => {
-    navigate(`/schedule/${caseId}`);
+    console.log('📅 Navigating to schedule:', caseId);
+    navigate(`/dashboard/schedule/${caseId}`);
   };
 
   const handleAiToolSelect = (project: Project) => {

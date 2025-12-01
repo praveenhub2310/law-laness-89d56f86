@@ -189,11 +189,11 @@ const CaseDetails = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full justify-start" onClick={() => navigate('/cloud-storage')}>
+                <Button className="w-full justify-start" onClick={() => navigate('/dashboard/cloud-storage')}>
                   <FileText className="h-4 w-4 mr-2" />
                   Manage Documents
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/schedule/${project.id}`)}>
+                <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/dashboard/schedule/${project.id}`)}>
                   <Calendar className="h-4 w-4 mr-2" />
                   Schedule Hearing
                 </Button>
@@ -215,7 +215,7 @@ const CaseDetails = () => {
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
-                <Button onClick={() => navigate('/cloud-storage')}>
+                <Button onClick={() => navigate('/dashboard/cloud-storage')}>
                   Upload Documents
                 </Button>
               </div>
@@ -232,7 +232,7 @@ const CaseDetails = () => {
               <div className="text-center py-8">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground mb-4">No hearings scheduled</p>
-                <Button onClick={() => navigate(`/schedule/${project.id}`)}>
+                <Button onClick={() => navigate(`/dashboard/schedule/${project.id}`)}>
                   Schedule Hearing
                 </Button>
               </div>
