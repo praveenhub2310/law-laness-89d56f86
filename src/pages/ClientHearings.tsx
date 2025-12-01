@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, User, FileText, ExternalLink, MessageSquare } 
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface HearingWithDetails {
   id: string;
@@ -32,6 +33,7 @@ interface HearingWithDetails {
 
 const ClientHearings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Fetch client's hearings
   const { data: hearings, loading, refetch } = useSupabaseData<HearingWithDetails>({
@@ -58,7 +60,10 @@ const ClientHearings = () => {
   };
 
   const handleContactLawyer = () => {
-    toast.info('Contact feature will be implemented soon');
+    toast.success('Opening Messages', {
+      description: 'Redirecting to contact your lawyer...'
+    });
+    navigate('/dashboard/messages');
   };
 
   const handleAddToCalendar = (hearing: HearingWithDetails) => {
@@ -68,6 +73,9 @@ const ClientHearings = () => {
     const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(hearing.title)}&dates=${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=${encodeURIComponent(hearing.description || '')}&location=${encodeURIComponent(hearing.court_name)}`;
     
     window.open(calendarUrl, '_blank');
+    toast.success('Calendar Event Created', {
+      description: 'Opening Google Calendar...'
+    });
   };
 
   if (loading) {
@@ -226,7 +234,11 @@ const ClientHearings = () => {
               </div>
 
               <div className="flex flex-wrap gap-2 pt-4 border-t">
-                <Button size="sm" asChild>
+                <Button 
+                  size="sm" 
+                  asChild
+                  className="cursor-pointer pointer-events-auto"
+                >
                   <a href="/dashboard/case-status">
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Case Details
@@ -236,15 +248,26 @@ const ClientHearings = () => {
                   variant="outline" 
                   size="sm"
                   onClick={() => handleAddToCalendar(hearing)}
+                  className="cursor-pointer pointer-events-auto"
                 >
                   <Calendar className="h-4 w-4 mr-2" />
                   Add to Calendar
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleContactLawyer}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleContactLawyer}
+                  className="cursor-pointer pointer-events-auto"
+                >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Contact Lawyer
                 </Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                  className="cursor-pointer pointer-events-auto"
+                >
                   <a 
                     href={`https://maps.google.com/maps?q=${encodeURIComponent(hearing.court_name)}`}
                     target="_blank"
