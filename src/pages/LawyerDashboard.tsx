@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Briefcase, Clock, Receipt, Calendar, User, TrendingUp, FileText, DollarSign, Play, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Briefcase, Clock, Receipt, Calendar, User, TrendingUp, FileText, DollarSign, Play, Plus, Mail, Phone, Award, Briefcase as BriefcaseIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +22,7 @@ const LawyerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [showPublicProfile, setShowPublicProfile] = useState(false);
   const [dashboardData, setDashboardData] = useState({
     projects: [],
     timeEntries: [],
@@ -494,7 +496,7 @@ const LawyerDashboard = () => {
                       <Button 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate('/dashboard/profile')}
+                        onClick={() => setShowPublicProfile(true)}
                       >
                         View Public Profile
                       </Button>
@@ -506,6 +508,93 @@ const LawyerDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Public Profile View Dialog */}
+      <Dialog open={showPublicProfile} onOpenChange={setShowPublicProfile}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Public Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Profile Header */}
+            <div className="text-center pb-6 border-b">
+              <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-12 w-12 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold">
+                {dashboardData.profile?.first_name} {dashboardData.profile?.last_name}
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Advocate{dashboardData.advocate?.experience_years ? ` • ${dashboardData.advocate.experience_years} years experience` : ''}
+              </p>
+              {dashboardData.advocate?.bar_number && (
+                <Badge className="mt-3" variant="secondary">
+                  Bar #: {dashboardData.advocate.bar_number}
+                </Badge>
+              )}
+            </div>
+
+            {/* Contact Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">{dashboardData.profile?.email}</p>
+                </div>
+              </div>
+              {dashboardData.profile?.phone && (
+                <div className="flex items-start gap-3">
+                  <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Phone</p>
+                    <p className="text-sm text-muted-foreground">{dashboardData.profile.phone}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Specializations */}
+            {dashboardData.advocate?.specialization?.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Award className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="font-semibold">Specializations</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dashboardData.advocate.specialization.map((spec: string, index: number) => (
+                    <Badge key={index} variant="outline">{spec}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Professional Details */}
+            {(dashboardData.advocate?.hourly_rate || dashboardData.advocate?.bio) && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <BriefcaseIcon className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="font-semibold">Professional Information</h3>
+                </div>
+                <div className="space-y-3">
+                  {dashboardData.advocate?.hourly_rate && (
+                    <div>
+                      <p className="text-sm font-medium">Hourly Rate</p>
+                      <p className="text-sm text-muted-foreground">₹{dashboardData.advocate.hourly_rate}/hour</p>
+                    </div>
+                  )}
+                  {dashboardData.advocate?.bio && (
+                    <div>
+                      <p className="text-sm font-medium">Bio</p>
+                      <p className="text-sm text-muted-foreground">{dashboardData.advocate.bio}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </RoleGuard>
   );
 };
