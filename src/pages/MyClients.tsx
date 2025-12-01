@@ -142,6 +142,7 @@ const MyClients = () => {
   };
 
   const handleScheduleMeeting = async (client: any) => {
+    console.log('📅 Opening schedule dialog for client:', client.id, client.first_name, client.last_name);
     setSelectedClient(client);
     setScheduleDialogOpen(true);
   };
@@ -183,34 +184,72 @@ const MyClients = () => {
   };
 
   const scheduleMeeting = async () => {
-    if (!meetingData.title || !meetingData.date || !selectedClient) return;
+    console.log('💾 Attempting to schedule meeting:', meetingData, 'for client:', selectedClient?.id);
+    
+    if (!meetingData.title || !meetingData.date || !selectedClient) {
+      console.error('❌ Missing required fields:', { 
+        hasTitle: !!meetingData.title, 
+        hasDate: !!meetingData.date, 
+        hasClient: !!selectedClient 
+      });
+      toast({
+        title: "Validation Error",
+        description: "Please fill in meeting title and date",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user) {
+      console.error('❌ No authenticated user');
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to schedule meetings",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
-      const { error } = await supabase
-        .from('court_calendar')
+      // Insert into hearings table which has proper client_id relationship
+      console.log('🔄 Inserting meeting into hearings table...');
+      const { data, error } = await supabase
+        .from('hearings')
         .insert({
           title: meetingData.title,
-          description: meetingData.description,
+          description: meetingData.description || `Meeting with ${selectedClient.first_name} ${selectedClient.last_name}`,
           hearing_date: meetingData.date,
-          start_time: meetingData.time,
+          hearing_time: meetingData.time || '10:00',
           court_name: 'Client Meeting',
+          hearing_type: 'meeting',
           status: 'scheduled',
-          type: 'meeting'
-        });
+          client_id: selectedClient.id,
+          lawyer_id: user.id,
+          hearing_number: `MTG-${Date.now()}`
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
 
+      console.log('✅ Meeting scheduled successfully:', data);
+      
       toast({
         title: "Meeting Scheduled",
-        description: `Meeting with ${selectedClient.first_name} ${selectedClient.last_name} has been scheduled`
+        description: `Meeting with ${selectedClient.first_name} ${selectedClient.last_name} scheduled for ${new Date(meetingData.date).toLocaleDateString()}`
       });
       
       setMeetingData({ title: '', date: '', time: '', description: '' });
       setScheduleDialogOpen(false);
+      setSelectedClient(null);
     } catch (error: any) {
+      console.error('❌ Failed to schedule meeting:', error);
       toast({
         title: "Error",
-        description: "Failed to schedule meeting",
+        description: error.message || "Failed to schedule meeting",
         variant: "destructive"
       });
     }
@@ -384,7 +423,7 @@ const MyClients = () => {
                      <Button 
                        size="sm" 
                        variant="outline" 
-                       className="flex items-center gap-1"
+                       className="flex items-center gap-1 relative z-10 pointer-events-auto cursor-pointer"
                        onClick={() => handleMessage(client)}
                      >
                        <MessageSquare className="h-3 w-3" />
@@ -393,16 +432,16 @@ const MyClients = () => {
                      <Button 
                        size="sm" 
                        variant="outline" 
-                       className="flex items-center gap-1"
+                       className="flex items-center gap-1 relative z-10 pointer-events-auto cursor-pointer"
                        onClick={() => handleScheduleMeeting(client)}
                      >
                        <Calendar className="h-3 w-3" />
-                       Schedule Meeting
+                       Schedule
                      </Button>
                      <Button 
                        size="sm" 
                        variant="outline"
-                       className="flex items-center gap-1"
+                       className="flex items-center gap-1 relative z-10 pointer-events-auto cursor-pointer"
                        onClick={() => handleViewCases(client)}
                      >
                        <Eye className="h-3 w-3" />
@@ -410,6 +449,7 @@ const MyClients = () => {
                      </Button>
                      <Button 
                        size="sm"
+                       className="relative z-10 pointer-events-auto cursor-pointer"
                        onClick={() => handleContact(client)}
                      >
                        Contact
@@ -456,7 +496,7 @@ const MyClients = () => {
 
       {/* Schedule Meeting Dialog */}
       <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-background border shadow-lg z-50">
           <DialogHeader>
             <DialogTitle>
               Schedule Meeting with {selectedClient?.first_name} {selectedClient?.last_name}
@@ -464,22 +504,29 @@ const MyClients = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="meetingTitle">Meeting Title</Label>
+              <Label htmlFor="meetingTitle">
+                Meeting Title <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="meetingTitle"
                 value={meetingData.title}
                 onChange={(e) => setMeetingData({...meetingData, title: e.target.value})}
-                placeholder="Client consultation"
+                placeholder="e.g., Initial Consultation, Case Review"
+                required
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="meetingDate">Date</Label>
+                <Label htmlFor="meetingDate">
+                  Date <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="meetingDate"
                   type="date"
                   value={meetingData.date}
                   onChange={(e) => setMeetingData({...meetingData, date: e.target.value})}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
                 />
               </div>
               <div>
@@ -489,6 +536,7 @@ const MyClients = () => {
                   type="time"
                   value={meetingData.time}
                   onChange={(e) => setMeetingData({...meetingData, time: e.target.value})}
+                  placeholder="10:00"
                 />
               </div>
             </div>
@@ -498,15 +546,25 @@ const MyClients = () => {
                 id="meetingDescription"
                 value={meetingData.description}
                 onChange={(e) => setMeetingData({...meetingData, description: e.target.value})}
-                placeholder="Meeting agenda or notes..."
+                placeholder="Meeting agenda, topics to discuss..."
                 rows={3}
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  console.log('❌ Canceling schedule dialog');
+                  setScheduleDialogOpen(false);
+                  setSelectedClient(null);
+                }}
+              >
                 Cancel
               </Button>
-              <Button onClick={scheduleMeeting} disabled={!meetingData.title || !meetingData.date}>
+              <Button 
+                onClick={scheduleMeeting} 
+                disabled={!meetingData.title || !meetingData.date}
+              >
                 <Clock className="h-4 w-4 mr-2" />
                 Schedule Meeting
               </Button>
