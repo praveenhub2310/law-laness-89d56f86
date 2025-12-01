@@ -410,11 +410,11 @@ const ClientDashboard = () => {
                         Your legal representative will be assigned based on your case type and requirements. 
                         Contact information will be provided once assignment is complete.
                       </p>
-                      <div className="flex gap-2 mt-4">
+                      <div className="flex gap-2 mt-4 relative z-10">
                         <Button 
                           size="sm"
                           onClick={handleSendMessage}
-                          className="cursor-pointer"
+                          className="cursor-pointer pointer-events-auto relative z-10"
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Send Message
@@ -423,7 +423,7 @@ const ClientDashboard = () => {
                           size="sm" 
                           variant="outline"
                           onClick={handleScheduleMeeting}
-                          className="cursor-pointer"
+                          className="cursor-pointer pointer-events-auto relative z-10"
                         >
                           Schedule Meeting
                         </Button>
