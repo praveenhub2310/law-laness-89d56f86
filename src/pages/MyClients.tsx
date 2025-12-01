@@ -44,6 +44,8 @@ const MyClients = () => {
     emergency_contact_phone: ''
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Fetch clients data with related information
   const {
     data: clients,
@@ -80,64 +82,90 @@ const MyClients = () => {
   }, [selectedClient, refetchCases]);
 
   const handleAddClient = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add clients",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate required fields
+    if (!newClientData.email || !newClientData.first_name || !newClientData.last_name) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields: First Name, Last Name, and Email",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newClientData.email)) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    console.log('Creating client with data:', newClientData);
 
     try {
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newClientData.email,
-        password: 'TempPassword123!', // Temporary password - client should change it
-        email_confirm: true,
-        user_metadata: {
-          first_name: newClientData.first_name,
-          last_name: newClientData.last_name,
-          role: 'client'
-        }
+      // Call the edge function to create the client
+      const { data, error } = await supabase.functions.invoke('create-client', {
+        body: newClientData
       });
 
-      if (authError) throw authError;
+      console.log('Edge function response:', { data, error });
 
-      // The profile will be automatically created via the trigger
-      // Just need to update the client-specific data
-      if (authData.user) {
-        const { error: clientError } = await supabase
-          .from('clients')
-          .update({
-            client_type: newClientData.client_type,
-            preferred_contact_method: newClientData.preferred_contact_method,
-            emergency_contact_name: newClientData.emergency_contact_name,
-            emergency_contact_phone: newClientData.emergency_contact_phone
-          })
-          .eq('id', authData.user.id);
-
-        if (clientError) {
-          console.error('Error updating client data:', clientError);
-        }
+      if (error) {
+        throw new Error(error.message || 'Failed to create client');
       }
 
-      toast({
-        title: "Success",
-        description: "Client added successfully"
-      });
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
-      setAddClientOpen(false);
-      setNewClientData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        client_type: 'individual',
-        preferred_contact_method: 'email',
-        emergency_contact_name: '',
-        emergency_contact_phone: ''
-      });
-      refetch();
+      if (data?.success) {
+        toast({
+          title: "Success",
+          description: `Client added successfully. Temporary password: ${data.temp_password || 'Generated'}`,
+        });
+
+        // Reset form and close dialog
+        setAddClientOpen(false);
+        setNewClientData({
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone: '',
+          client_type: 'individual',
+          preferred_contact_method: 'email',
+          emergency_contact_name: '',
+          emergency_contact_phone: ''
+        });
+        
+        // Refetch clients list
+        if (refetch) {
+          setTimeout(() => refetch(), 500);
+        }
+      } else {
+        throw new Error('Unexpected response from server');
+      }
     } catch (error: any) {
+      console.error('Error creating client:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to add client",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -296,18 +324,24 @@ const MyClients = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">
+                    First Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="firstName"
+                    required
                     value={newClientData.first_name}
                     onChange={(e) => setNewClientData({...newClientData, first_name: e.target.value})}
                     placeholder="John"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">
+                    Last Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="lastName"
+                    required
                     value={newClientData.last_name}
                     onChange={(e) => setNewClientData({...newClientData, last_name: e.target.value})}
                     placeholder="Doe"
@@ -315,10 +349,13 @@ const MyClients = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">
+                  Email <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="email"
                   type="email"
+                  required
                   value={newClientData.email}
                   onChange={(e) => setNewClientData({...newClientData, email: e.target.value})}
                   placeholder="john.doe@email.com"
@@ -347,11 +384,18 @@ const MyClients = () => {
                 </Select>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setAddClientOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setAddClientOpen(false)}
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleAddClient}>
-                  Add Client
+                <Button 
+                  onClick={handleAddClient}
+                  disabled={isSubmitting || !newClientData.email || !newClientData.first_name || !newClientData.last_name}
+                >
+                  {isSubmitting ? 'Adding...' : 'Add Client'}
                 </Button>
               </div>
             </div>
