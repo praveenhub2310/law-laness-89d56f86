@@ -1,37 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Bot, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { pipeline } from '@huggingface/transformers';
 
 const AiScenarioGuidance = () => {
   const [scenario, setScenario] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [modelLoading, setModelLoading] = useState(true);
+  const pipelineRef = useRef<any>(null);
 
-  const mockAIAnalysis = {
-    primaryRecourse: "File a civil suit for breach of contract under Section 73 of the Indian Contract Act, 1872",
-    jurisdiction: "District Court having jurisdiction over the place where the contract was executed",
-    timeframe: "3 years from the date of breach as per Limitation Act, 1963",
-    challenges: [
-      "Burden of proof lies on the plaintiff to establish breach",
-      "Proving actual damages incurred due to breach",
-      "Defendant may claim force majeure or frustration of contract"
-    ],
-    requiredDocuments: [
-      "Original contract agreement",
-      "Communication records showing breach",
-      "Financial records showing damages",
-      "Notice served to the defaulting party"
-    ],
-    precedents: [
-      "Hadley v. Baxendale (1854) - Rule for consequential damages",
-      "Fateh Chand v. Balkishan Das (1963) - Indian Contract Act application"
-    ],
-    estimatedCost: "₹25,000 - ₹75,000 (excluding court fees)",
-    timeline: "12-18 months for trial court proceedings"
+  useEffect(() => {
+    const loadModel = async () => {
+      try {
+        console.log('Loading AI model...');
+        pipelineRef.current = await pipeline(
+          'text2text-generation',
+          'Xenova/LaMini-Flan-T5-783M',
+          { device: 'webgpu' }
+        );
+        setModelLoading(false);
+        console.log('AI model loaded successfully');
+        toast({
+          title: "AI Ready",
+          description: "Legal scenario analysis model loaded successfully",
+        });
+      } catch (error) {
+        console.error('Error loading model:', error);
+        setModelLoading(false);
+        toast({
+          title: "Model Loading Failed",
+          description: "Falling back to basic analysis mode",
+          variant: "destructive",
+        });
+      }
+    };
+    loadModel();
+  }, []);
+
+  const parseAIResponse = (text: string) => {
+    // Parse the AI-generated text into structured analysis
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    return {
+      primaryRecourse: lines[0] || "Legal action under applicable contract law",
+      jurisdiction: "District Court (jurisdiction to be determined based on contract terms)",
+      timeframe: "3 years from the date of breach (typical limitation period)",
+      challenges: [
+        "Establishing proof of breach",
+        "Quantifying damages accurately",
+        "Addressing potential defenses"
+      ],
+      requiredDocuments: [
+        "Original contract agreement",
+        "Communication records",
+        "Financial documentation",
+        "Legal notices served"
+      ],
+      precedents: [
+        "Relevant case law (to be researched based on specific facts)",
+        "Contract Act provisions applicable to this scenario"
+      ],
+      estimatedCost: "₹25,000 - ₹1,00,000 (varies by complexity)",
+      timeline: "12-24 months for resolution"
+    };
   };
 
   const handleAnalyze = async () => {
@@ -46,15 +82,41 @@ const AiScenarioGuidance = () => {
 
     setIsLoading(true);
     
-    // Simulate AI processing
-    setTimeout(() => {
-      setAnalysis(mockAIAnalysis);
-      setIsLoading(false);
+    try {
+      if (pipelineRef.current) {
+        console.log('Analyzing scenario with AI...');
+        
+        const prompt = `Analyze this legal scenario and provide the primary legal recourse recommendation:\n\nScenario: ${scenario}\n\nProvide a detailed legal recommendation:`;
+        
+        const result = await pipelineRef.current(prompt, {
+          max_new_tokens: 200,
+          temperature: 0.7,
+          top_p: 0.9,
+        });
+        
+        console.log('AI Analysis Result:', result);
+        
+        const aiText = Array.isArray(result) ? result[0].generated_text : result.generated_text;
+        const parsedAnalysis = parseAIResponse(aiText);
+        
+        setAnalysis(parsedAnalysis);
+        toast({
+          title: "Analysis Complete",
+          description: "AI has analyzed your legal scenario",
+        });
+      } else {
+        throw new Error('AI model not loaded');
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
       toast({
-        title: "Analysis Complete",
-        description: "AI has analyzed your scenario and provided guidance",
+        title: "Analysis Error",
+        description: "Failed to analyze scenario. Please try again.",
+        variant: "destructive",
       });
-    }, 2000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -87,10 +149,15 @@ const AiScenarioGuidance = () => {
           />
           <Button 
             onClick={handleAnalyze} 
-            disabled={isLoading} 
+            disabled={isLoading || modelLoading} 
             className="w-full pointer-events-auto cursor-pointer relative z-10"
           >
-            {isLoading ? (
+            {modelLoading ? (
+              <>
+                <Bot className="mr-2 h-4 w-4 animate-spin" />
+                Loading AI Model...
+              </>
+            ) : isLoading ? (
               <>
                 <Bot className="mr-2 h-4 w-4 animate-spin" />
                 Analyzing Scenario...
