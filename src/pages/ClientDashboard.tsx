@@ -9,9 +9,13 @@ import OnlinePayments from '@/components/OnlinePayments';
 import RoleGuard from '@/components/RoleGuard';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const ClientDashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Fetch client's cases
   const { data: cases, loading: casesLoading } = useSupabaseData({
@@ -56,6 +60,31 @@ const ClientDashboard = () => {
   // Mock data for cases history
   const activeCasesList = cases?.filter(c => c.status === 'active') || [];
   const allCases = cases || [];
+
+  // Action handlers
+  const handleContactLawyer = () => {
+    toast({
+      title: "Opening Messages",
+      description: "Redirecting you to the messages page to contact your lawyer.",
+    });
+    navigate('/dashboard/messages');
+  };
+
+  const handleSendMessage = () => {
+    toast({
+      title: "Opening Messages",
+      description: "Redirecting you to the messages page.",
+    });
+    navigate('/dashboard/messages');
+  };
+
+  const handleScheduleMeeting = () => {
+    toast({
+      title: "Opening Schedule",
+      description: "Redirecting you to schedule a meeting.",
+    });
+    navigate('/dashboard/client-meetings');
+  };
 
   if (casesLoading) {
     return (
@@ -264,7 +293,14 @@ const ClientDashboard = () => {
                           <Button size="sm" variant="outline" asChild>
                             <a href="/dashboard/case-status">View Details</a>
                           </Button>
-                          <Button size="sm" variant="outline">Contact Lawyer</Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={handleContactLawyer}
+                            className="cursor-pointer"
+                          >
+                            Contact Lawyer
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -375,11 +411,22 @@ const ClientDashboard = () => {
                         Contact information will be provided once assignment is complete.
                       </p>
                       <div className="flex gap-2 mt-4">
-                        <Button size="sm">
+                        <Button 
+                          size="sm"
+                          onClick={handleSendMessage}
+                          className="cursor-pointer"
+                        >
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Send Message
                         </Button>
-                        <Button size="sm" variant="outline">Schedule Meeting</Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={handleScheduleMeeting}
+                          className="cursor-pointer"
+                        >
+                          Schedule Meeting
+                        </Button>
                       </div>
                     </div>
                   </div>
