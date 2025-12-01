@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import EditHearingForm from '@/components/EnhancedCourtCalendar-EditForm';
 
 const localizer = momentLocalizer(moment);
 
@@ -56,10 +57,28 @@ const EnhancedCourtCalendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<HearingEvent | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [calendarView, setCalendarView] = useState<View>('month');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [newHearing, setNewHearing] = useState({
+    case_id: '',
+    hearing_date: '',
+    hearing_time: '09:00',
+    duration: '01:00:00',
+    hearing_number: '',
+    title: '',
+    description: '',
+    court_name: '',
+    court_room: '',
+    judge_name: '',
+    hearing_type: '',
+    status: 'scheduled',
+    notes: ''
+  });
+
+  const [editHearing, setEditHearing] = useState({
+    id: '',
     case_id: '',
     hearing_date: '',
     hearing_time: '09:00',
@@ -188,7 +207,119 @@ const EnhancedCourtCalendar: React.FC = () => {
 
   const handleSelectEvent = (event: HearingEvent) => {
     setSelectedEvent(event);
+    setIsEditMode(false);
     setIsDetailModalOpen(true);
+  };
+
+  const handleEditClick = () => {
+    if (!selectedEvent) return;
+    
+    console.log('Edit clicked for event:', selectedEvent);
+    
+    // Find the original hearing data
+    const hearing = hearingsData.find(h => h.id === selectedEvent.id);
+    if (!hearing) {
+      toast({
+        title: 'Error',
+        description: 'Could not find hearing data',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setEditHearing({
+      id: hearing.id,
+      case_id: hearing.case_id || '',
+      hearing_date: hearing.hearing_date,
+      hearing_time: hearing.hearing_time || '09:00',
+      duration: hearing.duration || '01:00:00',
+      hearing_number: hearing.hearing_number,
+      title: hearing.title,
+      description: hearing.description || '',
+      court_name: hearing.court_name,
+      court_room: hearing.court_room || '',
+      judge_name: hearing.judge_name || '',
+      hearing_type: hearing.hearing_type || '',
+      status: hearing.status,
+      notes: hearing.notes || ''
+    });
+    
+    setIsEditMode(true);
+  };
+
+  const handleUpdateHearing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    console.log('Updating hearing with data:', editHearing);
+    
+    if (!editHearing.title?.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a hearing title.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!editHearing.hearing_date) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a hearing date.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!editHearing.court_name?.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter the court name.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const updateData = {
+        title: editHearing.title.trim(),
+        hearing_number: editHearing.hearing_number,
+        hearing_date: editHearing.hearing_date,
+        hearing_time: editHearing.hearing_time,
+        duration: editHearing.duration,
+        court_name: editHearing.court_name.trim(),
+        court_room: editHearing.court_room?.trim() || null,
+        judge_name: editHearing.judge_name?.trim() || null,
+        hearing_type: editHearing.hearing_type || null,
+        status: editHearing.status,
+        description: editHearing.description?.trim() || null,
+        notes: editHearing.notes?.trim() || null,
+        case_id: editHearing.case_id || null
+      };
+
+      console.log('Update data:', updateData);
+
+      await updateHearing(editHearing.id, updateData);
+      
+      toast({
+        title: 'Success',
+        description: `Hearing "${editHearing.title}" updated successfully.`,
+      });
+      
+      setIsEditMode(false);
+      setIsDetailModalOpen(false);
+      setSelectedEvent(null);
+    } catch (error: any) {
+      console.error('Error updating hearing:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to update hearing. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddToGoogleCalendar = (event: HearingEvent) => {
@@ -383,32 +514,61 @@ const EnhancedCourtCalendar: React.FC = () => {
   };
 
   const exportCalendarData = () => {
-    const csvData = events.map(event => ({
-      'Hearing Number': event.resource.hearing_number,
-      'Title': event.title,
-      'Date': moment(event.start).format('YYYY-MM-DD'),
-      'Time': moment(event.start).format('HH:mm'),
-      'Duration': moment(event.end).diff(moment(event.start), 'minutes') + ' minutes',
-      'Case Number': event.resource.case_number || 'N/A',
-      'Client': event.resource.client_name,
-      'Court': event.resource.court_name,
-      'Judge': event.resource.judge_name || 'TBD',
-      'Status': event.resource.status,
-      'Type': event.resource.hearing_type || 'General'
-    }));
+    console.log('Export clicked, events count:', events.length);
     
-    const csvContent = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `court-calendar-${moment().format('YYYY-MM-DD')}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    if (!events || events.length === 0) {
+      toast({
+        title: 'No Data',
+        description: 'There are no hearings to export.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const csvData = events.map(event => ({
+        'Hearing Number': event.resource.hearing_number,
+        'Title': event.title,
+        'Date': moment(event.start).format('YYYY-MM-DD'),
+        'Time': moment(event.start).format('HH:mm'),
+        'Duration': moment(event.end).diff(moment(event.start), 'minutes') + ' minutes',
+        'Case Number': event.resource.case_number || 'N/A',
+        'Client': event.resource.client_name,
+        'Court': event.resource.court_name,
+        'Judge': event.resource.judge_name || 'TBD',
+        'Status': event.resource.status,
+        'Type': event.resource.hearing_type || 'General'
+      }));
+      
+      const csvContent = [
+        Object.keys(csvData[0]).join(','),
+        ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `court-calendar-${moment().format('YYYY-MM-DD')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Export successful');
+      
+      toast({
+        title: 'Export Successful',
+        description: `Exported ${events.length} hearings to CSV.`,
+      });
+    } catch (error: any) {
+      console.error('Export failed:', error);
+      toast({
+        title: 'Export Failed',
+        description: error?.message || 'Failed to export calendar data.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -505,15 +665,15 @@ const EnhancedCourtCalendar: React.FC = () => {
 
       {/* Event Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background border shadow-lg z-50">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
-              Hearing Details
+              {isEditMode ? 'Edit Hearing' : 'Hearing Details'}
             </DialogTitle>
           </DialogHeader>
           
-          {selectedEvent && (
+          {selectedEvent && !isEditMode && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -605,12 +765,19 @@ const EnhancedCourtCalendar: React.FC = () => {
 
               <div className="flex gap-2 pt-4 border-t">
                 <Button 
+                  onClick={handleEditClick}
+                  variant="default"
+                  className="pointer-events-auto cursor-pointer relative z-10"
+                >
+                  Edit Hearing
+                </Button>
+                <Button 
                   onClick={() => handleAddToGoogleCalendar(selectedEvent)}
                   className="flex-1"
                   variant="outline"
                 >
                   <CalendarIcon className="h-4 w-4 mr-2" />
-                  Add to Google Calendar
+                  Google
                 </Button>
                 <Button 
                   onClick={() => handleAddToOutlookCalendar(selectedEvent)}
@@ -618,10 +785,23 @@ const EnhancedCourtCalendar: React.FC = () => {
                   variant="outline"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Add to Outlook
+                  Outlook
                 </Button>
               </div>
             </div>
+          )}
+
+          {selectedEvent && isEditMode && (
+            <EditHearingForm
+              editHearing={editHearing}
+              setEditHearing={setEditHearing}
+              handleUpdateHearing={handleUpdateHearing}
+              isSubmitting={isSubmitting}
+              onCancel={() => {
+                console.log('Edit cancelled');
+                setIsEditMode(false);
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
