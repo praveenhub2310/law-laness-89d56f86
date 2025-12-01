@@ -385,15 +385,31 @@ const CaseDetails = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full justify-start" onClick={() => navigate('/dashboard/cloud-storage')}>
+                <Button 
+                  className="w-full justify-start cursor-pointer pointer-events-auto" 
+                  onClick={() => navigate('/dashboard/cloud-storage')}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Manage Documents
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/dashboard/schedule/${project.id}`)}>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start cursor-pointer pointer-events-auto" 
+                  onClick={() => navigate(`/dashboard/schedule/${project.id}`)}
+                >
                   <Calendar className="h-4 w-4 mr-2" />
                   Schedule Hearing
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start cursor-pointer pointer-events-auto"
+                  onClick={() => {
+                    toast.success('Opening Messages', {
+                      description: 'Redirecting to messages page...'
+                    });
+                    navigate('/dashboard/messages');
+                  }}
+                >
                   <User className="h-4 w-4 mr-2" />
                   Contact Client
                 </Button>
