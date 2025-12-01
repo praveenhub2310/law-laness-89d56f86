@@ -254,13 +254,16 @@ const EnhancedCourtCalendar: React.FC = () => {
   const handleSubmitNewHearing = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submitted with data:', newHearing);
+    
     // Validate required fields
-    if (!newHearing.title) {
+    if (!newHearing.title?.trim()) {
       toast({
         title: 'Validation Error',
         description: 'Please enter a hearing title.',
         variant: 'destructive'
       });
+      console.error('Validation failed: Missing title');
       return;
     }
 
@@ -270,15 +273,17 @@ const EnhancedCourtCalendar: React.FC = () => {
         description: 'Please select a hearing date.',
         variant: 'destructive'
       });
+      console.error('Validation failed: Missing date');
       return;
     }
 
-    if (!newHearing.court_name) {
+    if (!newHearing.court_name?.trim()) {
       toast({
         title: 'Validation Error',
         description: 'Please enter the court name.',
         variant: 'destructive'
       });
+      console.error('Validation failed: Missing court name');
       return;
     }
 
@@ -288,6 +293,7 @@ const EnhancedCourtCalendar: React.FC = () => {
         description: 'Please select a start time.',
         variant: 'destructive'
       });
+      console.error('Validation failed: Missing time');
       return;
     }
 
@@ -297,6 +303,17 @@ const EnhancedCourtCalendar: React.FC = () => {
         description: 'Please select a duration.',
         variant: 'destructive'
       });
+      console.error('Validation failed: Missing duration');
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to schedule hearings.',
+        variant: 'destructive'
+      });
+      console.error('User not authenticated');
       return;
     }
 
@@ -305,6 +322,7 @@ const EnhancedCourtCalendar: React.FC = () => {
 
     try {
       setIsSubmitting(true);
+      console.log('Starting hearing creation...');
 
       const hearingData = {
         title: newHearing.title.trim(),
@@ -324,7 +342,11 @@ const EnhancedCourtCalendar: React.FC = () => {
         lawyer_id: user?.id || null
       };
 
+      console.log('Hearing data to insert:', hearingData);
+
       await addHearing(hearingData);
+      
+      console.log('Hearing created successfully');
       
       toast({
         title: 'Success',
@@ -414,11 +436,22 @@ const EnhancedCourtCalendar: React.FC = () => {
               Court Calendar & Hearings ({events.length} scheduled)
             </CardTitle>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={exportCalendarData}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={exportCalendarData}
+                className="pointer-events-auto cursor-pointer relative z-10"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
-              <Button onClick={() => setIsAddModalOpen(true)}>
+              <Button 
+                onClick={() => {
+                  console.log('Schedule Hearing clicked');
+                  setIsAddModalOpen(true);
+                }}
+                className="pointer-events-auto cursor-pointer relative z-10"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Schedule Hearing
               </Button>
@@ -436,7 +469,13 @@ const EnhancedCourtCalendar: React.FC = () => {
               <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">No hearings scheduled</h3>
               <p className="text-sm text-muted-foreground mb-4">Schedule your first hearing to get started</p>
-              <Button onClick={() => setIsAddModalOpen(true)}>
+              <Button 
+                onClick={() => {
+                  console.log('Schedule Hearing clicked (empty state)');
+                  setIsAddModalOpen(true);
+                }}
+                className="pointer-events-auto cursor-pointer relative z-10"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Schedule Hearing
               </Button>
@@ -589,7 +628,7 @@ const EnhancedCourtCalendar: React.FC = () => {
 
       {/* Add New Hearing Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background border shadow-lg z-50">
           <DialogHeader>
             <DialogTitle>Schedule New Hearing</DialogTitle>
           </DialogHeader>
@@ -618,7 +657,9 @@ const EnhancedCourtCalendar: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title">
+                  Title <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="title"
                   value={newHearing.title}
@@ -631,17 +672,22 @@ const EnhancedCourtCalendar: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="hearing_date">Date *</Label>
+                <Label htmlFor="hearing_date">
+                  Date <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="hearing_date"
                   type="date"
+                  min={moment().format('YYYY-MM-DD')}
                   value={newHearing.hearing_date}
                   onChange={(e) => setNewHearing(prev => ({ ...prev, hearing_date: e.target.value }))}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="hearing_time">Time *</Label>
+                <Label htmlFor="hearing_time">
+                  Time <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="hearing_time"
                   type="time"
@@ -651,7 +697,9 @@ const EnhancedCourtCalendar: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="duration">Duration</Label>
+                <Label htmlFor="duration">
+                  Duration <span className="text-destructive">*</span>
+                </Label>
                 <Select value={newHearing.duration} onValueChange={(value) => setNewHearing(prev => ({ ...prev, duration: value }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -669,7 +717,9 @@ const EnhancedCourtCalendar: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="court_name">Court Name *</Label>
+                <Label htmlFor="court_name">
+                  Court Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="court_name"
                   value={newHearing.court_name}
@@ -730,8 +780,8 @@ const EnhancedCourtCalendar: React.FC = () => {
             <div className="flex gap-2 pt-4 border-t">
               <Button 
                 type="submit" 
-                className="flex-1 pointer-events-auto"
-                disabled={isSubmitting}
+                className="flex-1 pointer-events-auto cursor-pointer relative z-10"
+                disabled={isSubmitting || !newHearing.title || !newHearing.hearing_date || !newHearing.court_name}
               >
                 {isSubmitting ? (
                   <>
@@ -745,8 +795,12 @@ const EnhancedCourtCalendar: React.FC = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  console.log('Cancel clicked, closing modal');
+                  setIsAddModalOpen(false);
+                }}
                 disabled={isSubmitting}
+                className="pointer-events-auto cursor-pointer relative z-10"
               >
                 Cancel
               </Button>
