@@ -70,6 +70,27 @@ const ESign = () => {
   const signaturePadRef = useRef<SignaturePadRef>(null);
   const [isSigning, setIsSigning] = useState(false);
 
+  // Component mount logging
+  useEffect(() => {
+    console.log('📋 E-Sign Module Loaded');
+    console.log('User:', user?.id, user?.email);
+    console.log('User Role:', userProfile?.role);
+    console.log('Google Drive Connected:', isConnected);
+    console.log('Active Tab:', activeTab);
+  }, []);
+
+  // Log file selection
+  useEffect(() => {
+    if (uploadedFile) {
+      console.log('📄 File Selected:', {
+        name: uploadedFile.name,
+        size: uploadedFile.size,
+        url: uploadedFile.url,
+        googleDriveId: uploadedFile.googleDriveId
+      });
+    }
+  }, [uploadedFile]);
+
   // Fetch documents - filter for clients
   const { data: allDocuments, loading: documentsLoading, refetch: refetchDocuments } = useSupabaseData<ESignDocument>({
     table: 'e_sign_documents',
@@ -95,16 +116,49 @@ const ESign = () => {
   }, [allDocuments, isClient, user?.id, user?.email]);
 
   const addSignatory = () => {
-    if (!newSignatoryEmail || !newSignatoryName) {
-      toast.error('Please fill in email and name');
+    console.log('➕ Adding signatory:', { email: newSignatoryEmail, name: newSignatoryName, role: newSignatoryRole });
+    
+    if (!newSignatoryEmail || newSignatoryEmail.trim() === '') {
+      console.error('❌ Validation Failed: Email is missing');
+      toast.error('Email is required', {
+        description: 'Please enter a valid email address for the signatory'
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newSignatoryEmail.trim())) {
+      console.error('❌ Validation Failed: Invalid email format');
+      toast.error('Invalid email format', {
+        description: 'Please enter a valid email address (e.g., name@example.com)'
+      });
+      return;
+    }
+
+    if (!newSignatoryName || newSignatoryName.trim() === '') {
+      console.error('❌ Validation Failed: Name is missing');
+      toast.error('Name is required', {
+        description: 'Please enter the full name of the signatory'
+      });
+      return;
+    }
+
+    // Check for duplicate email
+    const isDuplicate = signatories.some(s => s.email.toLowerCase() === newSignatoryEmail.trim().toLowerCase());
+    if (isDuplicate) {
+      console.error('❌ Validation Failed: Duplicate email');
+      toast.error('Duplicate signatory', {
+        description: 'This email address has already been added'
+      });
       return;
     }
 
     const newSignatory: Signatory = {
       id: Date.now().toString(),
-      email: newSignatoryEmail,
-      name: newSignatoryName,
-      role: newSignatoryRole || 'Signatory',
+      email: newSignatoryEmail.trim(),
+      name: newSignatoryName.trim(),
+      role: newSignatoryRole.trim() || 'Signatory',
       signed: false
     };
 
@@ -112,6 +166,11 @@ const ESign = () => {
     setNewSignatoryEmail('');
     setNewSignatoryName('');
     setNewSignatoryRole('');
+    
+    console.log('✅ Signatory added successfully:', newSignatory);
+    toast.success('Signatory added', {
+      description: `${newSignatory.name} has been added to the list`
+    });
   };
 
   const removeSignatory = (id: string) => {
@@ -119,16 +178,70 @@ const ESign = () => {
   };
 
   const createDocument = async () => {
-    if (!documentTitle || !uploadedFile || signatories.length === 0) {
-      toast.error('Please fill in all required fields');
+    console.log('🔄 Create Document - Starting validation...');
+    console.log('Document Title:', documentTitle);
+    console.log('Uploaded File:', uploadedFile);
+    console.log('Signatories Count:', signatories.length);
+    console.log('Selected Case ID:', selectedCaseId);
+    console.log('Case Number:', caseNumber);
+
+    // Step-by-step validation with specific error messages
+    if (!documentTitle || documentTitle.trim() === '') {
+      console.error('❌ Validation Failed: Document title is missing');
+      toast.error('Document title is required', {
+        description: 'Please enter a title for your document'
+      });
+      return;
+    }
+
+    if (!uploadedFile) {
+      console.error('❌ Validation Failed: No file uploaded');
+      toast.error('Document file is required', {
+        description: 'Please select a document file from Google Drive'
+      });
+      return;
+    }
+
+    if (!uploadedFile.url || uploadedFile.url.trim() === '') {
+      console.error('❌ Validation Failed: Uploaded file has no URL');
+      toast.error('Invalid file selected', {
+        description: 'The selected file does not have a valid URL. Please try selecting the file again.'
+      });
+      return;
+    }
+
+    if (signatories.length === 0) {
+      console.error('❌ Validation Failed: No signatories added');
+      toast.error('At least one signatory is required', {
+        description: 'Please add at least one person to sign the document'
+      });
+      return;
+    }
+
+    // Validate email addresses for all signatories
+    const invalidSignatories = signatories.filter(s => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return !emailRegex.test(s.email);
+    });
+
+    if (invalidSignatories.length > 0) {
+      console.error('❌ Validation Failed: Invalid email addresses:', invalidSignatories);
+      toast.error('Invalid email addresses', {
+        description: `Please provide valid email addresses for all signatories`
+      });
       return;
     }
 
     // Validate either existing case or new case number is provided
     if (!selectedCaseId && !caseNumber) {
-      toast.error('Please either select an existing case or create a new case number');
+      console.error('❌ Validation Failed: No case selected or created');
+      toast.error('Case association required', {
+        description: 'Please either select an existing case or create a new case number'
+      });
       return;
     }
+
+    console.log('✅ All validations passed, proceeding with document creation...');
 
     setIsCreating(true);
     try {
@@ -136,48 +249,77 @@ const ESign = () => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(expiryDays));
 
-      const { error } = await supabase
+      console.log('📝 Preparing document data...');
+      const documentData = {
+        document_number: documentNumber,
+        title: documentTitle.trim(),
+        original_file_url: uploadedFile.url,
+        google_drive_file_id: uploadedFile.googleDriveId || null,
+        case_id: selectedCaseId || null,
+        case_number: caseNumber || null,
+        client_id: user?.id || null,
+        lawyer_id: user?.id || null,
+        signature_positions: signatories.map((s, index) => ({
+          signatory_id: s.id,
+          email: s.email.trim(),
+          name: s.name.trim(),
+          role: s.role.trim() || 'Signatory',
+          position: index + 1,
+          signed: false
+        })),
+        signatures: [],
+        signing_status: 'pending',
+        expires_at: expiresAt.toISOString()
+      };
+
+      console.log('📤 Sending document data to Supabase:', JSON.stringify(documentData, null, 2));
+
+      const { data, error } = await supabase
         .from('e_sign_documents')
-        .insert({
-          document_number: documentNumber,
-          title: documentTitle,
-          original_file_url: uploadedFile.url,
-          google_drive_file_id: uploadedFile.googleDriveId,
-          case_id: selectedCaseId || null,
-          case_number: caseNumber || null, // Store the formatted case number
-          client_id: user?.id,
-          lawyer_id: user?.id,
-          signature_positions: signatories.map((s, index) => ({
-            signatory_id: s.id,
-            email: s.email,
-            name: s.name,
-            role: s.role,
-            position: index + 1,
-            signed: false
-          })),
-          signatures: [],
-          signing_status: 'pending',
-          expires_at: expiresAt.toISOString()
-        });
+        .insert(documentData)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase Error:', error);
+        throw error;
+      }
 
-      toast.success('Document created successfully');
+      console.log('✅ Document created successfully:', data);
+
+      toast.success('Document created successfully', {
+        description: `Document ${documentNumber} has been created and sent for signature`
+      });
       
       // Reset form
+      console.log('🔄 Resetting form...');
       setDocumentTitle('');
       setDocumentDescription('');
       setUploadedFile(null);
       setSignatories([]);
       setSelectedCaseId('');
       setCaseNumber('');
+      setExpiryDays('30');
+      
+      // Switch to manage tab and refresh
       setActiveTab('manage');
-      refetchDocuments();
-    } catch (error) {
-      console.error('Error creating document:', error);
-      toast.error('Failed to create document');
+      await refetchDocuments();
+      
+      console.log('✅ Form reset complete');
+    } catch (error: any) {
+      console.error('❌ Error creating document:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code
+      });
+      
+      toast.error('Failed to create document', {
+        description: error?.message || 'An unexpected error occurred. Please check the console for details.'
+      });
     } finally {
       setIsCreating(false);
+      console.log('🏁 Create document process completed');
     }
   };
 
@@ -187,25 +329,48 @@ const ESign = () => {
   };
 
   const signDocument = async () => {
-    if (!selectedDocumentId || !currentSignature) {
-      toast.error('Please select a document and provide signature');
+    console.log('✍️ Sign Document - Starting validation...');
+    console.log('Selected Document ID:', selectedDocumentId);
+    console.log('Current Signature:', currentSignature ? 'Present' : 'Missing');
+
+    if (!selectedDocumentId) {
+      console.error('❌ Validation Failed: No document selected');
+      toast.error('Please select a document', {
+        description: 'Choose a document to sign from the list'
+      });
       return;
     }
+
+    if (!currentSignature) {
+      console.error('❌ Validation Failed: No signature provided');
+      toast.error('Signature required', {
+        description: 'Please draw your signature in the signature pad'
+      });
+      return;
+    }
+
+    console.log('✅ Validation passed, proceeding with signing...');
 
     setIsSigning(true);
     try {
       const document = documents?.find(d => d.id === selectedDocumentId);
       if (!document) {
+        console.error('❌ Document not found in list');
         throw new Error('Document not found');
       }
+
+      console.log('📄 Document found:', document.title);
 
       // Create signature data
       const signatureData = {
         signatory_id: user?.id,
+        signatory_email: user?.email,
         signature: currentSignature,
         signed_at: new Date().toISOString(),
-        ip_address: 'unknown' // Could be enhanced to capture actual IP
+        ip_address: 'unknown'
       };
+
+      console.log('📝 Signature data prepared:', signatureData);
 
       // Update document with signature
       const updatedSignatures = [...(document.signatures || []), signatureData];
@@ -213,26 +378,58 @@ const ESign = () => {
         updatedSignatures.some(sig => sig.signatory_id === pos.signatory_id)
       );
 
-      const { error } = await supabase
+      console.log('📊 Signature status:', { 
+        totalRequired: document.signature_positions.length, 
+        totalSigned: updatedSignatures.length,
+        allSigned 
+      });
+
+      const updateData = {
+        signatures: updatedSignatures,
+        signing_status: allSigned ? 'completed' : 'partially_signed',
+        signed_at: allSigned ? new Date().toISOString() : null
+      };
+
+      console.log('📤 Sending update to Supabase:', updateData);
+
+      const { data, error } = await supabase
         .from('e_sign_documents')
-        .update({
-          signatures: updatedSignatures,
-          signing_status: allSigned ? 'completed' : 'partially_signed',
-          signed_at: allSigned ? new Date().toISOString() : null
-        })
-        .eq('id', selectedDocumentId);
+        .update(updateData)
+        .eq('id', selectedDocumentId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase Error:', error);
+        throw error;
+      }
 
-      toast.success('Document signed successfully');
+      console.log('✅ Document signed successfully:', data);
+
+      toast.success('Document signed successfully', {
+        description: allSigned ? 'All signatures collected!' : 'Your signature has been recorded'
+      });
+      
       setCurrentSignature('');
+      setSelectedDocumentId('');
       signaturePadRef.current?.clear();
-      refetchDocuments();
-    } catch (error) {
-      console.error('Error signing document:', error);
-      toast.error('Failed to sign document');
+      await refetchDocuments();
+      
+      console.log('✅ Sign document process completed');
+    } catch (error: any) {
+      console.error('❌ Error signing document:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code
+      });
+      
+      toast.error('Failed to sign document', {
+        description: error?.message || 'An unexpected error occurred. Please check the console for details.'
+      });
     } finally {
       setIsSigning(false);
+      console.log('🏁 Sign document process completed');
     }
   };
 
@@ -298,22 +495,46 @@ const ESign = () => {
         </TabsList>
 
         {!isClient && <TabsContent value="create" className="space-y-6">
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <FileSignature className="h-4 w-4 text-blue-600" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-blue-900">Creating an E-Sign Document</h3>
+                  <p className="text-sm text-blue-700">
+                    Fill in all required fields marked with <span className="text-destructive">*</span>. 
+                    The document will be sent to all signatories for electronic signature.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5" />
                 Create New E-Sign Document
               </CardTitle>
+              <CardDescription>
+                All fields marked with <span className="text-destructive">*</span> are required
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Document Title *</Label>
+                  <Label htmlFor="title" className="flex items-center gap-1">
+                    Document Title <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="title"
                     value={documentTitle}
                     onChange={(e) => setDocumentTitle(e.target.value)}
                     placeholder="Enter document title"
+                    required
+                    className={!documentTitle && isCreating ? 'border-destructive' : ''}
                   />
                 </div>
                 <div className="space-y-2">
@@ -367,19 +588,24 @@ const ESign = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  <h3 className="text-lg font-semibold">Signatories</h3>
+                  <h3 className="text-lg font-semibold flex items-center gap-1">
+                    Signatories <span className="text-destructive">*</span>
+                  </h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Input
-                    placeholder="Email address"
+                    placeholder="Email address *"
                     value={newSignatoryEmail}
                     onChange={(e) => setNewSignatoryEmail(e.target.value)}
+                    type="email"
+                    required
                   />
                   <Input
-                    placeholder="Full name"
+                    placeholder="Full name *"
                     value={newSignatoryName}
                     onChange={(e) => setNewSignatoryName(e.target.value)}
+                    required
                   />
                   <Input
                     placeholder="Role (optional)"
@@ -394,21 +620,22 @@ const ESign = () => {
 
                 {signatories.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Added Signatories</Label>
+                    <Label>Added Signatories ({signatories.length})</Label>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {signatories.map((signatory) => (
-                        <div key={signatory.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div key={signatory.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                           <div>
                             <p className="font-medium">{signatory.name}</p>
                             <p className="text-sm text-muted-foreground">{signatory.email}</p>
                             {signatory.role && (
-                              <Badge variant="secondary" className="text-xs">{signatory.role}</Badge>
+                              <Badge variant="secondary" className="text-xs mt-1">{signatory.role}</Badge>
                             )}
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => removeSignatory(signatory.id)}
+                            className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -416,6 +643,12 @@ const ESign = () => {
                       ))}
                     </div>
                   </div>
+                )}
+                
+                {signatories.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Add at least one signatory to create the document
+                  </p>
                 )}
               </div>
 
@@ -435,15 +668,101 @@ const ESign = () => {
                 </Select>
               </div>
 
+              <Separator />
+
+              {/* Validation Summary */}
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium text-sm">Document Status</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    {documentTitle ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-muted-foreground">Title provided</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Title required</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {uploadedFile ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-muted-foreground">File selected</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">File required</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {signatories.length > 0 ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-muted-foreground">{signatories.length} signator{signatories.length === 1 ? 'y' : 'ies'} added</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Signatories required</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {(selectedCaseId || caseNumber) ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-muted-foreground">Case associated</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Case required</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <Button 
                 onClick={createDocument} 
-                disabled={isCreating}
+                disabled={isCreating || !isConnected}
                 className="w-full gap-2"
                 size="lg"
               >
                 <Send className="h-4 w-4" />
                 {isCreating ? 'Creating Document...' : 'Create & Send for Signature'}
               </Button>
+              
+              {!isConnected && (
+                <p className="text-sm text-destructive text-center">
+                  Please connect to Google Drive to create documents
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>}
