@@ -2,3 +2,6 @@ project_id = "ibaqunlwzzoonbsnajbk"
 
 [functions.scrape-templates]
 verify_jwt = false
+
+[functions.ai-legal-assistant]
+verify_jwt = true
