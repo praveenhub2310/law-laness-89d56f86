@@ -54,31 +54,6 @@ const DocumentTranslation = () => {
     }
   };
 
-  const translateText = (text, fromLang, toLang) => {
-    // Mock translation logic
-    const langPair = `${fromLang}-${toLang}`;
-    const translations = sampleTranslations[langPair] || {};
-    
-    let translated = text;
-    Object.entries(translations).forEach(([source, target]) => {
-      const regex = new RegExp(`\\b${source}\\b`, 'gi');
-      translated = translated.replace(regex, target);
-    });
-    
-    // If no specific translations found, return a mock translation
-    if (translated === text) {
-      if (toLang === 'hi') {
-        translated = text + " (हिंदी अनुवाद)";
-      } else if (toLang === 'en') {
-        translated = text + " (English Translation)";
-      } else {
-        translated = text + ` (${languages.find(l => l.code === toLang)?.name} Translation)`;
-      }
-    }
-    
-    return translated;
-  };
-
   const handleTranslate = async () => {
     if (!sourceLanguage || !targetLanguage || !sourceText.trim()) {
       toast({
@@ -100,17 +75,37 @@ const DocumentTranslation = () => {
 
     setIsTranslating(true);
     
-    // Simulate translation API call
-    setTimeout(() => {
-      const translated = translateText(sourceText, sourceLanguage, targetLanguage);
-      setTranslatedText(translated);
-      setIsTranslating(false);
+    try {
+      // Use MyMemory free translation API
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(sourceText)}&langpair=${sourceLanguage}|${targetLanguage}`
+      );
       
+      if (!response.ok) {
+        throw new Error('Translation API request failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.responseStatus === 200 && data.responseData.translatedText) {
+        setTranslatedText(data.responseData.translatedText);
+        toast({
+          title: "Translation Complete",
+          description: `Text translated from ${languages.find(l => l.code === sourceLanguage)?.name} to ${languages.find(l => l.code === targetLanguage)?.name}`,
+        });
+      } else {
+        throw new Error('Invalid translation response');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
       toast({
-        title: "Translation Complete",
-        description: `Text translated from ${languages.find(l => l.code === sourceLanguage)?.name} to ${languages.find(l => l.code === targetLanguage)?.name}`,
+        title: "Translation Failed",
+        description: "Unable to translate text. Please try again later.",
+        variant: "destructive",
       });
-    }, 2000);
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleFileUpload = (event) => {
