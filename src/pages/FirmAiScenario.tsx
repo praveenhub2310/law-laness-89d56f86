@@ -104,7 +104,11 @@ const FirmAiScenario = () => {
                       Clients: {scenario.clients.join(', ')}
                     </div>
                   </div>
-                  <Button size="sm" className="mt-3" onClick={() => setSelectedScenario(scenario.title)}>
+                  <Button 
+                    size="sm" 
+                    className="mt-3 pointer-events-auto cursor-pointer relative z-10" 
+                    onClick={() => setSelectedScenario(scenario.title)}
+                  >
                     Analyze Scenario
                   </Button>
                 </div>
@@ -131,9 +135,16 @@ const FirmAiScenario = () => {
             <Button 
               onClick={analyzeScenario}
               disabled={isAnalyzing || (!customScenario.trim() && !selectedScenario)}
-              className="w-full"
+              className="w-full pointer-events-auto cursor-pointer relative z-10"
             >
-              {isAnalyzing ? 'Analyzing...' : 'Get AI Guidance'}
+              {isAnalyzing ? (
+                <>
+                  <Bot className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                'Get AI Guidance'
+              )}
             </Button>
           </CardContent>
         </Card>
