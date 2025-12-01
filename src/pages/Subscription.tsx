@@ -311,8 +311,37 @@ const Subscription = () => {
     }
   };
 
+  const handleRenewSubscription = async () => {
+    if (!currentSubscription) return;
+    
+    console.log('🔵 handleRenewSubscription called');
+    
+    const plan = plans.find(p => p.id === currentSubscription.plan_id);
+    if (!plan) {
+      console.log('❌ Plan not found');
+      toast({
+        title: "Error",
+        description: "Unable to find subscription plan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Use the existing handleSubscribe logic to renew
+    await handleSubscribe(plan.id);
+  };
+
+  const handleUpdatePaymentMethod = () => {
+    console.log('🔵 handleUpdatePaymentMethod called');
+    toast({
+      title: "Coming Soon",
+      description: "Payment method update will be available soon. Please contact support to update your payment method.",
+    });
+  };
+
   const handleDownloadInvoice = async (invoiceId: string) => {
     try {
+      console.log('🔵 Downloading invoice:', invoiceId);
       // Mock download - in real implementation, this would generate and download PDF
       toast({
         title: "Invoice Downloaded",
@@ -389,8 +418,17 @@ const Subscription = () => {
                 Renew now to avoid service interruption
               </p>
             </div>
-            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button 
+              size="sm" 
+              className="bg-amber-600 hover:bg-amber-700 pointer-events-auto cursor-pointer relative z-10"
+              onClick={handleRenewSubscription}
+              disabled={actionLoading || paymentLoading}
+            >
+              {(actionLoading || paymentLoading) ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
               Renew Now
             </Button>
           </CardContent>
@@ -440,7 +478,12 @@ const Subscription = () => {
                   <CreditCard className="h-4 w-4" />
                   {currentSubscription.payment_method || 'Not set'}
                 </p>
-                <Button variant="link" size="sm" className="text-xs p-0">
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-xs p-0 pointer-events-auto cursor-pointer relative z-10"
+                  onClick={handleUpdatePaymentMethod}
+                >
                   <Settings className="h-3 w-3 mr-1" />
                   Update
                 </Button>
@@ -452,7 +495,11 @@ const Subscription = () => {
                 <>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" disabled={actionLoading} className="flex-1 sm:flex-none">
+                      <Button 
+                        variant="outline" 
+                        disabled={actionLoading} 
+                        className="flex-1 sm:flex-none pointer-events-auto cursor-pointer relative z-10"
+                      >
                         Cancel Subscription
                       </Button>
                     </AlertDialogTrigger>
@@ -464,28 +511,47 @@ const Subscription = () => {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>No, Keep Subscription</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelSubscription} disabled={actionLoading}>
-                          Yes, Cancel Subscription
+                        <AlertDialogCancel className="pointer-events-auto cursor-pointer">
+                          No, Keep Subscription
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleCancelSubscription} 
+                          disabled={actionLoading}
+                          className="pointer-events-auto cursor-pointer"
+                        >
+                          {actionLoading ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Cancelling...</>
+                          ) : (
+                            'Yes, Cancel Subscription'
+                          )}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                   
-                  <Button variant="outline" className="flex-1 sm:flex-none">
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 sm:flex-none pointer-events-auto cursor-pointer relative z-10"
+                    onClick={handleRenewSubscription}
+                    disabled={actionLoading || paymentLoading}
+                  >
+                    {(actionLoading || paymentLoading) ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
                     Renew Now
                   </Button>
                   
                   {invoices.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleDownloadInvoice(invoices[0].id)}
-                      className="flex-1 sm:flex-none"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Invoice
-                    </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleDownloadInvoice(invoices[0].id)}
+                    className="flex-1 sm:flex-none pointer-events-auto cursor-pointer relative z-10"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Invoice
+                  </Button>
                   )}
                 </>
               )}
@@ -574,15 +640,15 @@ const Subscription = () => {
                       </Button>
                     ) : (
                       <Button 
-                        className={`w-full h-12 text-base font-semibold transition-all ${
+                        className={`w-full h-12 text-base font-semibold transition-all pointer-events-auto cursor-pointer relative z-10 ${
                           isRecommended 
                             ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg' 
                             : ''
                         }`}
                         onClick={() => handleSubscribe(plan.id)}
-                        disabled={actionLoading || !!currentSubscription}
+                        disabled={actionLoading || paymentLoading || !!currentSubscription}
                       >
-                        {actionLoading ? (
+                        {(actionLoading || paymentLoading) ? (
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                         ) : (
                           <>
@@ -605,7 +671,7 @@ const Subscription = () => {
         <Card>
           <Collapsible open={billingHistoryOpen} onOpenChange={setBillingHistoryOpen}>
             <CollapsibleTrigger asChild>
-              <CardHeader className="hover:bg-muted/50 cursor-pointer transition-colors">
+              <CardHeader className="hover:bg-muted/50 cursor-pointer transition-colors pointer-events-auto relative z-10">
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
@@ -654,7 +720,7 @@ const Subscription = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDownloadInvoice(invoice.id)}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 pointer-events-auto cursor-pointer relative z-10"
                         >
                           <Download className="h-4 w-4" />
                           Download
