@@ -311,10 +311,10 @@ const CourtFeeCalculator = () => {
                 Case Type
               </label>
               <Select value={caseType} onValueChange={setCaseType}>
-                <SelectTrigger>
+                <SelectTrigger className="pointer-events-auto cursor-pointer relative z-10">
                   <SelectValue placeholder="Select case type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-lg z-[100]">
                   {caseTypes.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
@@ -329,10 +329,10 @@ const CourtFeeCalculator = () => {
                 Court Jurisdiction
               </label>
               <Select value={jurisdiction} onValueChange={setJurisdiction}>
-                <SelectTrigger>
+                <SelectTrigger className="pointer-events-auto cursor-pointer relative z-10">
                   <SelectValue placeholder="Select jurisdiction" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-lg z-[100]">
                   {jurisdictions.map((j) => (
                     <SelectItem key={j.value} value={j.value}>
                       {j.label}
@@ -358,11 +358,17 @@ const CourtFeeCalculator = () => {
                       setClaimAmount(e.target.value);
                     }
                   }}
+                  className="pointer-events-auto"
+                  min="0"
+                  step="1"
                 />
               </div>
             )}
 
-            <Button onClick={handleCalculateCourtFee} className="w-full">
+            <Button 
+              onClick={handleCalculateCourtFee} 
+              className="w-full pointer-events-auto cursor-pointer relative z-10"
+            >
               <Calculator className="mr-2 h-4 w-4" />
               Calculate Court Fee
             </Button>
