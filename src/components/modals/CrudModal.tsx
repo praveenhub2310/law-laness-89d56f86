@@ -96,10 +96,13 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
             onValueChange={(value) => setFormData({ ...formData, [field.key]: value })}
             disabled={isReadonly}
           >
-            <SelectTrigger className={isReadonly ? 'bg-gray-100' : ''}>
+            <SelectTrigger className={cn(
+              isReadonly ? 'bg-gray-100 cursor-not-allowed' : '',
+              'pointer-events-auto'
+            )}>
               <SelectValue placeholder={`Select ${field.label}`} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-background border shadow-lg z-[100]">
                   {field.options?.map((option) => {
                     const optionValue = typeof option === 'string' ? option : String(option.value);
                     const optionLabel = typeof option === 'string' ? option : option.label;
@@ -121,9 +124,9 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
               <Button
                 variant="outline"
                 className={cn(
-                  "w-full justify-start text-left font-normal",
+                  "w-full justify-start text-left font-normal pointer-events-auto",
                   !formData[field.key] && "text-muted-foreground",
-                  isReadonly && "bg-gray-100"
+                  isReadonly && "bg-gray-100 cursor-not-allowed"
                 )}
                 disabled={isReadonly}
               >
@@ -131,7 +134,11 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
                 {isValidDate ? format(new Date(formData[field.key]), "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent 
+              className="w-auto p-0 bg-background border shadow-lg z-[100]" 
+              align="start"
+              sideOffset={8}
+            >
               <Calendar
                 mode="single"
                 selected={isValidDate ? new Date(formData[field.key]) : undefined}
@@ -170,28 +177,38 @@ const CrudModal = ({ isOpen, onClose, onSave, data, fields, title, mode }: CrudM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto bg-background border shadow-lg">
         <DialogHeader>
           <DialogTitle>
             {mode === 'add' ? `Add New ${title}` : mode === 'edit' ? `Edit ${title}` : `View ${title}`}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 py-4">
           {fields.map((field) => (
             <div key={field.key} className="space-y-2">
-              <Label htmlFor={field.key}>{field.label}</Label>
+              <Label htmlFor={field.key}>
+                {field.label}
+                {field.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
               {renderField(field)}
             </div>
           ))}
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            className="pointer-events-auto"
+          >
             Cancel
           </Button>
           {mode !== 'view' && (
-            <Button onClick={handleSave} className="legal-gradient">
+            <Button 
+              onClick={handleSave} 
+              className="pointer-events-auto"
+            >
               {mode === 'add' ? 'Add' : 'Save Changes'}
             </Button>
           )}
