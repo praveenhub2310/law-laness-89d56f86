@@ -123,7 +123,7 @@ function App() {
           <Route path="/dashboard/claims" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><ManageClaims /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/logs" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><SystemLog /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/reports" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Reports /></DashboardLayout></RoleGuard>} />
-          <Route path="/dashboard/settings" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><Settings /></DashboardLayout></RoleGuard>} />
+          <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
           <Route path="/dashboard/payment-settings" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><PaymentSettings /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/drafting-tool" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DraftingTool /></DashboardLayout></RoleGuard>} />
           <Route path="/dashboard/translation" element={<RoleGuard allowedRoles={['super_admin']}><DashboardLayout><DocumentTranslation /></DashboardLayout></RoleGuard>} />
