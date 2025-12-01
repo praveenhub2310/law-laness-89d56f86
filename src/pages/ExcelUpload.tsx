@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileSpreadsheet, CheckCircle, AlertTriangle, Download } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 const ExcelUpload = () => {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFiles, setUploadedFiles] = useState([
     {
       id: 1,
@@ -48,29 +52,151 @@ const ExcelUpload = () => {
   };
 
   const handleFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    
     files.forEach(file => {
-      if (file.type.includes('spreadsheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        const newFile = {
-          id: Date.now(),
-          name: file.name,
-          uploadDate: new Date().toISOString().split('T')[0],
-          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-          status: 'processing' as const,
-          records: 0,
-          errors: 0
-        };
-        
-        setUploadedFiles(prev => [newFile, ...prev]);
-        
-        // Simulate processing
-        setTimeout(() => {
+      // Validate file type
+      if (!file.type.includes('spreadsheet') && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        toast({
+          title: 'Invalid File Type',
+          description: 'Please upload Excel files (.xlsx or .xls) only.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // Validate file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast({
+          title: 'File Too Large',
+          description: 'File size must be less than 10MB.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      const newFile = {
+        id: Date.now() + Math.random(), // Ensure unique ID
+        name: file.name,
+        uploadDate: new Date().toISOString().split('T')[0],
+        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        status: 'processing' as const,
+        records: 0,
+        errors: 0
+      };
+      
+      setUploadedFiles(prev => [newFile, ...prev]);
+      
+      toast({
+        title: 'Upload Started',
+        description: `Processing ${file.name}...`
+      });
+      
+      // Process Excel file
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          
+          // Simulate processing delay
+          setTimeout(() => {
+            setUploadedFiles(prev => prev.map(f => 
+              f.id === newFile.id 
+                ? { 
+                    ...f, 
+                    status: 'processed' as const, 
+                    records: jsonData.length,
+                    errors: 0
+                  }
+                : f
+            ));
+            
+            toast({
+              title: 'Upload Successful',
+              description: `Processed ${jsonData.length} records from ${file.name}.`
+            });
+          }, 2000);
+        } catch (error) {
+          console.error('Error processing Excel file:', error);
           setUploadedFiles(prev => prev.map(f => 
             f.id === newFile.id 
-              ? { ...f, status: 'processed' as const, records: Math.floor(Math.random() * 200) + 50 }
+              ? { ...f, status: 'error' as const, errors: 1 }
               : f
           ));
-        }, 3000);
-      }
+          
+          toast({
+            title: 'Processing Failed',
+            description: 'Failed to process Excel file. Please check the file format.',
+            variant: 'destructive'
+          });
+        }
+      };
+      
+      reader.onerror = () => {
+        toast({
+          title: 'Read Error',
+          description: 'Failed to read the file.',
+          variant: 'destructive'
+        });
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
+  };
+  
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    handleFiles(files);
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleDownloadReport = (file: typeof uploadedFiles[0]) => {
+    // Create a sample report
+    const reportData = [
+      ['File Name', file.name],
+      ['Upload Date', file.uploadDate],
+      ['File Size', file.size],
+      ['Total Records', file.records],
+      ['Errors', file.errors],
+      ['Status', file.status],
+      [''],
+      ['Sample Data Report'],
+      ['Record #', 'Case Number', 'Client Name', 'Status'],
+    ];
+    
+    // Add sample records
+    for (let i = 1; i <= Math.min(file.records, 10); i++) {
+      reportData.push([
+        i.toString(),
+        `CASE-${1000 + i}`,
+        `Client ${i}`,
+        'Active'
+      ]);
+    }
+    
+    // Create workbook and worksheet
+    const ws = XLSX.utils.aoa_to_sheet(reportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    
+    // Generate and download
+    XLSX.writeFile(wb, `${file.name.replace(/\.[^/.]+$/, '')}_report.xlsx`);
+    
+    toast({
+      title: 'Download Started',
+      description: 'Report is being downloaded.'
     });
   };
 
@@ -97,6 +223,16 @@ const ExcelUpload = () => {
           <CardDescription>Drag and drop Excel files or click to browse</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            multiple
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
+          
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
@@ -111,7 +247,10 @@ const ExcelUpload = () => {
             <p className="text-muted-foreground mb-4">
               Supports .xlsx and .xls files up to 10MB
             </p>
-            <Button>
+            <Button 
+              onClick={handleBrowseClick}
+              className="pointer-events-auto cursor-pointer relative z-10"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Browse Files
             </Button>
@@ -176,7 +315,12 @@ const ExcelUpload = () => {
                   </Badge>
                   
                   {file.status === 'processed' && (
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDownloadReport(file)}
+                      className="pointer-events-auto cursor-pointer relative z-10"
+                    >
                       <Download className="h-4 w-4 mr-2" />
                       Download Report
                     </Button>
