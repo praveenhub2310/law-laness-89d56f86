@@ -6,6 +6,7 @@ import { UserCheck, Phone, Mail, Calendar, Award, DollarSign, Clock, MapPin } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface LawyerDetails {
   id: string;
@@ -30,9 +31,37 @@ interface CaseInfo {
 
 const AssignedAdvocate = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [lawyer, setLawyer] = useState<LawyerDetails | null>(null);
   const [cases, setCases] = useState<CaseInfo[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleSendMessage = () => {
+    toast.success('Opening Messages', {
+      description: 'Redirecting to messages page...'
+    });
+    navigate('/dashboard/messages');
+  };
+
+  const handleScheduleMeeting = () => {
+    toast.success('Opening Schedule', {
+      description: 'Redirecting to schedule a meeting...'
+    });
+    navigate('/dashboard/client-meetings');
+  };
+
+  const handleRequestCall = () => {
+    toast.info('Call Request Sent', {
+      description: 'Your lawyer will contact you soon.'
+    });
+  };
+
+  const handleContactSupport = () => {
+    toast.info('Contact Support', {
+      description: 'Opening messages to contact support...'
+    });
+    navigate('/dashboard/messages');
+  };
 
   useEffect(() => {
     if (user) {
@@ -184,7 +213,12 @@ const AssignedAdvocate = () => {
             <p className="text-muted-foreground mb-4">
               You don't have a lawyer assigned to your cases yet. Please contact our support team if you need assistance.
             </p>
-            <Button>Contact Support</Button>
+            <Button 
+              onClick={handleContactSupport}
+              className="cursor-pointer pointer-events-auto"
+            >
+              Contact Support
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -310,15 +344,29 @@ const AssignedAdvocate = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Button size="sm">
+            <Button 
+              size="sm"
+              onClick={handleSendMessage}
+              className="cursor-pointer pointer-events-auto"
+            >
               <Mail className="h-4 w-4 mr-2" />
               Send Message
             </Button>
-            <Button size="sm" variant="outline">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleScheduleMeeting}
+              className="cursor-pointer pointer-events-auto"
+            >
               <Calendar className="h-4 w-4 mr-2" />
               Schedule Meeting
             </Button>
-            <Button size="sm" variant="outline">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleRequestCall}
+              className="cursor-pointer pointer-events-auto"
+            >
               <Phone className="h-4 w-4 mr-2" />
               Request Call
             </Button>
