@@ -77,10 +77,18 @@ serve(async (req) => {
     // Create Razorpay order
     const razorpayAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
     
+    // Generate short receipt ID (max 40 chars)
+    // Format: rcpt_timestamp_short-uuid (e.g., rcpt_1234567890_abc12345)
+    const shortUserId = user.id.substring(0, 8);
+    const timestamp = Date.now().toString().substring(3); // Remove first 3 digits
+    const receiptId = `rcpt_${timestamp}_${shortUserId}`;
+    
+    console.log('📝 Generated receipt ID:', receiptId, 'Length:', receiptId.length);
+    
     const orderData = {
       amount: Math.round(amount * 100), // Convert to paisa
       currency: currency,
-      receipt: `receipt_${user.id}_${Date.now()}`,
+      receipt: receiptId,
       notes: {
         user_id: user.id,
         plan_id: planId
