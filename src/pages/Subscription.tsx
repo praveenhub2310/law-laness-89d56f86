@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRazorpayPayment } from '@/hooks/useRazorpayPayment';
+import { useCurrencyByLocation } from '@/hooks/useCurrencyByLocation';
 import { 
   CreditCard, 
   Check, 
@@ -74,6 +75,7 @@ const Subscription = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { initiatePayment, loading: paymentLoading } = useRazorpayPayment();
+  const { currencyConfig, formatPrice } = useCurrencyByLocation();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -464,7 +466,7 @@ const Subscription = () => {
               </div>
               <div className="text-center p-4 bg-background/50 rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground mb-1">Price</p>
-                <p className="text-2xl font-bold text-primary">₹{currentSubscription.plan.price}</p>
+                <p className="text-2xl font-bold text-primary">{formatPrice(currentSubscription.plan.price)}</p>
                 <p className="text-xs text-muted-foreground">per month</p>
               </div>
               <div className="text-center p-4 bg-background/50 rounded-lg">
@@ -612,7 +614,7 @@ const Subscription = () => {
                   </p>
                   
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-primary mb-1">₹{plan.price}</div>
+                    <div className="text-4xl font-bold text-primary mb-1">{formatPrice(plan.price)}</div>
                     <div className="text-sm text-muted-foreground">per month</div>
                   </div>
                 </CardHeader>
@@ -704,7 +706,7 @@ const Subscription = () => {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="text-lg font-bold">₹{invoice.amount}</p>
+                          <p className="text-lg font-bold">{formatPrice(invoice.amount)}</p>
                           <Badge 
                             variant={invoice.status === 'paid' ? 'default' : 'secondary'}
                             className="text-xs"
