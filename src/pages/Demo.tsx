@@ -118,7 +118,7 @@ const Demo = () => {
   return (
     <AuthLayout
       title="Demo Access"
-      description="Experience Law Lanes with different user roles"
+      description="Experience Lawlanes with different user roles"
     >
       <div className="space-y-6">
         <Button

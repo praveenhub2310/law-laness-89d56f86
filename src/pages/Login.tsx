@@ -20,7 +20,7 @@ const Login = () => {
   return (
     <AuthLayout
       title="Welcome Back"
-      description="Sign in to your Law Lanes account"
+      description="Sign in to your Lawlanes account"
     >
       <LoginForm />
     </AuthLayout>
