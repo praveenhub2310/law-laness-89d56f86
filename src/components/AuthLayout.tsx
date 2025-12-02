@@ -14,8 +14,8 @@ const AuthLayout = ({ children, title, description }: AuthLayoutProps) => {
     <div className="min-h-screen legal-gradient flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={logo} alt="Law Lanes Logo" className="h-16 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white mb-2">Law Lanes</h1>
+          <img src={logo} alt="Lawlanes Logo" className="h-16 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-white mb-2">Lawlanes</h1>
           <p className="text-blue-100">Professional Case Management System</p>
         </div>
         
