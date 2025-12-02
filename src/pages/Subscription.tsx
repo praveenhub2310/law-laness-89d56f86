@@ -123,9 +123,11 @@ const Subscription = () => {
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()  // Use maybeSingle() to avoid errors when no rows found
       ]);
 
+      console.log('📊 Payment settings response:', paymentSettingsResponse);
+      
       if (plansResponse.error) throw plansResponse.error;
       
       // Transform the data to match our interface
@@ -137,7 +139,17 @@ const Subscription = () => {
 
       // Set payment settings (might not exist yet)
       if (paymentSettingsResponse.data) {
+        console.log('✅ Payment settings loaded:', paymentSettingsResponse.data);
         setPaymentSettings(paymentSettingsResponse.data);
+      } else {
+        console.warn('⚠️ No payment settings found or error:', paymentSettingsResponse.error);
+        // Create default payment settings object for development
+        setPaymentSettings({
+          is_active: true,
+          enable_razorpay_subscription: true,
+          enable_razorpay_prepaid: true,
+          razorpay_base_uri: 'https://api.razorpay.com/v1'
+        });
       }
 
       // Fetch current user subscription
