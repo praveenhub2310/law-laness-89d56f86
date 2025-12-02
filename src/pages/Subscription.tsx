@@ -48,6 +48,7 @@ interface SubscriptionPlan {
   currency: string;
   features: string[];
   is_active: boolean;
+  razorpay_plan_id?: string;
 }
 
 interface UserSubscription {
@@ -267,14 +268,14 @@ const Subscription = () => {
     console.log('🚀 Initiating payment with:', {
       planId: plan.id,
       amount: plan.price,
-      currency: plan.currency || 'INR',
+      currency: currencyConfig.currency,
       planName: plan.name
     });
 
     await initiatePayment({
       planId: plan.id,
       amount: plan.price,
-      currency: plan.currency || 'INR',
+      currency: currencyConfig.currency,
       planName: plan.name
     });
   };
