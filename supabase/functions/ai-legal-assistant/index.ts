@@ -59,6 +59,10 @@ serve(async (req) => {
 
     console.log('Calling Hugging Face API with Mistral model...');
 
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
     const hfResponse = await fetch(modelEndpoint, {
       method: 'POST',
       headers: {
@@ -68,17 +72,31 @@ serve(async (req) => {
       body: JSON.stringify({
         inputs: conversationText,
         parameters: {
-          max_new_tokens: 1024,
+          max_new_tokens: 384, // Reduced from 1024 for faster responses
           temperature: 0.7,
-          top_p: 0.95,
+          top_p: 0.9, // Reduced from 0.95 for more focused responses
           return_full_text: false,
+          do_sample: true,
         },
+        options: {
+          wait_for_model: true,
+          use_cache: true, // Enable caching for faster responses
+        }
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!hfResponse.ok) {
       const errorText = await hfResponse.text();
       console.error('Hugging Face API error:', errorText);
+      
+      // If model is loading, provide helpful message
+      if (hfResponse.status === 503) {
+        throw new Error('Model is loading. Please try again in a moment.');
+      }
+      
       throw new Error(`Hugging Face API error: ${hfResponse.status} - ${errorText}`);
     }
 
@@ -124,6 +142,21 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in AI Legal Assistant:', error);
+    
+    // Handle timeout specifically
+    if (error.name === 'AbortError') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Request timeout. The AI model took too long to respond. Please try again.',
+          details: 'Request timed out after 30 seconds'
+        }),
+        { 
+          status: 504, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Internal server error',
