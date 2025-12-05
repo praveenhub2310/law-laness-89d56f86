@@ -6,16 +6,12 @@ import logo from '@/assets/lawlanes_logo.png';
 const AppSidebarHeader = () => {
   return (
     <SidebarHeader className="p-4 border-b border-blue-600/20">
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-center">
         <img 
           src={logo} 
           alt="Lawlanes Logo" 
-          className="w-8 h-8 object-contain flex-shrink-0"
+          className="h-10 object-contain"
         />
-        <div className="min-w-0">
-          <h2 className="text-lg font-bold text-white truncate">Lawlanes</h2>
-          <p className="text-xs text-blue-100 truncate">Case Management</p>
-        </div>
       </div>
     </SidebarHeader>
   );
