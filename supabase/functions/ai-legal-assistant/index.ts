@@ -52,7 +52,7 @@ serve(async (req) => {
       throw new Error('HUGGING_FACE_API_KEY not configured');
     }
 
-    const modelEndpoint = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
+    const modelEndpoint = "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2";
     
     // Format conversation for Mistral
     const conversationText = formatConversationForMistral(formattedMessages);
