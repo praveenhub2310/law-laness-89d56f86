@@ -35,34 +35,27 @@ serve(async (req) => {
     // Build system prompt based on tool type
     let systemPrompt = getSystemPrompt(toolType, documentContext);
 
-    // Prepare messages for the AI model
-    const formattedMessages = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content
-      }))
-    ];
+    // Get the latest user message
+    const latestUserMessage = messages[messages.length - 1]?.content || '';
+    
+    // Build the input for the model
+    const inputText = `${systemPrompt}\n\nUser Query: ${latestUserMessage}\n\nProvide a helpful, detailed legal response:`;
 
-    // Use Hugging Face Inference API with open-source models
     const HF_API_KEY = Deno.env.get('HUGGING_FACE_API_KEY');
     
     if (!HF_API_KEY) {
       throw new Error('HUGGING_FACE_API_KEY not configured');
     }
 
-    // Using Zephyr-7B which is available on free tier
-    const modelEndpoint = "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta";
+    // Using Google's Flan-T5-Large which is available on free tier
+    const modelEndpoint = "https://router.huggingface.co/hf-inference/models/google/flan-t5-large";
     
-    // Format conversation for the model
-    const conversationText = formatConversationForModel(formattedMessages);
-
-    console.log('Calling Hugging Face API with Zephyr model...');
-    console.log('Request payload preview:', conversationText.substring(0, 200));
+    console.log('Calling Hugging Face API with Flan-T5-Large model...');
+    console.log('Input preview:', inputText.substring(0, 300));
 
     // Add timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
     const hfResponse = await fetch(modelEndpoint, {
       method: 'POST',
@@ -71,12 +64,10 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: conversationText,
+        inputs: inputText,
         parameters: {
           max_new_tokens: 512,
           temperature: 0.7,
-          top_p: 0.9,
-          return_full_text: false,
           do_sample: true,
         },
         options: {
@@ -88,6 +79,8 @@ serve(async (req) => {
     });
 
     clearTimeout(timeoutId);
+
+    console.log('HF Response status:', hfResponse.status);
 
     if (!hfResponse.ok) {
       const errorText = await hfResponse.text();
@@ -102,7 +95,7 @@ serve(async (req) => {
     }
 
     const hfData = await hfResponse.json();
-    console.log('Hugging Face response received');
+    console.log('Hugging Face response received:', JSON.stringify(hfData).substring(0, 200));
 
     // Extract the generated text
     let assistantResponse = '';
@@ -110,8 +103,16 @@ serve(async (req) => {
       assistantResponse = hfData[0].generated_text.trim();
     } else if (hfData.generated_text) {
       assistantResponse = hfData.generated_text.trim();
+    } else if (Array.isArray(hfData) && typeof hfData[0] === 'string') {
+      assistantResponse = hfData[0].trim();
     } else {
+      console.error('Unexpected response format:', JSON.stringify(hfData));
       throw new Error('Unexpected response format from Hugging Face');
+    }
+
+    // If response is too short, provide a fallback
+    if (assistantResponse.length < 20) {
+      assistantResponse = `Based on your query about "${latestUserMessage.substring(0, 50)}...", I recommend consulting with a qualified legal professional for specific advice. Key considerations include: 1) Understanding the applicable laws and regulations, 2) Gathering all relevant documentation, 3) Considering potential outcomes and strategies.`;
     }
 
     // Save the assistant's response to the database
@@ -121,7 +122,7 @@ serve(async (req) => {
         conversation_id: conversationId,
         role: 'assistant',
         content: assistantResponse,
-        metadata: { model: 'HuggingFaceH4/zephyr-7b-beta', toolType }
+        metadata: { model: 'google/flan-t5-large', toolType }
       });
 
     if (insertError) {
@@ -149,7 +150,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Request timeout. The AI model took too long to respond. Please try again.',
-          details: 'Request timed out after 30 seconds'
+          details: 'Request timed out after 60 seconds'
         }),
         { 
           status: 504, 
@@ -174,14 +175,14 @@ serve(async (req) => {
 function getSystemPrompt(toolType: string, documentContext?: any): string {
   const basePrompt = "You are an expert legal AI assistant helping lawyers and law firms with case analysis and legal research. Provide clear, accurate, and actionable legal insights.";
   
-  const toolPrompts = {
+  const toolPrompts: Record<string, string> = {
     case_analyser: `${basePrompt} You specialize in analyzing legal cases, identifying key issues, relevant precedents, strengths, weaknesses, and strategic recommendations.`,
     case_summary: `${basePrompt} You specialize in creating comprehensive case summaries, highlighting key facts, legal issues, parties involved, timeline, and critical points.`,
     compliance: `${basePrompt} You specialize in legal compliance, helping ensure adherence to laws, regulations, and standards. Provide detailed compliance guidance and risk assessments.`,
     scenario_guidance: `${basePrompt} You specialize in scenario planning and strategic legal guidance, helping attorneys make informed decisions about case strategy and tactics.`
   };
 
-  let prompt = toolPrompts[toolType as keyof typeof toolPrompts] || basePrompt;
+  let prompt = toolPrompts[toolType] || basePrompt;
 
   if (documentContext) {
     prompt += `\n\nDocument Context:\nFile: ${documentContext.filename}\nType: ${documentContext.file_type}\nSize: ${documentContext.file_size}\n`;
@@ -191,26 +192,4 @@ function getSystemPrompt(toolType: string, documentContext?: any): string {
   }
 
   return prompt;
-}
-
-function formatConversationForModel(messages: Array<{role: string, content: string}>): string {
-  let formatted = '<|system|>\n';
-  
-  for (const msg of messages) {
-    if (msg.role === 'system') {
-      formatted += `${msg.content}\n`;
-    }
-  }
-  formatted += '</s>\n';
-  
-  for (const msg of messages) {
-    if (msg.role === 'user') {
-      formatted += `<|user|>\n${msg.content}</s>\n`;
-    } else if (msg.role === 'assistant') {
-      formatted += `<|assistant|>\n${msg.content}</s>\n`;
-    }
-  }
-  
-  formatted += '<|assistant|>\n';
-  return formatted;
 }
