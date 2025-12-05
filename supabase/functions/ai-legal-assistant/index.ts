@@ -45,23 +45,24 @@ serve(async (req) => {
     ];
 
     // Use Hugging Face Inference API with open-source models
-    // Using Mistral-7B-Instruct for legal analysis
     const HF_API_KEY = Deno.env.get('HUGGING_FACE_API_KEY');
     
     if (!HF_API_KEY) {
       throw new Error('HUGGING_FACE_API_KEY not configured');
     }
 
-    const modelEndpoint = "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2";
+    // Using Zephyr-7B which is available on free tier
+    const modelEndpoint = "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta";
     
-    // Format conversation for Mistral
-    const conversationText = formatConversationForMistral(formattedMessages);
+    // Format conversation for the model
+    const conversationText = formatConversationForModel(formattedMessages);
 
-    console.log('Calling Hugging Face API with Mistral model...');
+    console.log('Calling Hugging Face API with Zephyr model...');
+    console.log('Request payload preview:', conversationText.substring(0, 200));
 
     // Add timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
 
     const hfResponse = await fetch(modelEndpoint, {
       method: 'POST',
@@ -72,15 +73,15 @@ serve(async (req) => {
       body: JSON.stringify({
         inputs: conversationText,
         parameters: {
-          max_new_tokens: 384, // Reduced from 1024 for faster responses
+          max_new_tokens: 512,
           temperature: 0.7,
-          top_p: 0.9, // Reduced from 0.95 for more focused responses
+          top_p: 0.9,
           return_full_text: false,
           do_sample: true,
         },
         options: {
           wait_for_model: true,
-          use_cache: true, // Enable caching for faster responses
+          use_cache: true,
         }
       }),
       signal: controller.signal,
@@ -120,7 +121,7 @@ serve(async (req) => {
         conversation_id: conversationId,
         role: 'assistant',
         content: assistantResponse,
-        metadata: { model: 'mistralai/Mistral-7B-Instruct-v0.2', toolType }
+        metadata: { model: 'HuggingFaceH4/zephyr-7b-beta', toolType }
       });
 
     if (insertError) {
@@ -192,18 +193,24 @@ function getSystemPrompt(toolType: string, documentContext?: any): string {
   return prompt;
 }
 
-function formatConversationForMistral(messages: Array<{role: string, content: string}>): string {
-  let formatted = '';
+function formatConversationForModel(messages: Array<{role: string, content: string}>): string {
+  let formatted = '<|system|>\n';
   
   for (const msg of messages) {
     if (msg.role === 'system') {
-      formatted += `<s>[INST] ${msg.content} [/INST]\n`;
-    } else if (msg.role === 'user') {
-      formatted += `<s>[INST] ${msg.content} [/INST]\n`;
+      formatted += `${msg.content}\n`;
+    }
+  }
+  formatted += '</s>\n';
+  
+  for (const msg of messages) {
+    if (msg.role === 'user') {
+      formatted += `<|user|>\n${msg.content}</s>\n`;
     } else if (msg.role === 'assistant') {
-      formatted += `${msg.content}</s>\n`;
+      formatted += `<|assistant|>\n${msg.content}</s>\n`;
     }
   }
   
+  formatted += '<|assistant|>\n';
   return formatted;
 }
