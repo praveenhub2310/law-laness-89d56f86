@@ -319,10 +319,18 @@ A comprehensive legal practice management system designed to streamline law firm
 - **Payment Tracking**: Real-time payment status updates
 
 ### AI Services
+- **AI Model**: Google Flan-T5-Large via Hugging Face Inference API
+- **Edge Function**: `ai-legal-assistant` - Handles all AI-powered legal analysis
 - **Document Analysis**: Intelligent document processing
 - **Case Summary**: Automated case summary generation
 - **Compliance Checking**: Legal compliance verification
 - **Translation Services**: Multi-language document translation
+- **Scenario Guidance**: AI-powered legal scenario recommendations
+
+### Analytics & Tracking
+- **Microsoft Clarity**: User behavior analytics and session recording
+  - Project ID: `ui6g5d67dv`
+  - Heatmaps, session recordings, and user journey tracking
 
 ### Court System Integration
 - **Cause List Processing**: Automated court schedule parsing
@@ -382,4 +390,24 @@ A comprehensive legal practice management system designed to streamline law firm
 
 ---
 
-*This functional specification document covers all implemented features and modules across all user roles in the Legal Practice Management System as of the current development state.*
+## Recent Updates
+
+### December 2024
+- **AI Model Update**: Switched to Google Flan-T5-Large model for improved availability and reliability
+- **Analytics Integration**: Added Microsoft Clarity for user behavior analytics (Project ID: `ui6g5d67dv`)
+- **Edge Function**: Updated `ai-legal-assistant` with improved error handling and logging
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.1.0 | Dec 23, 2024 | Added AI model details, Microsoft Clarity integration, version history |
+| 1.0.0 | Initial | Initial FSD creation |
+
+---
+
+*Last Updated: December 23, 2024*
+
+*This functional specification document covers all implemented features and modules across all user roles in the Legal Practice Management System.*
