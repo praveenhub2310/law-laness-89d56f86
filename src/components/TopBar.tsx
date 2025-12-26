@@ -8,9 +8,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { Bell, Calendar, User, ArrowLeft, LogOut, Settings } from 'lucide-react';
+import { Bell, Calendar, User, ArrowLeft, LogOut, Settings, Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 const TopBar = () => {
   const navigate = useNavigate();
@@ -45,6 +46,9 @@ const TopBar = () => {
   return (
     <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-6">
       <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+        <SidebarTrigger className="md:hidden flex-shrink-0">
+          <Menu className="h-5 w-5" />
+        </SidebarTrigger>
         {showBackButton && (
           <Button
             variant="ghost"
