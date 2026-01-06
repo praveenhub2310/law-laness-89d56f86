@@ -149,18 +149,19 @@ const Signup = () => {
         }
         setLoading(false);
       } else {
-        console.log('Signup successful - showing confirmation message');
+        console.log('Signup successful - redirecting to login');
         
-        // Show confirmation toast that stays visible
-        toast.success('Account created successfully! Please check your email and click the confirmation link to verify your account.', {
-          duration: 15000,
+        // Email confirmation is disabled, redirect to login
+        toast.success('Account created successfully! Please log in to continue.', {
+          duration: 5000,
         });
         
-        // Set email sent state to show confirmation UI
-        setEmailSent(true);
         setLoading(false);
         
-        console.log('Email confirmation screen should now be visible, emailSent:', true);
+        // Redirect to login page
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
       }
     } catch (catchError) {
       console.error('Signup threw an exception:', catchError);
