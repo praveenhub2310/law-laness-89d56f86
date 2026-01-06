@@ -135,6 +135,15 @@ const Signup = () => {
           toast.error('An account with this email already exists. Please try logging in instead.', {
             duration: 8000
           });
+        } else if (result.error.status === 500 || result.error.message?.includes('Error sending confirmation')) {
+          // Handle email sending failure - user was likely created but email failed
+          toast.error('Account may have been created, but we couldn\'t send a confirmation email. Please try logging in or contact support.', {
+            duration: 10000
+          });
+          // Offer to navigate to login page after a short delay
+          setTimeout(() => {
+            navigate('/login');
+          }, 3000);
         } else {
           toast.error(result.error.message || 'Failed to create account');
         }
