@@ -4,16 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { 
-  Scale, Briefcase, Users, Shield, FileText, Calendar, 
-  Clock, DollarSign, MessageSquare, BarChart, 
-  Brain, Cloud, CheckCircle, ArrowRight, Menu, X,
-  Gavel, FolderOpen, UserCheck, Building2
-} from 'lucide-react';
+import { Scale, Briefcase, Users, Shield, FileText, Calendar, Clock, DollarSign, MessageSquare, ChartBar as BarChart, Brain, Cloud, CircleCheck as CheckCircle, ArrowRight, Menu, X, Gavel, FolderOpen, UserCheck, Building2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import dashboardScreenshot from '@/assets/dashboard-screenshot.png';
-import documentsScreenshot from '@/assets/documents-screenshot.png';
+import documentsScreenshot from '@/assets/dashboard-screenshot.png';
 import calendarScreenshot from '@/assets/calendar-screenshot.png';
 import logo from '@/assets/lawlanes_logo.png';
 
